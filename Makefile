@@ -12,12 +12,15 @@ HOSTCC        := gcc
 # HOST and TARGET must be different
 HOST          := i686-linux
 TARGET        := i586-linux
+TARGET_FAMILY := i386
+
 BUILDDIR      := $(TOP)/$(TARGET)/build-$(HOST)
 TOOLDIR       := $(TOP)/$(TARGET)/tool-$(HOST)
 ROOTDIR       := $(TOP)/$(TARGET)/root
 TOOL_PREFIX   := $(TOOLDIR)/usr
 ROOT_PREFIX   := $(ROOTDIR)/usr
 TARGET_PATH   := $(TOOLDIR)/usr/bin:$(PATH)
+CROSSPFX      := $(TARGET)-
 
 BINUTILS      := 2.15.94.0.2
 BINUTILS_SDIR := $(SOURCE)/binutils-$(BINUTILS)
@@ -36,12 +39,17 @@ GLIBC_SDIR    := $(SOURCE)/glibc-$(GLIBC)
 GLIBC_BDIR    := $(BUILDDIR)/glibc-$(GLIBC)
 GLIBC_HDIR    := $(BUILDDIR)/glibc-headers-$(GLIBC)
 
+DIETLIBC      := 0.28
+DIETLIBC_SDIR := $(SOURCE)/dietlibc-$(DIETLIBC)
+DIETLIBC_BDIR := $(BUILDDIR)/dietlibc-$(DIETLIBC)
+
 MFLAGS        :=
 MPFLAGS       := -j 2
 
 
+################# end of configuration ##############
 
-all: gcc
+all: gcc dietlibc
 
 
 binutils: $(BINUTILS_BDIR)/.installed
@@ -166,7 +174,8 @@ glibc: $(GLIBC_BDIR)/.installed
 $(GLIBC_BDIR)/.installed: $(GLIBC_BDIR)/.compiled $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
 	(cd $(GLIBC_BDIR) && \
 	 $(MAKE) $(MFLAGS) install slibdir=$(ROOTDIR)/lib \
-	    INSTALL_PROGRAM_ARGS="-s" && \
+	    INSTALL_PROGRAM="\$${INSTALL} -s" \
+	    INSTALL_SCRIPT="\$${INSTALL}" && \
 	 rm -rf $(ROOT_PREFIX)/include/{asm,linux} && \
 	 cp -aH $(KHDR_SDIR)/include/{asm,linux} $(ROOT_PREFIX)/include/ )
 	touch $@
@@ -290,4 +299,36 @@ $(GCC_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC_SDIR)/.patched $(BINUTIL
 	#   --enable-target-optspace 
 	#   --libdir=$(TOOL_PREFIX)/target-root/usr/lib \
 	#   --enable-languages=c,c++
+
+
+
+#### dietlibc
+#### Cannot be fully cross-compiled yet, the 'diet' program uses the
+#### cross-compiler while it should not.
+dietlibc: $(DIETLIBC_BDIR)/.installed
+
+$(DIETLIBC_BDIR)/.installed: $(DIETLIBC_BDIR)/.compiled
+	cd $(DIETLIBC_BDIR) && \
+	   $(MAKE) $(MFLAGS) install ARCH=$(TARGET_FAMILY) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
+	touch $@
+
+$(DIETLIBC_BDIR)/.compiled: $(GCC_BDIR)/.installed $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+	cd $(DIETLIBC_BDIR) && PATH=$(TARGET_PATH) \
+	   $(MAKE) $(MPFLAGS) ARCH=$(TARGET_FAMILY) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
+	touch $@
+
+$(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.patched
+	-rm -f $(DIETLIBC_BDIR) >/dev/null 2>&1
+	mkdir -p $(BUILDDIR)
+	tar -C $(SOURCE) -cf - dietlibc-$(DIETLIBC) | tar -C $(BUILDDIR) -xUf -
+	touch $@
+
+$(DIETLIBC_SDIR)/.patched: $(DIETLIBC_SDIR)/.extracted
+	patch -d $(DIETLIBC_SDIR) -p1 < $(PATCHES)/patch-dietlibc-0.28-cross-gcc
+	touch $@
+
+$(DIETLIBC_SDIR)/.extracted:
+	mkdir -p $(SOURCE)
+	tar -C $(SOURCE) -jxf $(DOWNLOAD)/dietlibc-$(DIETLIBC).tar.bz2
+	touch $@
 

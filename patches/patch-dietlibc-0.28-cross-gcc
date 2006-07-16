@@ -1,0 +1,37 @@
+--- ./i386/Makefile.add.bad	2004-12-17 20:22:11.000000000 +0100
++++ ./i386/Makefile.add	2005-02-28 09:58:26.000000000 +0100
+@@ -1,5 +1,5 @@
+ 
+-M:=$(shell ./findcflags.sh $(CC))
++M:=$(shell ./findcflags.sh $(CROSS)$(CC))
+ LIBOBJ+=$(OBJDIR)/__ten.o $(OBJDIR)/md5asm.o $(OBJDIR)/__restore_rt.o
+ LIBMATH+=acos.o asin.o atan.o ceil.o cos.o exp.o exp10.o exp2.o expm1.o fabs.o floor.o hypot.o log.o log2.o log10.o sin.o sqrt.o copysign.o sincos.o __half.o ldexp.o ilogb.o cbrt.o log1p.o fmod.o libm2.o atan2.o tan.o
+ LIBMATH:=$(filter-out acosh.o asinh.o atanh.o cbrt.o copysign.o exp10.o exp2.o expm1.o ilogb.o log2.o,$(LIBMATH))
+--- ./libpthread/Makefile.bad	2003-08-18 19:32:52.000000000 +0200
++++ ./libpthread/Makefile	2005-02-28 09:59:26.000000000 +0100
+@@ -1,7 +1,5 @@
+ all: libpthread.a
+ 
+-M=$(shell ../findcflags.sh $(CC))
+-
+ ARCH=$(shell uname -m | sed 's/i[4-9]86/i386/')
+ 
+ CFLAGS= -g #-pipe -O -march=k6
+@@ -10,6 +8,8 @@
+ 
+ CC=gcc
+ 
++M=$(shell ../findcflags.sh $(CROSS)$(CC))
++
+ VPATH=../$(ARCH)/
+ 
+ PTHREAD_OBJS = __testandset.o $(patsubst %.c,%.o,$(wildcard pthread_*.c))
+@@ -17,7 +17,7 @@
+ TESTS = $(patsubst %.c,%,$(wildcard test-*.c))
+ 
+ %.o : %.c
+-	$(CC) $(CFLAGS) -c -o $@ $?
++	$(CROSS)$(CC) $(CFLAGS) -c -o $@ $?
+ 
+ #include ../$(ARCH)/Makefile.add
+ 

@@ -1,0 +1,76 @@
+##### Compiling the formilux toolchain v0.2 #####
+
+1) get the following files :
+   - binutils-2.15.94.0.2.2.tar.bz2   : http://www.fr.kernel.org/pub/linux/devel/binutils/binutils-2.15.94.0.2.2.tar.bz2
+   - dietlibc-0.28.tar.bz2            : http://www.fr.kernel.org/pub/linux/libs/dietlibc/dietlibc-0.28.tar.bz2
+   - glibc-2.2.5.tar.bz2              : http://ftp.club-internet.fr/pub/mirrors/ftp.gnu.org/gnu/glibc/glibc-2.2.5.tar.gz
+   - glibc-linuxthreads-2.2.5.tar.bz2 : http://ftp.club-internet.fr/pub/mirrors/ftp.gnu.org/gnu/glibc/glibc-linuxthreads-2.2.5.tar.gz
+   - gcc-20011006.tar.bz2             : http://www.uclibc.org/downloads/toolchain/gcc-20011006.tar.bz2
+   - gcc2.95-mega.patch.bz2           : http://cvs.sourceforge.net/viewcvs.py/*checkout*/tuxscreen/buildroot-tux/sources/gcc2.95-mega.patch.bz2?rev=1.1
+     or extract it from http://www.fr.kernel.org/pub/linux/libs/uclibc/buildroot-0.9.27.tar.bz2
+
+If some files are not in .bz2, either recompress them or change the makefile.
+
+2) get kernel-headers-2.4.29-hf2 or similar. A previous version can be downloaded there :
+   http://www.uclibc.org/downloads/toolchain/kernel-headers-2.4.25.tar.bz2
+
+3) cd to an empty directory with at least 780 MB free, an untar 'flx-toolchain-0.2.tgz' there :
+
+$ cd $freespace
+$ tar zxf $somedir/flx-toolchain-0.2.tgz
+
+4) create a symlink named 'download' pointing to the directory where you put all the
+   files above, then edit your Makefile to ensure that it references the exact same
+   versions that are available under 'download'.
+
+$ cd toolchain
+$ ln -s $download_dir download
+
+5) update the number of parallel jobs in the Makefile (MPFLAGS) to match a reasonnable
+   limit based on your number of CPUs and available memory. Recommended values are 
+   between nCPU+1 and 2*nCPU. Then run make, and redirect its output to a file which
+   will save you hours if something goes wrong. Echoing the command result is a quick
+   way to inform you that everything went OK if it outputs '0' :
+
+$ time make >build.log 2>&1 ; echo $?
+or
+$ make HOST=i686-linux TARGET=i586-linux  >build.log 2>&1
+
+This also works on non-x86 hosts, validated on Sparc64 (except perhaps for the dietlibc
+stuff). HOST and TARGET *MUST* be different, otherwise gcc will not detect that it must
+configure a cross-compiler :-(
+
+To use it, assuming we run HOST=i686-linux and TARGET=i586-linux :
+
+$ export TOOLDIR=$PWD/i586-linux/tool-686-linux
+$ export PATH=$TOOLDIR/usr/bin:$PATH
+
+and use i586-linux-{gcc,ld,strip,ar,...} whenever needed.
+(or set a CROSSPFX variable equal to i586-linux- and use it everywhere)
+
+To compile something with glibc :
+
+$ cd $somethingdir
+$ i586-linux-gcc -Wl,--gc-sections -o something something.c
+$ i586-linux-strip --strip-unneeded -x -R .comment -R .note something
+
+To compile something with dietlibc :
+
+$ export PATH=$TOOLDIR/diet/bin:$PATH
+$ cd $somethingdir
+$ diet i586-linux-gcc -Wl,--gc-sections -o something something.c
+$ i586-linux-strip --strip-unneeded -x -R .comment -R .note something
+
+If a particular package is needed (libraries, includes, etc...), install it normally in
+$PWD/i586-linux/root/ just as if it were the real root target :
+
+$ tar -C $PWD/i586-linux/root -zxf /var/flx-pkg/zlib-1.1.4-flx0.1/.tgz
+
+And use it without specifying any path, it will be used automatically :
+
+$ cd $somethingdir
+$ i586-linux-gcc -Wl,--gc-sections -o something something.c -lz
+$ i586-linux-strip --strip-unneeded -x -R .comment -R .note something
+
+### that's all folks ###
+
