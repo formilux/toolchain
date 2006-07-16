@@ -1,0 +1,5 @@
+2005/08/20 : version 0.2.2
+	* Makefile: we now create sys-include everywhere there's an "include"
+	  directory. This missing directory was the cause for gcc not to use
+	  system includes such as "limits.h".
+	* CHANGELOG: created

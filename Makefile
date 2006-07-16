@@ -1,6 +1,8 @@
 LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
+TOOLCHAIN     := 0.2.2
+
 TOP           := $(PWD)
 DOWNLOAD      := $(TOP)/download
 PATCHES       := $(TOP)/patches
@@ -93,6 +95,7 @@ $(GCC_LIBC_BDIR)/.compiled: $(GCC_LIBC_BDIR)/.configured $(BINUTILS_BDIR)/.insta
 # make cpp0 prefix=/build/buildroot/i386-linux/root/usr
 
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	cd $(GCC_LIBC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) all-gcc
 	touch $@
 
@@ -280,9 +283,13 @@ $(GCC_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC_BDIR)/.configured $(BINUTI
 $(GCC_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC_SDIR)/.patched $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC_BDIR)
 
-	[ -e $(TOOL_PREFIX)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/
-	# (cd $(GCC_BDIR) && CC="$(HOSTCC) -I$(TOOL_PREFIX)/target-root/usr/include"
+	# those directories are important : gcc looks for "limits.h" there to
+	# know if it must chain to it or impose its own.
 
+	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
+	[ -e $(TOOL_PREFIX)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/
+	[ -e $(TOOL_PREFIX)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/
 
 	(cd $(GCC_BDIR) && CC="$(HOSTCC)" \
 	 PATH=$(TARGET_PATH) $(GCC_SDIR)/configure \
