@@ -1,3 +1,9 @@
+2006/07/15 : version 0.4.0
+	* added gcc-3.3, gcc-3.4 and gcc-4.1
+	* binutils are now built with --with-sysroot (needed by gcc-4.1)
+	* added uClibc-0.9.28 and a simple wrapper to use it easily
+	* upgraded dietlibc to 0.30
+
 2005/08/21 : version 0.3.1
 	* moved libstdc++ to the rootdir instead of tooldir
 	* moved libiberty to tooldir instead of rootdir
