@@ -1,3 +1,11 @@
+2006/07/16 : version 0.4.1
+	* fixed lots of problems with gcc >= 3 silently using binaries outside
+	  the sysroot.
+	* fixed sysroot installation with gcc >= 3 : now gcc does not install
+	  anything in the sysroot, not even the libstdc++. Those must be
+	  brought by external packages if needed.
+	* added an "install" target which does some cleanup
+
 2006/07/15 : version 0.4.0
 	* added gcc-3.3, gcc-3.4 and gcc-4.1
 	* binutils are now built with --with-sysroot (needed by gcc-4.1)

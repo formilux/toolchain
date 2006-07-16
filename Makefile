@@ -3,7 +3,7 @@ export LD_LIBRARY_PATH
 
 # those are only used to build a package
 # WARNING! do not supply a leading '/' to the directory
-TOOLCHAIN     := 0.4.0
+TOOLCHAIN     := 0.4.1
 TOOLCHAIN_DIR := var/flx-toolchain
 
 TOP           := $(PWD)
@@ -44,7 +44,8 @@ TOOLDIR       := $(TOP)/$(TARGET)/tool-$(HOST)
 ROOTDIR       := $(TOP)/$(TARGET)/root
 TOOL_PREFIX   := $(TOOLDIR)/usr
 ROOT_PREFIX   := $(ROOTDIR)/usr
-TARGET_PATH   := $(TOOLDIR)/usr/bin:$(PATH)
+SYS_ROOT      := $(TOOL_PREFIX)/target-root
+TARGET_PATH   := $(TOOL_PREFIX)/bin:$(PATH)
 CROSSPFX      := $(TARGET)-
 
 BINUTILS_SDIR := $(SOURCE)/binutils-$(BINUTILS)
@@ -87,15 +88,19 @@ MPFLAGS       := -j 2
 # There are files which are not necessary to build anything, and if needed, they
 # should be extracted from their respective compiled packages. They don't have
 # their place in the toolchain, so we'll remove them.
-all: gcc dietlibc uclibc $(TOP)/$(TARGET)/pool $(GCCVERSIONS)
-	rm -rf $(TOOL_PREFIX)/usr/{man,info} $(TOOLDIR)/diet/man $(ROOT_PREFIX)/info
+all: gcc dietlibc uclibc $(GCCVERSIONS)
+	rm -rf $(TOOL_PREFIX)/{man,info} $(TOOLDIR)/diet/man
 	rm -rf $(ROOT_PREFIX)/{bin,info,lib/gconv,sbin,share}
 
 all-noclean: gcc dietlibc uclibc $(TOP)/$(TARGET)/pool $(GCCVERSIONS)
 
+# finishes the installation.
+# "make space" may also be issued to regain all wasted space
+install: $(TOP)/$(TARGET)/pool remove-unneeded
+
 # can be called after all-noclean if needed
 remove-unneeded:
-	rm -rf $(TOOL_PREFIX)/usr/{man,info} $(TOOLDIR)/diet/man $(ROOT_PREFIX)/info
+	rm -rf $(TOOL_PREFIX)/{man,info} $(TOOLDIR)/diet/man
 	rm -rf $(ROOT_PREFIX)/{bin,info,lib/gconv,sbin,share}
 
 # remove everything that's not absolutely necessary
@@ -111,7 +116,7 @@ bootstrap-archive:
 	rm -f toolchain-$(TOOLCHAIN)
 
 # build the archive containing the minimal binary tools.
-tool-archive:
+tool-archive: remove-unneeded
 	# We'll make a fake directory. This is dirty but works.
 	mkdir -p .tmp/$(TOOLCHAIN_DIR)
 	rmdir .tmp/$(TOOLCHAIN_DIR)
@@ -121,7 +126,7 @@ tool-archive:
 	rm -rf .tmp
 
 # build the archive containing the minimal binary root files.
-root-archive: $(TOP)/$(TARGET)/pool
+root-archive: remove-unneeded $(TOP)/$(TARGET)/pool
 	# We'll make a fake directory. This is dirty but works.
 	mkdir -p .tmp/$(TOOLCHAIN_DIR)
 	rmdir .tmp/$(TOOLCHAIN_DIR)
@@ -130,6 +135,7 @@ root-archive: $(TOP)/$(TARGET)/pool
 	  | bzip2 -9 >flx-toolchain-$(TOOLCHAIN)-root-$(TARGET).tbz
 	rm -rf .tmp
 
+# moves root directory to turn it into a link to a group of profiles
 $(TOP)/$(TARGET)/pool:
 	mkdir -p $@/{groups,individual}
 	cp -al $(TOP)/$(TARGET)/root $@/groups/std-group-0
@@ -142,9 +148,13 @@ $(TOP)/$(TARGET)/pool:
 
 binutils: $(BINUTILS_BDIR)/.installed
 
+# Note: we link gnm to nm and gstrip to strip because GCC searches them
+# first in all of the system directories !
 $(BINUTILS_BDIR)/.installed: $(BINUTILS_BDIR)/.compiled
 	(cd $(BINUTILS_BDIR) && \
 	 $(MAKE) $(MFLAGS) install INSTALL_PROGRAM="\$${INSTALL} -s" )
+	 ln -sf nm $(TOOL_PREFIX)/$(TARGET)/bin/gnm
+	 ln -sf strip $(TOOL_PREFIX)/$(TARGET)/bin/gstrip
 	touch $@
 
 $(BINUTILS_BDIR)/.compiled: $(BINUTILS_BDIR)/.configured
@@ -155,8 +165,8 @@ $(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.patched
 	mkdir -p $(BINUTILS_BDIR)
 	(cd $(BINUTILS_BDIR) && CC=$(HOSTCC) $(BINUTILS_SDIR)/configure \
            --host=$(HOST) --target=$(TARGET) --prefix=$(TOOL_PREFIX) \
-	   --with-sysroot=$(TOOL_PREFIX)/target-root \
-	   --with-lib-path="$(TOOLDIR)/usr/$(TARGET_ARCH)-linux/lib:$(ROOTDIR)/lib:$(ROOTDIR)/usr/lib" \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-lib-path="$(TOOL_PREFIX)/$(TARGET)-linux/lib:$(ROOTDIR)/lib:$(ROOT_PREFIX)/lib" \
 	   --disable-shared --disable-locale --disable-nls \
 	)
 	touch $@
@@ -190,6 +200,8 @@ $(GCC_LIBC_BDIR)/.installed: $(GCC_LIBC_BDIR)/.compiled $(BINUTILS_BDIR)/.instal
 
 	touch $@
 
+# FIXME: This might be better with relative links like this :
+# ln -s ../target-root/usr/include  ../target-root/usr/sys-include $(TOOL_PREFIX)/$(TARGET)/
 $(GCC_LIBC_BDIR)/.compiled: $(GCC_LIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
@@ -201,28 +213,35 @@ $(GCC_LIBC_BDIR)/.compiled: $(GCC_LIBC_BDIR)/.configured $(BINUTILS_BDIR)/.insta
 # will be a cross-compiler, gcc will implicitly use $PREFIX/$TARGET for the
 # includes, libraries and binaries, and we cannot do anything about that,
 # so we must install the glibc headers accordingly.
+#
+# Note: try to build this in a different directory with different options, such
+# as --enable-__cxa_atexit, --disable-threads, --with-newlib, --disable-multilib
 
 $(GCC_LIBC_BDIR)/.configured: $(GCC_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 
 	# this is needed to find the binutils
 	# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
 	# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
-	mkdir -p $(TOOL_PREFIX)/target-root
+	mkdir -p $(SYS_ROOT)
 
-	[ -e $(TOOL_PREFIX)/target-root/usr ] || \
-	   ln -sf $(ROOTDIR)/usr $(TOOL_PREFIX)/target-root/
-	[ -e $(TOOL_PREFIX)/target-root/lib ] || \
-	   ln -sf $(ROOTDIR)/lib $(TOOL_PREFIX)/target-root/
+	[ -e $(SYS_ROOT)/usr ] || \
+	   ln -sf $(ROOT_PREFIX) $(SYS_ROOT)/
+	[ -e $(SYS_ROOT)/lib ] || \
+	   ln -sf $(ROOTDIR)/lib $(SYS_ROOT)/
 
 	mkdir -p $(ROOT_PREFIX)/include
 	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
 	mkdir -p $(GCC_LIBC_BDIR)
-	(cd $(GCC_LIBC_BDIR) && CC=$(HOSTCC) \
-	 PATH=$(TARGET_PATH) $(GCC_SDIR)/configure \
+	(cd $(GCC_LIBC_BDIR) && PATH=$(TARGET_PATH) \
+	 CC=$(HOSTCC) CC_FOR_BUILD=$(HOSTCC) \
+	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+	 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+         RANLIB_FOR_TARGET=$(TARGET)-ranlib \
+	 $(GCC_SDIR)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 	   --prefix=$(TOOL_PREFIX) --disable-shared --disable-nls \
 	   --disable-__cxa_atexit --disable-haifa \
-	   --includedir=$(TOOL_PREFIX)/target-root/usr/include \
+	   --includedir=$(SYS_ROOT)/usr/include \
 	   --enable-languages=c )
 	touch $@
 
@@ -253,6 +272,9 @@ $(GCC_SDIR)/.extracted:
 # make dep-files
 # ln -s . linux-2.4.32-wt8
 # tar --exclude='*.stamp' --exclude='*.ver' -c linux-2.4.32-wt8/include/{acpi,asm,asm-i386,linux,math-emu,net,pcmcia,scsi,video} | bzip2 -9 >kernel-headers-i386-2.4.32-wt8.tar.bz2
+#
+# Note: try this way instead of dep+dep-files :
+# make ARCH=$(TARGET_ARCH) allmodconfig symlinks include/linux/version.h
 
 kernel-headers: $(KHDR_SDIR)/.patched
 
@@ -440,8 +462,8 @@ $(GCC_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC_SDIR)/.patched $(BINUTIL
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 	   --prefix=$(TOOL_PREFIX) --disable-locale --disable-nls \
 	   --enable-shared --disable-__cxa_atexit --with-gnu-ld \
-	   --with-gxx-include-dir=$(TOOL_PREFIX)/target-root/usr/include/c++ \
-	   --libdir=$(TOOL_PREFIX)/target-root/usr/lib \
+	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
+	   --libdir=$(SYS_ROOT)/usr/lib \
 	   --enable-languages=c,c++ --enable-threads )
 	touch $@
 
@@ -462,7 +484,8 @@ gcc33: $(GCC33_BDIR)/.installed
 $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed $(GCC_BDIR)/.installed
 	# we must protect older gcc binaries from removal
 	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX) || true; \
+	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i" ] && \
+	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX) || true; \
 	done
 
 	cd $(GCC33_BDIR) && \
@@ -473,12 +496,14 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed $(
 
 	# now we set the version on the binaries
 	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC33_SUFFIX) || true; \
+	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i" ] && \
+	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC33_SUFFIX) || true; \
 	done
 
 	# and we restore original binaries
 	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX)" ] && \
+	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
 	done
 
 	touch $@
@@ -497,14 +522,17 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
 	 PATH=$(TARGET_PATH) $(GCC33_SDIR)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) --disable-locale --disable-nls \
+	   --prefix=$(TOOL_PREFIX) \
+	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
+	   --disable-locale --disable-nls \
 	   --enable-shared --with-gnu-ld --with-gnu-as \
+	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
+	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
-	   --with-sysroot=$(TOOL_PREFIX)/target-root \
-	   --with-headers=$(ROOT_PREFIX)/include \
-	   --with-libs=$(ROOT_PREFIX)/lib \
-	   --with-gxx-include-dir=$(ROOT_PREFIX)/include/c++ \
-	   --libdir=$(ROOT_PREFIX)/lib \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-headers=$(SYS_ROOT)/usr/include \
+	   --with-libs=$(SYS_ROOT)/usr/lib \
+	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC33_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
@@ -514,7 +542,7 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 
 $(GCC33_SDIR)/.patched: $(GCC33_SDIR)/.extracted
 	# patches to allow gcc to find includes in $ROOT_PREFIX/include
-	for p in patch-gcc33-install-script; do \
+	for p in patch-gcc33-{install-script,fix-tooldir,not-outside-root}; do \
 	   patch -p1 -d $(GCC33_SDIR) < $(PATCHES)/$$p ; \
 	done
 	touch $@
@@ -560,20 +588,27 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BIN
 	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
 	 PATH=$(TARGET_PATH) $(GCC34_SDIR)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) --disable-locale --disable-nls \
+	   --prefix=$(TOOL_PREFIX) \
+	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
+	   --disable-locale --disable-nls \
 	   --enable-shared --with-gnu-ld --with-gnu-as \
+	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
+	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
-	   --with-sysroot=$(TOOL_PREFIX)/target-root \
-	   --with-headers=$(ROOT_PREFIX)/include \
-	   --with-libs=$(ROOT_PREFIX)/lib \
-	   --with-gxx-include-dir=$(ROOT_PREFIX)/include/c++ \
-	   --libdir=$(ROOT_PREFIX)/lib \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-headers=$(SYS_ROOT)/usr/include \
+	   --with-libs=$(SYS_ROOT)/usr/lib \
+	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC34_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
+
 	touch $@
 
 $(GCC34_SDIR)/.patched: $(GCC34_SDIR)/.extracted
+	for p in patch-gcc34-fix-tooldir patch-gcc34-not-outside-root; do \
+	   patch -p1 -d $(GCC34_SDIR) < $(PATCHES)/$$p ; \
+	done
 	touch $@
 
 $(GCC34_SDIR)/.extracted:
@@ -617,20 +652,27 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BIN
 	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
 	 PATH=$(TARGET_PATH) $(GCC41_SDIR)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) --disable-locale --disable-nls \
+	   --prefix=$(TOOL_PREFIX) \
+	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
+	   --disable-locale --disable-nls \
 	   --enable-shared --with-gnu-ld --with-gnu-as \
+	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
+	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
-	   --with-sysroot=$(TOOL_PREFIX)/target-root \
-	   --with-headers=$(ROOT_PREFIX)/include \
-	   --with-libs=$(ROOT_PREFIX)/lib \
-	   --with-gxx-include-dir=$(ROOT_PREFIX)/include/c++ \
-	   --libdir=$(ROOT_PREFIX)/lib \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-headers=$(SYS_ROOT)/usr/include \
+	   --with-libs=$(SYS_ROOT)/usr/lib \
+	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC41_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
+
 	touch $@
 
 $(GCC41_SDIR)/.patched: $(GCC41_SDIR)/.extracted
+	for p in patch-gcc41-{fix-tooldir,not-outside-root}; do \
+	   patch -p1 -d $(GCC41_SDIR) < $(PATCHES)/$$p ; \
+	done
 	touch $@
 
 $(GCC41_SDIR)/.extracted:
@@ -678,8 +720,8 @@ uclibc: $(UCLIBC_BDIR)/.installed
 $(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
 	cd $(UCLIBC_BDIR) && \
 	   $(MAKE) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
-	sed -e 's@%%TOOLDIR%%@$(TOOLDIR)@g' $(PATCHES)/uclibc.wrap >$(TOOLDIR)/usr/bin/uclibc
-	chmod 755 $(TOOLDIR)/usr/bin/uclibc
+	sed -e 's@%%TOOLDIR%%@$(TOOLDIR)@g' $(PATCHES)/uclibc.wrap >$(TOOL_PREFIX)/bin/uclibc
+	chmod 755 $(TOOL_PREFIX)/bin/uclibc
 	touch $@
 
 $(UCLIBC_BDIR)/.compiled: $(GCC_BDIR)/.installed $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched

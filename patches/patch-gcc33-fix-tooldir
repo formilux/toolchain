@@ -1,0 +1,11 @@
+--- gcc-3.3.6/gcc/Makefile.in.orig	Sun Jul 16 22:23:09 2006
++++ gcc-3.3.6/gcc/Makefile.in	Sun Jul 16 22:23:11 2006
+@@ -1285,7 +1285,7 @@
+   -DDEFAULT_TARGET_VERSION=\"$(version)\" \
+   -DDEFAULT_TARGET_MACHINE=\"$(target_alias)\" \
+   -DSTANDARD_BINDIR_PREFIX=\"$(bindir)/\" \
+-  -DTOOLDIR_BASE_PREFIX=\"$(unlibsubdir)/../\" \
++  -DTOOLDIR_BASE_PREFIX=\"$(prefix)/\" \
+   @TARGET_SYSTEM_ROOT_DEFINE@ \
+   $(VALGRIND_DRIVER_DEFINES) \
+   `test "X$${SHLIB_LINK}" = "X" || test "@enable_shared@" != "yes" || echo "-DENABLE_SHARED_LIBGCC"` \
