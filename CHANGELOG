@@ -1,3 +1,8 @@
+2005/08/21 : version 0.3.1
+	* moved libstdc++ to the rootdir instead of tooldir
+	* moved libiberty to tooldir instead of rootdir
+	* added the 'remove-unneeded' make target to clean useless files
+
 2005/08/20 : version 0.3.0
 	* gcc now provides working g++ and libstdc++
 	* binutils: updated to 2.16.1

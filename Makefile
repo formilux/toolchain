@@ -1,7 +1,10 @@
 LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
-TOOLCHAIN     := 0.3.0
+# those are only used to build a package
+# WARNING! do not supply a leading '/' to the directory
+TOOLCHAIN     := 0.3.1
+TOOLCHAIN_DIR := var/flx-toolchain
 
 TOP           := $(PWD)
 DOWNLOAD      := $(TOP)/download
@@ -53,8 +56,57 @@ MPFLAGS       := -j 2
 
 ################# end of configuration ##############
 
+# There are files which are not necessary to build anything, and if needed, they
+# should be extracted from their respective compiled packages. They don't have
+# their place in the toolchain, so we'll remove them.
 all: gcc dietlibc
+	rm -rf $(TOOL_PREFIX)/usr/{man,info} $(TOOLDIR)/diet/man $(ROOT_PREFIX)/info
+	rm -rf $(ROOT_PREFIX)/{bin,info,lib/gconv,sbin,share}
 
+all-noclean: gcc dietlibc
+
+# can be called after all-noclean if needed
+remove-unneeded:
+	rm -rf $(TOOL_PREFIX)/usr/{man,info} $(TOOLDIR)/diet/man $(ROOT_PREFIX)/info
+	rm -rf $(ROOT_PREFIX)/{bin,info,lib/gconv,sbin,share}
+
+# make a bootstrap archive
+bootstrap-archive:
+	ln -s . toolchain-$(TOOLCHAIN)
+	tar cf - toolchain-$(TOOLCHAIN)/{CHANGELOG,HOWTO.txt,Makefile,patches} \
+	         toolchain-$(TOOLCHAIN)/tests/{FLXPKG,README.txt,*/.flxpkg} \
+	  | gzip -9 >flx-toolchain-$(TOOLCHAIN).tgz
+	rm -f toolchain-$(TOOLCHAIN)
+
+# build the archive containing the minimal binary tools.
+tool-archive:
+	# We'll make a fake directory. This is dirty but works.
+	mkdir -p .tmp/$(TOOLCHAIN_DIR)
+	rmdir .tmp/$(TOOLCHAIN_DIR)
+	ln -s $(TOP) .tmp/$(TOOLCHAIN_DIR)
+	tar -C .tmp -cf - $(TOOLCHAIN_DIR)/$(TARGET)/tool-$(HOST) \
+	  | bzip2 -9 >flx-toolchain-$(TOOLCHAIN)-tool-$(HOST)_$(TARGET).tbz
+	rm -rf .tmp
+
+# build the archive containing the minimal binary root files.
+root-archive: $(TOP)/$(TARGET)/pool
+	# We'll make a fake directory. This is dirty but works.
+	mkdir -p .tmp/$(TOOLCHAIN_DIR)
+	rmdir .tmp/$(TOOLCHAIN_DIR)
+	ln -s $(TOP) .tmp/$(TOOLCHAIN_DIR)
+	tar -C .tmp -cf - $(TOOLCHAIN_DIR)/$(TARGET)/root $(TOOLCHAIN_DIR)/$(TARGET)/pool \
+	  | bzip2 -9 >flx-toolchain-$(TOOLCHAIN)-root-$(TARGET).tbz
+	rm -rf .tmp
+
+$(TOP)/$(TARGET)/pool:
+	mkdir -p $@/{groups,individual}
+	cp -al $(TOP)/$(TARGET)/root $@/groups/std-group-0
+	echo "base-toolchain-$(TOOLCHAIN)" > $@/groups/std-group-0.txt
+	mv $(TOP)/$(TARGET)/root $@/base-toolchain-$(TOOLCHAIN)
+	ln -s pool/groups/std-group-0 $(TOP)/$(TARGET)/root
+
+
+################# start of build system ##############
 
 binutils: $(BINUTILS_BDIR)/.installed
 
@@ -258,13 +310,27 @@ $(GCC_BDIR)/.installed: $(GCC_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
 	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version) \
 	        gcc_gxx_include_dir=\$$(libsubdir)/include' )
-	echo "###############  install 'target'  ##################"
+
+	echo "###############  installing 'target'  ##################"
+	# Note that we want libstdc++ in the root directory and not in the toolchain,
+	# so we will use the 'tooldir' variable to displace the install directory.
+	# We also want to move libiberty to gcc-lib because the one in the root is
+	# reserved for binutils, so we point libdir to the gcc directory.
+
 	(cd $(GCC_BDIR) && \
 	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-target INSTALL_PROGRAM_ARGS="-s" \
 	    gcclibdir='$(TOOL_PREFIX)/lib/gcc-lib' \
-	    libdir='$(TOOL_PREFIX)/lib' \
 	    libsubdir='$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' \
+	    libdir='$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' \
+	    tooldir='$(ROOT_PREFIX)' \
 	    gcc_gxx_include_dir='\$$(libsubdir)/include' )
+	
+	# The libstdc++ links are now bad and must be fixed.
+	(old=$$(basename $$(readlink $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/libstdc++.so)) ; \
+	 ln -sf ../../../../target-root/usr/lib/$$old $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/libstdc++.so ; \
+	 old=$$(basename $$(readlink $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/libstdc++.a)) ; \
+	 ln -sf ../../../../target-root/usr/lib/$$old $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/libstdc++.a )
+
 	echo "###############  end of install  ##################"
 	# we must reset the 'cross_compile' flag, otherwise the path to crt*.o gets stripped !
 	sed '/^\*cross_compile/,/^$$/s/^1/0/' \
