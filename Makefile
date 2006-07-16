@@ -3,7 +3,7 @@ export LD_LIBRARY_PATH
 
 # those are only used to build a package
 # WARNING! do not supply a leading '/' to the directory
-TOOLCHAIN     := 0.4.1
+TOOLCHAIN     := 0.4.2
 TOOLCHAIN_DIR := var/flx-toolchain
 
 TOP           := $(PWD)
@@ -530,8 +530,6 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
 	   --with-sysroot=$(SYS_ROOT) \
-	   --with-headers=$(SYS_ROOT)/usr/include \
-	   --with-libs=$(SYS_ROOT)/usr/lib \
 	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC33_SUFFIX) --program-prefix=$(TARGET)- \
@@ -596,8 +594,6 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BIN
 	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
 	   --with-sysroot=$(SYS_ROOT) \
-	   --with-headers=$(SYS_ROOT)/usr/include \
-	   --with-libs=$(SYS_ROOT)/usr/lib \
 	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC34_SUFFIX) --program-prefix=$(TARGET)- \
@@ -660,8 +656,6 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BIN
 	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
 	   --with-sysroot=$(SYS_ROOT) \
-	   --with-headers=$(SYS_ROOT)/usr/include \
-	   --with-libs=$(SYS_ROOT)/usr/lib \
 	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC41_SUFFIX) --program-prefix=$(TARGET)- \
