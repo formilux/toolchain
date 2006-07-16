@@ -22,7 +22,7 @@ ROOT_PREFIX   := $(ROOTDIR)/usr
 TARGET_PATH   := $(TOOLDIR)/usr/bin:$(PATH)
 CROSSPFX      := $(TARGET)-
 
-BINUTILS      := 2.15.94.0.2
+BINUTILS      := 2.15.94.0.2.2
 BINUTILS_SDIR := $(SOURCE)/binutils-$(BINUTILS)
 BINUTILS_BDIR := $(BUILDDIR)/binutils-$(BINUTILS)
 

@@ -42,11 +42,12 @@ configure a cross-compiler :-(
 
 To use it, assuming we run HOST=i686-linux and TARGET=i586-linux :
 
-$ export TOOLDIR=$PWD/i586-linux/tool-686-linux
-$ export PATH=$TOOLDIR/usr/bin:$PATH
+$ export FLXROOTDIR=$PWD/i586-linux/root
+$ export FLXTOOLDIR=$PWD/i586-linux/tool-i686-linux
+$ export PATH=$FLXTOOLDIR/usr/bin:$PATH
 
 and use i586-linux-{gcc,ld,strip,ar,...} whenever needed.
-(or set a CROSSPFX variable equal to i586-linux- and use it everywhere)
+(or set a FLXCROSS variable equal to i586-linux- and use it everywhere)
 
 To compile something with glibc :
 
@@ -56,7 +57,7 @@ $ i586-linux-strip --strip-unneeded -x -R .comment -R .note something
 
 To compile something with dietlibc :
 
-$ export PATH=$TOOLDIR/diet/bin:$PATH
+$ export PATH=$FLXTOOLDIR/diet/bin:$PATH
 $ cd $somethingdir
 $ diet i586-linux-gcc -Wl,--gc-sections -o something something.c
 $ i586-linux-strip --strip-unneeded -x -R .comment -R .note something
