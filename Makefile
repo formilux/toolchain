@@ -1,7 +1,7 @@
 LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
-TOOLCHAIN     := 0.2.2
+TOOLCHAIN     := 0.3.0
 
 TOP           := $(PWD)
 DOWNLOAD      := $(TOP)/download
@@ -11,8 +11,10 @@ SOURCE        := $(TOP)/source
 HOSTCC        := gcc
 
 # WARNING! for GCC and binutils to detect cross-compilation,
-# HOST and TARGET must be different
-HOST          := i686-linux
+# HOST and TARGET must be different. Inserting 'x' for 'cross' between
+# the CPU and OS field is largely enough.
+#
+HOST          := i686-x-linux
 TARGET        := i586-linux
 TARGET_FAMILY := i386
 
@@ -24,7 +26,7 @@ ROOT_PREFIX   := $(ROOTDIR)/usr
 TARGET_PATH   := $(TOOLDIR)/usr/bin:$(PATH)
 CROSSPFX      := $(TARGET)-
 
-BINUTILS      := 2.15.94.0.2.2
+BINUTILS      := 2.16.1
 BINUTILS_SDIR := $(SOURCE)/binutils-$(BINUTILS)
 BINUTILS_BDIR := $(BUILDDIR)/binutils-$(BINUTILS)
 
@@ -33,7 +35,7 @@ GCC_SDIR      := $(SOURCE)/gcc-$(GCC)
 GCC_BDIR      := $(BUILDDIR)/gcc-$(GCC)
 GCC_LIBC_BDIR := $(BUILDDIR)/gcc-libc-$(GCC)
 
-KHDR          := 2.4.29-hf2
+KHDR          := 2.4.31-wt1
 KHDR_SDIR     := $(SOURCE)/linux-$(KHDR)
 
 GLIBC         := 2.2.5
@@ -69,7 +71,7 @@ $(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.patched
 	mkdir -p $(BINUTILS_BDIR)
 	(cd $(BINUTILS_BDIR) && CC=$(HOSTCC) $(BINUTILS_SDIR)/configure \
            --host=$(HOST) --target=$(TARGET) --prefix=$(TOOL_PREFIX) \
-	   --with-lib-path="$(TOOLDIR)/usr/i386-linux/lib:$(ROOTDIR)/lib:$(ROOTDIR)/usr/lib" \
+	   --with-lib-path="$(TOOLDIR)/usr/$(TARGET_FAMILY)-linux/lib:$(ROOTDIR)/lib:$(ROOTDIR)/usr/lib" \
 	   --disable-shared --disable-locale --disable-nls \
 	)
 	touch $@
@@ -126,10 +128,6 @@ $(GCC_LIBC_BDIR)/.configured: $(GCC_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIB
 	   --disable-__cxa_atexit --disable-haifa \
 	   --includedir=$(TOOL_PREFIX)/target-root/usr/include \
 	   --enable-languages=c )
-
-	   #--libdir=$(TOOL_PREFIX)/target-root/usr/lib \
-	   #--with-gxx-include-dir=$(TOOL_PREFIX)/include/c++ \
-
 	touch $@
 
 $(GCC_SDIR)/.patched: $(GCC_SDIR)/.extracted
@@ -143,7 +141,6 @@ $(GCC_SDIR)/.patched: $(GCC_SDIR)/.extracted
 	for p in patch-gcc295-{prefix-target-root,prefix-usage,displace-gcc-lib}; do \
 	   patch -p1 -d $(GCC_SDIR) < $(PATCHES)/$$p ; \
 	done
-
 	touch $@
 
 $(GCC_SDIR)/.extracted:
@@ -158,7 +155,7 @@ $(GCC_SDIR)/.extracted:
 # make allmodconfig
 # make dep
 # cd ..
-# tar c linux-2.4.29-hf2/include/{acpi,asm,asm-i386,linux,math-emu,net,pcmcia,scsi,video} | bzip2 -9 >kernel-headers-2.4.29-hf2.tar.bz2
+# tar c linux-2.4.29-hf2/include/{acpi,asm,asm-i386,linux,math-emu,net,pcmcia,scsi,video} | bzip2 -9 >kernel-headers-i386-2.4.29-hf2.tar.bz2
 
 kernel-headers: $(KHDR_SDIR)/.patched
 
@@ -167,7 +164,8 @@ $(KHDR_SDIR)/.patched: $(KHDR_SDIR)/.extracted
 
 $(KHDR_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(KHDR).tar.bz2
+	tar -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(TARGET_FAMILY)-$(KHDR).tar.bz2 \
+	  || tar -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(KHDR).tar.bz2
 	touch $@
 
 
@@ -252,13 +250,22 @@ $(GLIBC_SDIR)/.extracted:
 gcc: $(GCC_BDIR)/.installed
 
 $(GCC_BDIR)/.installed: $(GCC_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+	echo "###############  installing 'gcc-cross'  ##################"
 	(cd $(GCC_BDIR) && \
-	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" \
+	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc-cross INSTALL_PROGRAM_ARGS="-s" \
 	    gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
-	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' )
-
+	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version) \
+	        gcc_gxx_include_dir=\$$(libsubdir)/include' )
+	echo "###############  install 'target'  ##################"
+	(cd $(GCC_BDIR) && \
+	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-target INSTALL_PROGRAM_ARGS="-s" \
+	    gcclibdir='$(TOOL_PREFIX)/lib/gcc-lib' \
+	    libdir='$(TOOL_PREFIX)/lib' \
+	    libsubdir='$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' \
+	    gcc_gxx_include_dir='\$$(libsubdir)/include' )
+	echo "###############  end of install  ##################"
 	# we must reset the 'cross_compile' flag, otherwise the path to crt*.o gets stripped !
 	sed '/^\*cross_compile/,/^$$/s/^1/0/' \
 		< $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/specs \
@@ -267,30 +274,42 @@ $(GCC_BDIR)/.installed: $(GCC_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	touch $@
 
 $(GCC_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	cd $(GCC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) \
+	# this is because of bugs in the libstdc++ path configuration
+	( rmdir $(GCC_BDIR)/$(TARGET) && ln -s . $(GCC_BDIR)/$(TARGET) || true ) 2>/dev/null 
+
+	# first, we will only build gcc
+	cd $(GCC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) all-gcc $(MFLAGS) \
 	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
 	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)'
 
-	# As usual, C++ is a pile of shit which does not know where to find its
-	# includes. If C++ is needed, you have to start from the chunks. I'm giving up.
+	# we must reset the 'cross_compile' flag, otherwise the path to crt*.o gets stripped and
+	# components such as libstdc++ cannot be built !
+	sed '/^\*cross_compile/,/^$$/s/^1/0/' < $(GCC_BDIR)/gcc/specs > $(GCC_BDIR)/gcc/specs-
+	mv $(GCC_BDIR)/gcc/specs- $(GCC_BDIR)/gcc/specs
 
-	# cd $(GCC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) all-gcc
-	# cd $(GCC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) -C i386-linux/libio CINCLUDES="-I. -I\$$(srcdir) -I$(ROOT_PREFIX)/include"  CXXINCLUDES="-I. -I\$$(srcdir) -I$(ROOT_PREFIX)/include"
+	# now we can make everything else (libio, libstdc++, ...)
+	cd $(GCC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) \
+	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
+	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
+	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
+	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)'
 	touch $@
+
 
 $(GCC_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC_SDIR)/.patched $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC_BDIR)
 
-	# those directories are important : gcc looks for "limits.h" there to
+	# Those directories are important : gcc looks for "limits.h" there to
 	# know if it must chain to it or impose its own.
-
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/
 	[ -e $(TOOL_PREFIX)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/
 
+	# WARNING! do not enable target-optspace, it corrupts CXX_FLAGS
+	# in mt-frags which break c++ build.
 	(cd $(GCC_BDIR) && CC="$(HOSTCC)" \
 	 PATH=$(TARGET_PATH) $(GCC_SDIR)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
@@ -298,15 +317,8 @@ $(GCC_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC_SDIR)/.patched $(BINUTIL
 	   --enable-shared --disable-__cxa_atexit --with-gnu-ld \
 	   --with-gxx-include-dir=$(TOOL_PREFIX)/target-root/usr/include/c++ \
 	   --libdir=$(TOOL_PREFIX)/target-root/usr/lib \
-	   --enable-languages=c --enable-threads )
+	   --enable-languages=c,c++ --enable-threads )
 	touch $@
-
-	# WARNING! do not enable target-optspace, it corrupts CXX_FLAGS
-	# in mt-frags which break c++ build.
-	#   --enable-target-optspace 
-	#   --libdir=$(TOOL_PREFIX)/target-root/usr/lib \
-	#   --enable-languages=c,c++
-
 
 
 #### dietlibc

@@ -1,0 +1,10 @@
+2005/01/30 18:22  i586@aluminium.exosec.local
+
+	* released squashfs-2.1-r2-flx0.1
+	* updated to remove the gcc-2 build patch
+
+2004/12/12 16:58  root@pcw
+
+	* released squashfs-2.1-flx0.1
+	* first release
+

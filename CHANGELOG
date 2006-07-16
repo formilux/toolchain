@@ -1,3 +1,11 @@
+2005/08/20 : version 0.3.0
+	* gcc now provides working g++ and libstdc++
+	* binutils: updated to 2.16.1
+	* kernel-headers: updated to 2.4.31-wt1
+	* kernel-headers are now arch-dependent
+	* HOST arch/os changed to include 'x' in the middle of the name
+	  in order to always differentiate between host and target.
+
 2005/08/20 : version 0.2.2
 	* Makefile: we now create sys-include everywhere there's an "include"
 	  directory. This missing directory was the cause for gcc not to use

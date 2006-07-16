@@ -1,0 +1,15 @@
+2005/08/11 23:36  willy@wtap
+
+	* released zlib-1.2.3-flx0.1
+	* fixes vulnerability CAN-2005-2096
+	* fixes vulnerability CAN-2004-0797
+
+2005/01/28 10:40  i586@aluminium.exosec.local
+
+	* released zlib-1.2.2-flx0.2
+	* fixed default permissions
+
+2005/01/28 10:34  i586@aluminium.exosec.local
+
+	* released zlib-1.2.2-flx0.1
+
