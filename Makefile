@@ -115,6 +115,10 @@ bootstrap-archive:
 	  | gzip -9 >flx-toolchain-$(TOOLCHAIN).tgz
 	rm -f toolchain-$(TOOLCHAIN)
 
+# easier way to make a bootstrap archive based on git
+git-bootstrap-archive:
+	git tar-tree HEAD toolchain-$(TOOLCHAIN) | gzip -c9 >flx-toolchain-$(TOOLCHAIN).tgz
+
 # build the archive containing the minimal binary tools.
 tool-archive: remove-unneeded
 	# We'll make a fake directory. This is dirty but works.
