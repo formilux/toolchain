@@ -1,0 +1,47 @@
+--- gcc-20011006/gcc/Makefile.in.bad	Sun Feb 20 23:43:50 2005
++++ gcc-20011006/gcc/Makefile.in	Sun Feb 27 10:12:20 2005
+@@ -271,8 +271,9 @@
+ bindir = @bindir@
+ # Directory in which to put the directories used by the compiler.
+ libdir = @libdir@
++gcclibdir = $(libdir)/gcc-lib
+ # Directory in which the compiler finds executables, libraries, etc.
+-libsubdir = $(libdir)/gcc-lib/$(target_alias)/$(version)
++libsubdir = $(gcclibdir)/$(target_alias)/$(version)
+ # Used to produce a relative $(gcc_tooldir) in gcc.o
+ unlibsubdir = ../../..
+ # Directory in which to find other cross-compilation tools and headers.
+@@ -1410,7 +1411,7 @@
+ 
+ DRIVER_DEFINES = \
+   -DSTANDARD_STARTFILE_PREFIX=\"$(libdir)/\" \
+-  -DSTANDARD_EXEC_PREFIX=\"$(libdir)/gcc-lib/\" \
++  -DSTANDARD_EXEC_PREFIX=\"$(gcclibdir)/\" \
+   -DDEFAULT_TARGET_VERSION=\"$(version)\" \
+   -DDEFAULT_TARGET_MACHINE=\"$(target_alias)\" \
+   -DTOOLDIR_BASE_PREFIX=\"$(exec_prefix)/\"
+@@ -2182,9 +2183,9 @@
+ 	if [ "$(SYSTEM_HEADER_DIR)" = "$(tooldir)/sys-include" ] \
+ 	   && [ -d $(tooldir)/sys-include ]; then \
+ 	  if [ -d $(libdir) ] ; then true ; else mkdir $(libdir) ; fi; \
+-	  if [ -d $(libdir)/gcc-lib ] ; then true ; else mkdir $(libdir)/gcc-lib; fi; \
+-	  if [ -d $(libdir)/gcc-lib/$(target_alias) ] ; then true ; else mkdir $(libdir)/gcc-lib/$(target_alias) ; fi; \
+-	  if [ -d $(libdir)/gcc-lib/$(target_alias)/$(version) ] ; then true ; else mkdir $(libdir)/gcc-lib/$(target_alias)/$(version) ; fi; \
++	  if [ -d $(gcclibdir) ] ; then true ; else mkdir $(gcclibdir); fi; \
++	  if [ -d $(gcclibdir)/$(target_alias) ] ; then true ; else mkdir $(gcclibdir)/$(target_alias) ; fi; \
++	  if [ -d $(gcclibdir)/$(target_alias)/$(version) ] ; then true ; else mkdir $(gcclibdir)/$(target_alias)/$(version) ; fi; \
+ 	else true; fi
+ 
+ 	touch stmp-fixinc
+@@ -2485,9 +2486,9 @@
+ 	-if [ -d $(prefix) ] ; then true ; else mkdir $(prefix) ; chmod a+rx $(prefix) ; fi
+ 	-if [ -d $(exec_prefix) ] ; then true ; else mkdir $(exec_prefix) ; chmod a+rx $(exec_prefix) ; fi
+ 	-if [ -d $(libdir) ] ; then true ; else mkdir $(libdir) ; chmod a+rx $(libdir) ; fi
+-	-if [ -d $(libdir)/gcc-lib ] ; then true ; else mkdir $(libdir)/gcc-lib ; chmod a+rx $(libdir)/gcc-lib ; fi
++	-if [ -d $(gcclibdir) ] ; then true ; else mkdir $(gcclibdir) ; chmod a+rx $(gcclibdir) ; fi
+ # This dir isn't currently searched by cpp.
+-#	-if [ -d $(libdir)/gcc-lib/include ] ; then true ; else mkdir $(libdir)/gcc-lib/include ; chmod a+rx $(libdir)/gcc-lib/include ; fi
++#	-if [ -d $(gcclibdir)/include ] ; then true ; else mkdir $(gcclibdir)/include ; chmod a+rx $(gcclibdir)/include ; fi
+ 	-fdir= ; for dir in `echo $(libsubdir) | tr '/' ' '`; do \
+ 	  fdir=$${fdir}/$${dir}; \
+ 	  if [ -d $${fdir} ] ; then true ; else mkdir $${fdir}; chmod a+rx $${fdir}; fi ; \

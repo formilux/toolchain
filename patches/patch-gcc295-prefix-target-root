@@ -1,0 +1,11 @@
+--- gcc-20011006/gcc/prefix.c.orig	Wed Feb 23 00:01:20 2005
++++ gcc-20011006/gcc/prefix.c	Wed Feb 23 00:03:14 2005
+@@ -70,7 +70,7 @@
+ #endif
+ #include "prefix.h"
+ 
+-static const char *std_prefix = PREFIX;
++static const char *std_prefix = PREFIX "/target-root";
+ 
+ static const char *get_key_value	PROTO((char *));
+ static const char *translate_name	PROTO((const char *));
