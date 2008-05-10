@@ -3,7 +3,7 @@ export LD_LIBRARY_PATH
 
 # those are only used to build a package
 # WARNING! do not supply a leading '/' to the directory
-TOOLCHAIN     := 0.4.2
+TOOLCHAIN     := 0.4.3
 TOOLCHAIN_DIR := var/flx-toolchain
 
 TOP           := $(PWD)
@@ -28,7 +28,7 @@ GCC           := 20011006
 GCC_SUFFIX    := 2.95
 KHDR          := 2.4.32-wt8
 DIETLIBC      := 0.30
-UCLIBC        := 0.9.28
+UCLIBC        := 0.9.28.3
 
 # Additionnal GCC versions. Those which will be build are defined by the
 # 'GCCVERSIONS' variable below.
@@ -363,6 +363,7 @@ $(GLIBC_HDIR)/.configured: $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(
 	touch $@
 
 $(GLIBC_SDIR)/.patched: $(GLIBC_SDIR)/.extracted
+	patch -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.3.2-csu-Makefile.patch
 	touch $@
 
 $(GLIBC_SDIR)/.extracted:
@@ -533,8 +534,9 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
 	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
+	   --enable-symvers=gnu --enable-c99 --enable-long-long \
 	   --with-sysroot=$(SYS_ROOT) \
-	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
+	   --with-local-prefix=$(SYS_ROOT) \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC33_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
@@ -597,8 +599,9 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BIN
 	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
 	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
+	   --enable-symvers=gnu --enable-c99 --enable-long-long \
 	   --with-sysroot=$(SYS_ROOT) \
-	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
+	   --with-local-prefix=$(SYS_ROOT) \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC34_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
@@ -659,8 +662,9 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BIN
 	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
 	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
 	   --enable-version-specific-runtime-libs --enable-threads \
+	   --enable-symvers=gnu --enable-c99 --enable-long-long \
 	   --with-sysroot=$(SYS_ROOT) \
-	   --with-gxx-include-dir=$(SYS_ROOT)/usr/include/c++ \
+	   --with-local-prefix=$(SYS_ROOT) \
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC41_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))

@@ -9,11 +9,11 @@
      or extract it from http://www.fr.kernel.org/pub/linux/libs/uclibc/buildroot-0.9.27.tar.bz2
 
 Optional :
-   - dietlibc-0.29.tar.bz2            : http://www.fr.kernel.org/pub/linux/libs/dietlibc/dietlibc-0.29.tar.bz2
-   - uClibc-0.9.28.tar.bz2            : http://www.fr.kernel.org/pub/linux/libs/uclibc/uClibc-0.9.28.tar.bz2
+   - dietlibc-0.30.tar.bz2            : http://www.fr.kernel.org/pub/linux/libs/dietlibc/dietlibc-0.30.tar.bz2
+   - uClibc-0.9.28.3.tar.bz2          : http://www.fr.kernel.org/pub/linux/libs/uclibc/uClibc-0.9.28.3.tar.bz2
 
 
-You can also get gcc-3.3.6, gcc-3.4.6, gcc-4.1.1 and uclibc-0.9.28, which are
+You can also get gcc-3.3.6, gcc-3.4.6, gcc-4.1.1 and uclibc-0.9.29, which are
 covered by this makefile. If some files are not in .bz2, either recompress them
 or change the makefile.
 
