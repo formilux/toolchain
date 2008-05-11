@@ -3,7 +3,7 @@ export LD_LIBRARY_PATH
 
 # those are only used to build a package
 # WARNING! do not supply a leading '/' to the directory
-TOOLCHAIN     := 0.4.3
+TOOLCHAIN     := 0.5.0
 TOOLCHAIN_DIR := var/flx-toolchain
 
 TOP           := $(PWD)
@@ -39,7 +39,7 @@ UCLIBC        := 0.9.28.3
 GCC29         := 20011006
 GCC33         := 3.3.6
 GCC34         := 3.4.6
-GCC41         := 4.1.1
+GCC41         := 4.1.2
 
 BUILDDIR      := $(TOP)/$(TARGET)/build-$(HOST)
 TOOLDIR       := $(TOP)/$(TARGET)/tool-$(HOST)
@@ -95,7 +95,7 @@ MPFLAGS       := -j 2
 help:
 	@echo
 	@echo "This Makefile supports the following targets :"
-	@echo "   - all: dietlibc uclibc $(GCCVERSIONS) default_gcc($(GCCDEFAULT))"
+	@echo "   - all: dietlibc uclibc glibc $(GCCVERSIONS) default_gcc[$(GCCDEFAULT)]"
 	@echo "   - binutils gcc-libc $(GCCVERSIONS)"
 	@echo "   - default_gcc29 default_gcc33 default_gcc34 default_gcc41"
 	@echo "   - glibc dietlibc uclibc"
@@ -108,7 +108,8 @@ help:
 	@echo "Notes:"
 	@echo "   - GCC versions may be changed with GCCVERSIONS=\"gccXX ...\""
 	@echo "   - default GCC version is the first of the list (or GCCDEFAULT)"
-	@echo "   - parallel build may be changed with MPFLAGS=\"-jXX\" ($(MPFLAGS))"
+	@echo "   - parallel build may be changed with MPFLAGS=\"-jXX\""
+	@echo "   - using TARGET=$(TARGET) HOST=$(HOST) MPFLAGS=\"$(MPFLAGS)\""
 	@echo
 
 # There are files which are not necessary to build anything, and if needed, they
@@ -400,38 +401,19 @@ $(GLIBC_SDIR)/.extracted:
 #### We also want to set a default GCC. For this, pick one of
 #### "default_gcc29", "default_gcc33", "default_gcc34", "default_gcc41"
 
-default_gcc: $(BUILDDIR)/.default_gcc
-$(BUILDDIR)/.default_gcc: default_$(GCCDEFAULT)
-
-default_gcc29: $(GCC29_BDIR)/.installed
-	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
-	    ln -snf $(TARGET)-$$i-$(GCC29_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
-	echo $@ > $(BUILDDIR)/.default_gcc
-
-default_gcc33: $(GCC33_BDIR)/.installed
-	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    ln -snf $(TARGET)-$$i-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
-	echo $@ > $(BUILDDIR)/.default_gcc
-
-default_gcc34: $(GCC34_BDIR)/.installed
-	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    ln -snf $(TARGET)-$$i-$(GCC34_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
-	echo $@ > $(BUILDDIR)/.default_gcc
-
-default_gcc41: $(GCC41_BDIR)/.installed
-	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    ln -snf $(TARGET)-$$i-$(GCC41_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
-	echo $@ > $(BUILDDIR)/.default_gcc
-
+default_gcc: default_$(GCCDEFAULT)
 
 #### full GCC 2.95
 
-gcc29: $(GCC29_BDIR)/.installed
+default_gcc29: $(GCC29_BDIR)/.default_gcc
+$(GCC29_BDIR)/.default_gcc: $(GCC29_BDIR)/.installed
+	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
+	    ln -snf $(TARGET)-$$i-$(GCC29_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	done
+	echo $@ > $(GCC29_BDIR)/.default_gcc
 
+
+gcc29: $(GCC29_BDIR)/.installed
 $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	echo "###############  installing 'gcc-cross'  ##################"
 	(cd $(GCC29_BDIR) && \
@@ -540,8 +522,15 @@ GCC33_ADDONS = AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
                NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
                RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
-gcc33: $(GCC33_BDIR)/.installed
+default_gcc33: $(GCC33_BDIR)/.default_gcc
+$(GCC33_BDIR)/.default_gcc: $(GCC33_BDIR)/.installed
+	for i in gcov gccbug g++ c++ gcc cpp; do \
+	    ln -snf $(TARGET)-$$i-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	done
+	echo $@ > $(GCC33_BDIR)/.default_gcc
 
+
+gcc33: $(GCC33_BDIR)/.installed
 $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	# we must protect older gcc binaries from removal
 	for i in gcov gccbug g++ c++ gcc cpp; do \
@@ -569,6 +558,7 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	done
 
 	touch $@
+
 
 $(GCC33_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC33_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC33_BDIR) && \
@@ -624,8 +614,15 @@ GCC34_ADDONS = AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
                NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
                RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
-gcc34: $(GCC34_BDIR)/.installed
+default_gcc34: $(GCC34_BDIR)/.default_gcc
+$(GCC34_BDIR)/.default_gcc: $(GCC34_BDIR)/.installed
+	for i in gcov gccbug g++ c++ gcc cpp; do \
+	    ln -snf $(TARGET)-$$i-$(GCC34_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	done
+	echo $@ > $(GCC34_BDIR)/.default_gcc
 
+
+gcc34: $(GCC34_BDIR)/.installed
 $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
 	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM='$${INSTALL} -s' $(GCC34_ADDONS)
@@ -687,8 +684,16 @@ GCC41_ADDONS = AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
                NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
                RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
-gcc41: $(GCC41_BDIR)/.installed
 
+default_gcc41: $(GCC41_BDIR)/.default_gcc
+$(GCC41_BDIR)/.default_gcc: $(GCC41_BDIR)/.installed
+	for i in gcov gccbug g++ c++ gcc cpp; do \
+	    ln -snf $(TARGET)-$$i-$(GCC41_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	done
+	echo $@ > $(GCC41_BDIR)/.default_gcc
+
+
+gcc41: $(GCC41_BDIR)/.installed
 $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
 	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC41_ADDONS)
@@ -751,7 +756,7 @@ $(DIETLIBC_BDIR)/.installed: $(DIETLIBC_BDIR)/.compiled
 	   $(MAKE) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
 
-$(DIETLIBC_BDIR)/.compiled: $(BUILDDIR)/.default_gcc $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(DIETLIBC_BDIR)/.compiled: default_gcc $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
 	cd $(DIETLIBC_BDIR) && PATH=$(TARGET_PATH) \
 	   $(MAKE) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
@@ -783,7 +788,7 @@ $(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
 	chmod 755 $(TOOL_PREFIX)/bin/uclibc
 	touch $@
 
-$(UCLIBC_BDIR)/.compiled: $(BUILDDIR)/.default_gcc $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(UCLIBC_BDIR)/.compiled: default_gcc $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) clean
 
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \

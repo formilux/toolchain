@@ -1,3 +1,16 @@
+2008/05/11 : version 0.5.0
+	* support for a default compiler
+	* upgraded to gcc-4.1.2 for 4.1 branch
+	* major makefile cleanup
+	* makefile provides help by default
+
+2008/05/10 : version 0.4.3
+	* added --with-local-prefix to build g++
+	* removed --with-gxx-include-dir
+	* added --enable-symvers=gnu --enable-c99 --enable-long-long
+	* updated uclibc to 0.9.28.3.
+	* g++ now builds binaries (at least in version 3.4)
+
 2006/07/17 : version 0.4.2
 	* removed --with-headers and --with-libs in gcc to prevent it from
           copying libraries and headers at wrong places
