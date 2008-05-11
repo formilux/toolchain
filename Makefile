@@ -22,6 +22,9 @@ TARGET_CPU    := i586
 TARGET_ARCH   := i386
 TARGET        := $(TARGET_CPU)-linux
 
+GCCVERSIONS   := gcc29 gcc33 gcc34 gcc41
+GCCDEFAULT    := $(word 1,$(GCCVERSIONS))
+
 GLIBC         := 2.2.5
 BINUTILS      := 2.16.1
 KHDR          := 2.4.32-wt8
@@ -38,8 +41,6 @@ GCC33         := 3.3.6
 GCC34         := 3.4.6
 GCC41         := 4.1.1
 
-GCCVERSIONS   := gcc29 gcc33 gcc34 gcc41
-
 BUILDDIR      := $(TOP)/$(TARGET)/build-$(HOST)
 TOOLDIR       := $(TOP)/$(TARGET)/tool-$(HOST)
 ROOTDIR       := $(TOP)/$(TARGET)/root
@@ -52,7 +53,8 @@ CROSSPFX      := $(TARGET)-
 BINUTILS_SDIR := $(SOURCE)/binutils-$(BINUTILS)
 BINUTILS_BDIR := $(BUILDDIR)/binutils-$(BINUTILS)
 
-# the gcc used for building glibc.
+# The gcc used for building glibc. The resulting executable will eventually
+# be overwritten, so we can use the same suffix as the original one.
 GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC29)
 GCCLC_SUFFIX  := 2.95
 
@@ -90,20 +92,12 @@ MPFLAGS       := -j 2
 
 ################# end of configuration ##############
 
-# There are files which are not necessary to build anything, and if needed, they
-# should be extracted from their respective compiled packages. They don't have
-# their place in the toolchain, so we'll remove them.
-all: dietlibc uclibc $(GCCVERSIONS)
-	rm -rf $(TOOL_PREFIX)/{man,info} $(TOOLDIR)/diet/man
-	rm -rf $(ROOT_PREFIX)/{bin,info,lib/gconv,sbin,share}
-
-all-noclean: dietlibc uclibc $(TOP)/$(TARGET)/pool $(GCCVERSIONS)
-
 help:
 	@echo
-	@echo "This makefile supports the following targets :"
-	@echo "   - all (dietlibc uclibc $(GCCVERSIONS))"
+	@echo "This Makefile supports the following targets :"
+	@echo "   - all: dietlibc uclibc $(GCCVERSIONS) default_gcc($(GCCDEFAULT))"
 	@echo "   - binutils gcc-libc $(GCCVERSIONS)"
+	@echo "   - default_gcc29 default_gcc33 default_gcc34 default_gcc41"
 	@echo "   - glibc dietlibc uclibc"
 	@echo "   - kernel-headers glibc-headers"
 	@echo "   - install"
@@ -111,6 +105,20 @@ help:
 	@echo "   - bootstrap-archive git-bootstrap-archive"
 	@echo "   - tool-archive root-archive"
 	@echo
+	@echo "Notes:"
+	@echo "   - GCC versions may be changed with GCCVERSIONS=\"gccXX ...\""
+	@echo "   - default GCC version is the first of the list (or GCCDEFAULT)"
+	@echo "   - parallel build may be changed with MPFLAGS=\"-jXX\" ($(MPFLAGS))"
+	@echo
+
+# There are files which are not necessary to build anything, and if needed, they
+# should be extracted from their respective compiled packages. They don't have
+# their place in the toolchain, so we'll remove them.
+all: dietlibc uclibc glibc $(GCCVERSIONS) default_$(GCCDEFAULT)
+	rm -rf $(TOOL_PREFIX)/{man,info} $(TOOLDIR)/diet/man
+	rm -rf $(ROOT_PREFIX)/{bin,info,lib/gconv,sbin,share}
+
+all-noclean: dietlibc uclibc glibc $(TOP)/$(TARGET)/pool $(GCCVERSIONS)
 
 # finishes the installation.
 # "make space" may also be issued to regain all wasted space
@@ -389,7 +397,38 @@ $(GLIBC_SDIR)/.extracted:
 	tar -C $(GLIBC_SDIR) -jxf $(DOWNLOAD)/glibc-linuxthreads-$(GLIBC).tar.bz2
 	touch $@
 
-#### full GCC
+#### We also want to set a default GCC. For this, pick one of
+#### "default_gcc29", "default_gcc33", "default_gcc34", "default_gcc41"
+
+default_gcc: $(BUILDDIR)/.default_gcc
+$(BUILDDIR)/.default_gcc: default_$(GCCDEFAULT)
+
+default_gcc29: $(GCC29_BDIR)/.installed
+	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
+	    ln -snf $(TARGET)-$$i-$(GCC29_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	done
+	echo $@ > $(BUILDDIR)/.default_gcc
+
+default_gcc33: $(GCC33_BDIR)/.installed
+	for i in gcov gccbug g++ c++ gcc cpp; do \
+	    ln -snf $(TARGET)-$$i-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	done
+	echo $@ > $(BUILDDIR)/.default_gcc
+
+default_gcc34: $(GCC34_BDIR)/.installed
+	for i in gcov gccbug g++ c++ gcc cpp; do \
+	    ln -snf $(TARGET)-$$i-$(GCC34_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	done
+	echo $@ > $(BUILDDIR)/.default_gcc
+
+default_gcc41: $(GCC41_BDIR)/.installed
+	for i in gcov gccbug g++ c++ gcc cpp; do \
+	    ln -snf $(TARGET)-$$i-$(GCC41_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	done
+	echo $@ > $(BUILDDIR)/.default_gcc
+
+
+#### full GCC 2.95
 
 gcc29: $(GCC29_BDIR)/.installed
 
@@ -436,8 +475,7 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 	# we must protect the gcc binaries from removal	by newer gcc versions
 	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
-	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_SUFFIX) && \
-	    ln -s $(TARGET)-$$i-$(GCC29_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
+	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_SUFFIX) || true; \
 	done
 
 	touch $@
@@ -478,7 +516,8 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BIN
 	[ -e $(TOOL_PREFIX)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/
 
 	# WARNING! do not enable target-optspace, it corrupts CXX_FLAGS
-	# in mt-frags which break c++ build.
+	# in mt-frags which break c++ build. Also, we cannot use program-suffix
+	# because it applies it to binutils too!
 	(cd $(GCC29_BDIR) && CC="$(HOSTCC)" \
 	 PATH=$(TARGET_PATH) $(GCC29_SDIR)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
@@ -503,7 +542,7 @@ GCC33_ADDONS = AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
 
 gcc33: $(GCC33_BDIR)/.installed
 
-$(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed $(GCC29_BDIR)/.installed
+$(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	# we must protect older gcc binaries from removal
 	for i in gcov gccbug g++ c++ gcc cpp; do \
 	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i" ] && \
@@ -516,7 +555,8 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed $(
 	# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC33)
 
-	# now we set the version on the binaries
+	# now we set the version on the binaries, because make install
+	# does not do it in gcc-3.3.
 	for i in gcov gccbug g++ c++ gcc cpp; do \
 	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i" ] && \
 	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC33_SUFFIX) || true; \
@@ -711,7 +751,7 @@ $(DIETLIBC_BDIR)/.installed: $(DIETLIBC_BDIR)/.compiled
 	   $(MAKE) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
 
-$(DIETLIBC_BDIR)/.compiled: $(GCC29_BDIR)/.installed $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(DIETLIBC_BDIR)/.compiled: $(BUILDDIR)/.default_gcc $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
 	cd $(DIETLIBC_BDIR) && PATH=$(TARGET_PATH) \
 	   $(MAKE) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
@@ -743,7 +783,7 @@ $(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
 	chmod 755 $(TOOL_PREFIX)/bin/uclibc
 	touch $@
 
-$(UCLIBC_BDIR)/.compiled: $(GCC29_BDIR)/.installed $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(UCLIBC_BDIR)/.compiled: $(BUILDDIR)/.default_gcc $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) clean
 
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
