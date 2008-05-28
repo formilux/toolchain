@@ -280,7 +280,8 @@ $(GCCLC_BDIR)/.configured: $(GCC29_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC
 
 $(GCC29_SDIR)/.patched: $(GCC29_SDIR)/.extracted
 	@# Patches from Erik Andersen to fix known bugs in gcc-2.95
-	bzcat $(DOWNLOAD)/gcc2.95-mega.patch.bz2 | patch -p1 -d $(GCC29_SDIR)
+	[ -s "$(DOWNLOAD)/gcc2.95-mega.patch.bz2" ] && \
+		bzcat $(DOWNLOAD)/gcc2.95-mega.patch.bz2 | patch -p1 -d $(GCC29_SDIR)
 
 	@# Patch to allow gcc-2.95 to build on gcc-3
 	bzcat $(PATCHES)/gcc-2.95-gcc3-compfix.diff.bz2 | patch -p1 -d $(GCC29_SDIR)
