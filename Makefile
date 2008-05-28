@@ -1,26 +1,30 @@
 LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
-# those are only used to build a package
-# WARNING! do not supply a leading '/' to the directory
-TOOLCHAIN     := 0.5.0
-TOOLCHAIN_DIR := var/flx-toolchain
-
-TOP           := $(PWD)
-DOWNLOAD      := $(TOP)/download
-PATCHES       := $(TOP)/patches
-SOURCE        := $(TOP)/source
+# version is used only for packaging
+TOOLCHAIN     := 0.5.1
 
 # WARNING! for GCC and binutils to detect cross-compilation,
 # HOST and TARGET must be different. Inserting 'host' between
 # the CPU and OS field is enough.
-#
+
 HOST          := i686-host-linux
 HOSTCC        := gcc
 
 TARGET_CPU    := i586
 TARGET_ARCH   := i386
-TARGET        := $(TARGET_CPU)-linux
+TARGET        := $(TARGET_CPU)-flx-linux
+
+# It is generally not needed to change this
+TOP           := $(PWD)
+PATCHES       := $(TOP)/patches
+DOWNLOAD      := $(TOP)/download
+SOURCE        := $(TOP)/source
+BUILD         := $(TOP)/build
+
+# Result will be installed in $(INSTALLDIR)/$(TARGET). This is the definitive
+# installation directory. It must be accessible during.
+INSTALLDIR    := $(TOP)
 
 GCCVERSIONS   := gcc29 gcc33 gcc34 gcc41
 GCCDEFAULT    := $(word 1,$(GCCVERSIONS))
@@ -41,14 +45,19 @@ GCC33         := 3.3.6
 GCC34         := 3.4.6
 GCC41         := 4.1.2
 
-BUILDDIR      := $(TOP)/$(TARGET)/build-$(HOST)
-TOOLDIR       := $(TOP)/$(TARGET)/tool-$(HOST)
-ROOTDIR       := $(TOP)/$(TARGET)/root
+# Everything under TARGETDIR must remain together
+TARGETDIR     := $(INSTALLDIR)/$(TARGET)
+TOOLDIR       := $(TARGETDIR)/tool-$(HOST)
+ROOTDIR       := $(TARGETDIR)/root
+POOLDIR       := $(TARGETDIR)/pool
 TOOL_PREFIX   := $(TOOLDIR)/usr
 ROOT_PREFIX   := $(ROOTDIR)/usr
 SYS_ROOT      := $(TOOL_PREFIX)/target-root
 TARGET_PATH   := $(TOOL_PREFIX)/bin:$(PATH)
 CROSSPFX      := $(TARGET)-
+
+# no need to change this, it will be easier to clean it up
+BUILDDIR      := $(BUILD)/$(TARGET)/$(HOST)
 
 BINUTILS_SDIR := $(SOURCE)/binutils-$(BINUTILS)
 BINUTILS_BDIR := $(BUILDDIR)/binutils-$(BINUTILS)
@@ -110,6 +119,7 @@ help:
 	@echo "   - default GCC version is the first of the list (or GCCDEFAULT)"
 	@echo "   - parallel build may be changed with MPFLAGS=\"-jXX\""
 	@echo "   - using TARGET=$(TARGET) HOST=$(HOST) MPFLAGS=\"$(MPFLAGS)\""
+	@echo "   - installing under INSTALLDIR=$(INSTALLDIR)"
 	@echo
 
 # There are files which are not necessary to build anything, and if needed, they
@@ -119,11 +129,11 @@ all: dietlibc uclibc glibc $(GCCVERSIONS) default_$(GCCDEFAULT)
 	rm -rf $(TOOL_PREFIX)/{man,info} $(TOOLDIR)/diet/man
 	rm -rf $(ROOT_PREFIX)/{bin,info,lib/gconv,sbin,share}
 
-all-noclean: dietlibc uclibc glibc $(TOP)/$(TARGET)/pool $(GCCVERSIONS)
+all-noclean: dietlibc uclibc glibc $(POOLDIR) $(GCCVERSIONS)
 
 # finishes the installation.
 # "make space" may also be issued to regain all wasted space
-install: $(TOP)/$(TARGET)/pool remove-unneeded
+install: $(POOLDIR) remove-unneeded
 
 # can be called after all-noclean if needed
 remove-unneeded:
@@ -132,12 +142,13 @@ remove-unneeded:
 
 # remove everything that's not absolutely necessary
 space: remove-unneeded
-	rm -rf $(BUILDDIR) $(SOURCE)
+	rm -rf $(BUILD)
+	rm -rf $(SOURCE)
 
 # make a bootstrap archive
 bootstrap-archive:
 	ln -s . toolchain-$(TOOLCHAIN)
-	tar cf - toolchain-$(TOOLCHAIN)/{CHANGELOG,HOWTO.txt,Makefile,patches} \
+	tar cf - toolchain-$(TOOLCHAIN)/{CHANGELOG,HOWTO.txt,Makefile,patches,tools} \
 	         toolchain-$(TOOLCHAIN)/tests/{FLXPKG,README.txt,*/.flxpkg} \
 	  | gzip -9 >flx-toolchain-$(TOOLCHAIN).tgz
 	rm -f toolchain-$(TOOLCHAIN)
@@ -148,32 +159,24 @@ git-bootstrap-archive:
 
 # build the archive containing the minimal binary tools.
 tool-archive: remove-unneeded
-	# We'll make a fake directory. This is dirty but works.
-	mkdir -p .tmp/$(TOOLCHAIN_DIR)
-	rmdir .tmp/$(TOOLCHAIN_DIR)
-	ln -s $(TOP) .tmp/$(TOOLCHAIN_DIR)
-	tar -C .tmp -cf - $(TOOLCHAIN_DIR)/$(TARGET)/tool-$(HOST) \
+	tar -cf - $(TARGETDIR)/tool-$(HOST) \
 	  | bzip2 -9 >flx-toolchain-$(TOOLCHAIN)-tool-$(HOST)_$(TARGET).tbz
-	rm -rf .tmp
 
 # build the archive containing the minimal binary root files.
-root-archive: remove-unneeded $(TOP)/$(TARGET)/pool
-	# We'll make a fake directory. This is dirty but works.
-	mkdir -p .tmp/$(TOOLCHAIN_DIR)
-	rmdir .tmp/$(TOOLCHAIN_DIR)
-	ln -s $(TOP) .tmp/$(TOOLCHAIN_DIR)
-	tar -C .tmp -cf - $(TOOLCHAIN_DIR)/$(TARGET)/root $(TOOLCHAIN_DIR)/$(TARGET)/pool \
+root-archive: remove-unneeded $(POOLDIR)
+	tar -cf - $(TARGETDIR)/root $(TARGETDIR)/pool \
 	  | bzip2 -9 >flx-toolchain-$(TOOLCHAIN)-root-$(TARGET).tbz
-	rm -rf .tmp
 
 # moves root directory to turn it into a link to a group of profiles
-$(TOP)/$(TARGET)/pool:
+$(POOLDIR):
 	mkdir -p $@/{groups,individual}
-	cp -al $(TOP)/$(TARGET)/root $@/groups/std-group-0
+	cp -al $(ROOTDIR) $@/groups/std-group-0
 	echo "base-toolchain-$(TOOLCHAIN)" > $@/groups/std-group-0.txt
-	mv $(TOP)/$(TARGET)/root $@/base-toolchain-$(TOOLCHAIN)
-	ln -s pool/groups/std-group-0 $(TOP)/$(TARGET)/root
-
+	mv $(ROOTDIR) $@/base-toolchain-$(TOOLCHAIN)
+	ln -s std-group-0 $@/groups/CURRENT
+	ln -s pool/groups/CURRENT $(ROOTDIR)
+	cp $(TOP)/tools/list-to-tgz.sh $@/groups/
+	cp $(TOP)/tools/list-to-pkgdir.sh $@/groups/
 
 ################# start of build system ##############
 

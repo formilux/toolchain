@@ -1,3 +1,9 @@
+2008/05/28 : version 0.5.1
+	* support for the INSTALLDIR variable for easier install and cleanup
+	* added the root->CURRENT->std-group-0 links
+	* added list-to-pkgdir and list-to-tgz in pool/groups
+	* changed target name from i586-linux to i586-flx-linux
+
 2008/05/11 : version 0.5.0
 	* support for a default compiler
 	* upgraded to gcc-4.1.2 for 4.1 branch
