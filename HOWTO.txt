@@ -1,4 +1,13 @@
-##### Compiling the formilux toolchain v0.5.2 #####
+##### Compiling the formilux toolchain v0.5.3 #####
+
+0) Quick starter for those who don't want to read the doc. Here's how
+   I'm used to build the whole toolchain at once :
+
+$ time make INSTALLDIR=/build/toolchain-0.5.3 \
+  MPFLAGS="-j6" GCCVERSIONS="gcc34 gcc29 gcc33 gcc41" \
+  all install space tool-archive root-archive \
+  2>&1 |tee build.log ; echo $?
+
 
 1) get the following files and put them together in a directory (symlinks are
    also supported) :
@@ -24,12 +33,12 @@ makefile.
    http://www.uclibc.org/downloads/toolchain/kernel-headers-2.4.25.tar.bz2
 
 3) cd to an empty directory with at least 780 MB free, or 2 GB if all 4
-   compilers will be built. Untar 'flx-toolchain-0.5.2.tgz' there, and run
+   compilers will be built. Untar 'flx-toolchain-0.5.3.tgz' there, and run
    "make help" from this new directory to get used to the make variables :
 
 $ cd $freespace
-$ tar zxf $somedir/flx-toolchain-0.5.2.tgz
-$ cd toolchain-0.5.2
+$ tar zxf $somedir/flx-toolchain-0.5.3.tgz
+$ cd toolchain-0.5.3
 $ make help
 
 4) create a symlink named 'download' pointing to the directory where you put all the
@@ -42,8 +51,16 @@ $ ln -s $download_dir download
    reasonnable limit based on your number of CPUs and available memory.
    Recommended values are between nCPU+1 and 2*nCPU. Check that the default
    variables suit your expectations, particularly for INSTALLDIR and
-   GCCVERSIONS. Note that the default compiler (the one with the "gcc" suffix)
-   will be the first one specified in GCCVERSIONS.
+   GCCVERSIONS. INSTALLDIR must be an absolute path if specified. It defaults
+   to a subdirectory of the current directory. This is the only location the
+   tools will run from, so if the resulting toolchain is intended to be
+   portable, care must be taken when chosing the directory. About 290 MB will
+   be needed in that directory (in addition to the 2 GB of the current one).
+
+   GCCVERSIONS may be initialized to the list of compilers to build. Please
+   note that the default compiler set by "make default_gcc" (implied by "all")
+   will be the first one specified in GCCVERSIONS. It is the compiler which
+   will be linked to the canonical names ("gcc", ...).
 
    Then run "make all", and redirect its output to a file which will save you
    hours if something goes wrong. Echoing the command result is a quick way to
@@ -53,26 +70,31 @@ $ time make all >build.log 2>&1 ; echo $?
 or
 $ make HOST=i686-linux TARGET=i586-linux all >build.log 2>&1
 or
-$ make INSTALLDIR=/build/toolchain-0.5.2 GCCVERSIONS="gcc34 gcc29 gcc41" all
+$ make INSTALLDIR=/build/toolchain-0.5.3 GCCVERSIONS="gcc34 gcc29 gcc41" all
 
 It is then recommended to run "make install" with the same variables. This
 will prepare the root directory for easier upgrades :
 
-$ make INSTALLDIR=/build/toolchain-0.5.2 install
+$ make INSTALLDIR=/build/toolchain-0.5.3 install
 
 This also works on non-x86 hosts, validated on Sparc64 (except perhaps for the
 dietlibc stuff). Note: HOST and TARGET *MUST* be different, otherwise gcc will
 not detect that it must configure a cross-compiler. This is the reason why by
 default, HOST is set to i686-host-linux and TARGET is set to i586-flx-linux.
 
+At the end of installation, it is possible to run "make space" to remove
+previously extracted sources, and "make tool-archive root-archive" to
+create an archive of the tools and root respectively. If INSTALLDIR was
+specified during build, it is still necessary here of course.
+
 
 ### using the toolchain ###
 
 Once the new toolchain is complete, assuming we run HOST=i686-host-linux and
-TARGET=i586-flx-linux and INSTALLDIR=/build/toolchain-0.5.2 :
+TARGET=i586-flx-linux and INSTALLDIR=/build/toolchain-0.5.3 :
 
-$ export FLXROOTDIR=/build/toolchain-0.5.2/i586-flx-linux/root
-$ export FLXTOOLDIR=/build/toolchain-0.5.2/i586-flx-linux/tool-i686-host-linux
+$ export FLXROOTDIR=/build/toolchain-0.5.3/i586-flx-linux/root
+$ export FLXTOOLDIR=/build/toolchain-0.5.3/i586-flx-linux/tool-i686-host-linux
 $ export PATH=$FLXTOOLDIR/usr/bin:$PATH
 $ export FLXCROSS=i586-flx-linux-
 
@@ -135,7 +157,7 @@ instead of overwriting them. It is highly recommended to add the names of the
 added packages to the a file holding the same name as the directory, suffixed
 with ".txt" :
 
-$ ls -l /build/toolchain-0.5.2/i586-flx-linux/pool/groups/
+$ ls -l /build/toolchain-0.5.3/i586-flx-linux/pool/groups/
 total 16
 drwxr-sr-x  4 willy distrib 145 2008-05-27 17:56 ./
 drwxr-sr-x  5 willy distrib  63 2008-05-11 10:07 ../
@@ -158,8 +180,8 @@ intact to always keep a genuine image of the root directory.
 
 PKG automatically combines FLXCROSS and {CC,CXX,...} to build the tool names.
 
-$ export FLXTOOLDIR=/build/toolchain-0.5.2/i586-flx-linux/tool-i686-host-linux
-$ export FLXROOTDIR=/build/toolchain-0.5.2/i586-flx-linux/root
+$ export FLXTOOLDIR=/build/toolchain-0.5.3/i586-flx-linux/tool-i686-host-linux
+$ export FLXROOTDIR=/build/toolchain-0.5.3/i586-flx-linux/root
 $ export PATH=$FLXTOOLDIR/usr/bin:$PATH
 $ export FLXCROSS=i586-flx-linux-
 
