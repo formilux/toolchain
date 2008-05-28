@@ -2,7 +2,7 @@ LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
 # version is used only for packaging
-TOOLCHAIN     := 0.5.1
+TOOLCHAIN     := 0.5.2
 
 # WARNING! for GCC and binutils to detect cross-compilation,
 # HOST and TARGET must be different. Inserting 'host' between
