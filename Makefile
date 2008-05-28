@@ -32,7 +32,7 @@ GCCDEFAULT    := $(word 1,$(GCCVERSIONS))
 GLIBC         := 2.2.5
 BINUTILS      := 2.16.1
 KHDR          := 2.4.32-wt8
-DIETLIBC      := 0.30
+DIETLIBC      := 0.31
 UCLIBC        := 0.9.29
 
 # Additionnal GCC versions. Those which will be build are defined by the
