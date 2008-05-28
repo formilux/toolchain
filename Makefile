@@ -33,7 +33,7 @@ GLIBC         := 2.2.5
 BINUTILS      := 2.16.1
 KHDR          := 2.4.32-wt8
 DIETLIBC      := 0.30
-UCLIBC        := 0.9.28.3
+UCLIBC        := 0.9.29
 
 # Additionnal GCC versions. Those which will be build are defined by the
 # 'GCCVERSIONS' variable below. The version indicated here is the suffix
@@ -785,7 +785,7 @@ $(DIETLIBC_SDIR)/.extracted:
 uclibc: $(UCLIBC_BDIR)/.installed
 
 $(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
-	cd $(UCLIBC_BDIR) && \
+	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
 	   $(MAKE) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
 	sed -e 's@%%TOOLDIR%%@$(TOOLDIR)@g' $(PATCHES)/uclibc.wrap >$(TOOL_PREFIX)/bin/uclibc
 	chmod 755 $(TOOL_PREFIX)/bin/uclibc
@@ -803,6 +803,7 @@ $(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.patched
 	mkdir -p $(BUILDDIR)
 	tar -C $(SOURCE) -cf - uClibc-$(UCLIBC) | tar -C $(BUILDDIR) -xUf -
 	echo 'KERNEL_SOURCE="$(KHDR_SDIR)"' >> $(BUILDDIR)/uClibc-$(UCLIBC)/.config
+	echo 'KERNEL_HEADERS="$(KHDR_SDIR)/include"' >> $(BUILDDIR)/uClibc-$(UCLIBC)/.config
 	echo 'RUNTIME_PREFIX="$(TOOLDIR)/uclibc/"' >> $(BUILDDIR)/uClibc-$(UCLIBC)/.config
 	echo 'DEVEL_PREFIX="$(TOOLDIR)/uclibc/usr/"' >> $(BUILDDIR)/uClibc-$(UCLIBC)/.config
 	cd $(BUILDDIR)/uClibc-$(UCLIBC) && $(MAKE) oldconfig
