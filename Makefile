@@ -219,6 +219,12 @@ $(BINUTILS_SDIR)/.extracted:
 gcc-libc: $(GCCLC_BDIR)/.installed
 
 $(GCCLC_BDIR)/.installed: $(GCCLC_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+	@# we must first protect possibly existing gcc binaries from removal
+	@echo "Saving previous gcc binaries into .gcclc/"
+	mkdir -p $(TOOL_PREFIX)/bin/.gcclc
+	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
+	    $(TOOL_PREFIX)/bin/.gcclc/ >/dev/null 2>&1
+
 	(cd $(GCCLC_BDIR) && \
 	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
 
@@ -226,10 +232,15 @@ $(GCCLC_BDIR)/.installed: $(GCCLC_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
 	mv $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
 
-	@# we must protect the gcc binaries from removal	by newer gcc versions
+	@# we must protect the gcc binaries from removal by newer gcc versions
 	for i in gcov gcc cpp unprotoize protoize; do \
 	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCCLC_SUFFIX) || true; \
 	done
+
+	@# we can now restore previous gcc binaries
+	-mv $(TOOL_PREFIX)/bin/.gcclc/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
+	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
+	rmdir $(TOOL_PREFIX)/bin/.gcclc >/dev/null 2>&1
 
 	touch $@
 
@@ -419,6 +430,12 @@ $(GCC29_BDIR)/.default_gcc: $(GCC29_BDIR)/.installed
 
 gcc29: $(GCC29_BDIR)/.installed
 $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+	@# we must first protect possibly existing gcc binaries from removal
+	@echo "Saving previous gcc binaries into .gcc29/"
+	mkdir -p $(TOOL_PREFIX)/bin/.gcc29
+	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,g++,c++,gcc,cpp,c++filt,unprotoize,protoize} \
+	    $(TOOL_PREFIX)/bin/.gcc29/ >/dev/null 2>&1
+
 	echo "###############  installing 'gcc-cross'  ##################"
 	(cd $(GCC29_BDIR) && \
 	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc-cross INSTALL_PROGRAM_ARGS="-s" \
@@ -463,6 +480,11 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
 	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_SUFFIX) || true; \
 	done
+
+	@# we can now restore previous gcc binaries
+	-mv $(TOOL_PREFIX)/bin/.gcc29/$(TARGET)-{gcov,g++,c++,gcc,cpp,c++filt,unprotoize,protoize} \
+	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
+	rmdir $(TOOL_PREFIX)/bin/.gcc29 >/dev/null 2>&1
 
 	touch $@
 
@@ -536,11 +558,11 @@ $(GCC33_BDIR)/.default_gcc: $(GCC33_BDIR)/.installed
 
 gcc33: $(GCC33_BDIR)/.installed
 $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	@# we must protect older gcc binaries from removal
-	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i" ] && \
-	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX) || true; \
-	done
+	@# we must first protect possibly existing gcc binaries from removal
+	@echo "Saving previous gcc binaries into .gcc33/"
+	mkdir -p $(TOOL_PREFIX)/bin/.gcc33
+	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gccbug,g++,c++,gcc,cpp} \
+	    $(TOOL_PREFIX)/bin/.gcc33/ >/dev/null 2>&1
 
 	cd $(GCC33_BDIR) && \
 	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC33_ADDONS)
@@ -555,11 +577,10 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC33_SUFFIX) || true; \
 	done
 
-	@# and we restore original binaries
-	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX)" ] && \
-	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
+	@# we can now restore previous gcc binaries
+	-mv $(TOOL_PREFIX)/bin/.gcc33/$(TARGET)-{gcov,gccbug,g++,c++,gcc,cpp} \
+	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
+	rmdir $(TOOL_PREFIX)/bin/.gcc33 >/dev/null 2>&1
 
 	touch $@
 
