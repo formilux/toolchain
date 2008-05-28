@@ -1,3 +1,7 @@
+2008/05/28 : version 0.5.3
+	* prevent ${TARGET}-{gcc,...} from vanishing
+	* update HOWTO
+
 2008/05/28 : version 0.5.2
 	* fix build error on gcc 3.4 on some platforms
 	* upgrade uclibc to 0.9.29
