@@ -222,11 +222,11 @@ $(GCCLC_BDIR)/.installed: $(GCCLC_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	(cd $(GCCLC_BDIR) && \
 	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
 
-	# this one is mis-named
+	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
 	mv $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
 
-	# we must protect the gcc binaries from removal	by newer gcc versions
+	@# we must protect the gcc binaries from removal	by newer gcc versions
 	for i in gcov gcc cpp unprotoize protoize; do \
 	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCCLC_SUFFIX) || true; \
 	done
@@ -252,9 +252,9 @@ $(GCCLC_BDIR)/.compiled: $(GCCLC_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 
 $(GCCLC_BDIR)/.configured: $(GCC29_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 
-	# this is needed to find the binutils
-	# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
-	# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	@# this is needed to find the binutils
+	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
+	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	mkdir -p $(SYS_ROOT)
 
 	[ -e $(SYS_ROOT)/usr ] || \
@@ -279,13 +279,13 @@ $(GCCLC_BDIR)/.configured: $(GCC29_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC
 	touch $@
 
 $(GCC29_SDIR)/.patched: $(GCC29_SDIR)/.extracted
-	# Patches from Erik Andersen to fix known bugs in gcc-2.95
+	@# Patches from Erik Andersen to fix known bugs in gcc-2.95
 	bzcat $(DOWNLOAD)/gcc2.95-mega.patch.bz2 | patch -p1 -d $(GCC29_SDIR)
 
-	# Patch to allow gcc-2.95 to build on gcc-3
+	@# Patch to allow gcc-2.95 to build on gcc-3
 	bzcat $(PATCHES)/gcc-2.95-gcc3-compfix.diff.bz2 | patch -p1 -d $(GCC29_SDIR)
 
-	# patches to allow gcc to find includes in $ROOT_PREFIX/include
+	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
 	for p in patch-gcc295-{prefix-target-root,prefix-usage,displace-gcc-lib}; do \
 	   patch -p1 -d $(GCC29_SDIR) < $(PATCHES)/$$p ; \
 	done
@@ -428,10 +428,10 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	        gcc_gxx_include_dir=\$$(libsubdir)/include' )
 
 	echo "###############  installing 'target'  ##################"
-	# Note that we want libstdc++ in the root directory and not in the toolchain,
-	# so we will use the 'tooldir' variable to displace the install directory.
-	# We also want to move libiberty to gcc-lib because the one in the root is
-	# reserved for binutils, so we point libdir to the gcc directory.
+	@# Note that we want libstdc++ in the root directory and not in the toolchain,
+	@# so we will use the 'tooldir' variable to displace the install directory.
+	@# We also want to move libiberty to gcc-lib because the one in the root is
+	@# reserved for binutils, so we point libdir to the gcc directory.
 
 	(cd $(GCC29_BDIR) && \
 	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-target INSTALL_PROGRAM_ARGS="-s" \
@@ -441,24 +441,24 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	    tooldir='$(ROOT_PREFIX)' \
 	    gcc_gxx_include_dir='\$$(libsubdir)/include' )
 
-	# The libstdc++ links are now bad and must be fixed.
+	@# The libstdc++ links are now bad and must be fixed.
 	(old=$$(basename $$(readlink $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/libstdc++.so)) ; \
 	 ln -sf ../../../../target-root/usr/lib/$$old $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/libstdc++.so ; \
 	 old=$$(basename $$(readlink $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/libstdc++.a)) ; \
 	 ln -sf ../../../../target-root/usr/lib/$$old $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/libstdc++.a )
 
 	echo "###############  end of install  ##################"
-	# we must reset the 'cross_compile' flag, otherwise the path to crt*.o gets stripped !
+	@# we must reset the 'cross_compile' flag, otherwise the path to crt*.o gets stripped !
 	sed '/^\*cross_compile/,/^$$/s/^1/0/' \
 		< $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/specs \
 		> $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/specs-
 	mv $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/specs- $(TOOL_PREFIX)/lib/gcc-lib/$(TARGET)/2.95.4/specs
 
-	# this one is mis-named
+	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
 	mv $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
 
-	# we must protect the gcc binaries from removal	by newer gcc versions
+	@# we must protect the gcc binaries from removal	by newer gcc versions
 	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
 	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_SUFFIX) || true; \
 	done
@@ -466,22 +466,22 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	touch $@
 
 $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	# this is because of bugs in the libstdc++ path configuration
+	@# this is because of bugs in the libstdc++ path configuration
 	( rmdir $(GCC29_BDIR)/$(TARGET) && ln -s . $(GCC29_BDIR)/$(TARGET) || true ) 2>/dev/null 
 
-	# first, we will only build gcc
+	@# first, we will only build gcc
 	cd $(GCC29_BDIR) && PATH=$(TARGET_PATH) $(MAKE) all-gcc $(MFLAGS) \
 	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
 	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)'
 
-	# we must reset the 'cross_compile' flag, otherwise the path to crt*.o gets stripped and
-	# components such as libstdc++ cannot be built !
+	@# we must reset the 'cross_compile' flag, otherwise the path to crt*.o gets stripped and
+	@# components such as libstdc++ cannot be built !
 	sed '/^\*cross_compile/,/^$$/s/^1/0/' < $(GCC29_BDIR)/gcc/specs > $(GCC29_BDIR)/gcc/specs-
 	mv $(GCC29_BDIR)/gcc/specs- $(GCC29_BDIR)/gcc/specs
 
-	# now we can make everything else (libio, libstdc++, ...)
+	@# now we can make everything else (libio, libstdc++, ...)
 	cd $(GCC29_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) \
 	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
@@ -493,16 +493,16 @@ $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BI
 $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC29_BDIR)
 
-	# Those directories are important : gcc looks for "limits.h" there to
-	# know if it must chain to it or impose its own.
+	@# Those directories are important : gcc looks for "limits.h" there to
+	@# know if it must chain to it or impose its own.
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/
 	[ -e $(TOOL_PREFIX)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/
 
-	# WARNING! do not enable target-optspace, it corrupts CXX_FLAGS
-	# in mt-frags which break c++ build. Also, we cannot use program-suffix
-	# because it applies it to binutils too!
+	@# WARNING! do not enable target-optspace, it corrupts CXX_FLAGS
+	@# in mt-frags which break c++ build. Also, we cannot use program-suffix
+	@# because it applies it to binutils too!
 	(cd $(GCC29_BDIR) && CC="$(HOSTCC)" \
 	 PATH=$(TARGET_PATH) $(GCC29_SDIR)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
@@ -535,7 +535,7 @@ $(GCC33_BDIR)/.default_gcc: $(GCC33_BDIR)/.installed
 
 gcc33: $(GCC33_BDIR)/.installed
 $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	# we must protect older gcc binaries from removal
+	@# we must protect older gcc binaries from removal
 	for i in gcov gccbug g++ c++ gcc cpp; do \
 	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i" ] && \
 	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX) || true; \
@@ -544,17 +544,17 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC33_BDIR) && \
 	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC33_ADDONS)
 
-	# this one is redundant
+	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC33)
 
-	# now we set the version on the binaries, because make install
-	# does not do it in gcc-3.3.
+	@# now we set the version on the binaries, because make install
+	@# does not do it in gcc-3.3.
 	for i in gcov gccbug g++ c++ gcc cpp; do \
 	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i" ] && \
 	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC33_SUFFIX) || true; \
 	done
 
-	# and we restore original binaries
+	@# and we restore original binaries
 	for i in gcov gccbug g++ c++ gcc cpp; do \
 	    [ -e "$(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX)" ] && \
 	       mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i-pre-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
@@ -595,7 +595,7 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 
 
 $(GCC33_SDIR)/.patched: $(GCC33_SDIR)/.extracted
-	# patches to allow gcc to find includes in $ROOT_PREFIX/include
+	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
 	for p in patch-gcc33-{install-script,fix-tooldir,not-outside-root}; do \
 	   patch -p1 -d $(GCC33_SDIR) < $(PATCHES)/$$p ; \
 	done
@@ -628,9 +628,9 @@ $(GCC34_BDIR)/.default_gcc: $(GCC34_BDIR)/.installed
 gcc34: $(GCC34_BDIR)/.installed
 $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM='$${INSTALL} -s' $(GCC34_ADDONS)
+	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}' $(GCC34_ADDONS)
 
-	# this one is redundant
+	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC34)
 
 	touch $@
@@ -701,7 +701,7 @@ $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
 	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC41_ADDONS)
 
-	# this one is redundant
+	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC41)
 
 	touch $@
