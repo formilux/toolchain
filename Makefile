@@ -2,7 +2,7 @@ LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
 # version is used only for packaging
-TOOLCHAIN     := 0.5.3
+TOOLCHAIN     := 0.6.0
 
 # WARNING! for GCC and binutils to detect cross-compilation,
 # HOST and TARGET must be different. Inserting 'host' between
@@ -28,6 +28,7 @@ INSTALLDIR    := $(TOP)
 
 GCCVERSIONS   := gcc29 gcc33 gcc34 gcc41
 GCCDEFAULT    := $(word 1,$(GCCVERSIONS))
+GCCLIBC       := gcc29
 
 GLIBC         := 2.2.5
 BINUTILS      := 2.16.1
@@ -64,24 +65,53 @@ BINUTILS_BDIR := $(BUILDDIR)/binutils-$(BINUTILS)
 
 # The gcc used for building glibc. The resulting executable will eventually
 # be overwritten, so we can use the same suffix as the original one.
-GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC29)
-GCCLC_SUFFIX  := 2.95
+GCCLC29_BDIR  := $(BUILDDIR)/gcc-libc-$(GCC29)
+GCCLC33_BDIR  := $(BUILDDIR)/gcc-libc-$(GCC33)
+GCCLC34_BDIR  := $(BUILDDIR)/gcc-libc-$(GCC34)
+GCCLC41_BDIR  := $(BUILDDIR)/gcc-libc-$(GCC41)
 
+GCC29_SUFFIX  := 2.95
 GCC29_SDIR    := $(SOURCE)/gcc-$(GCC29)
 GCC29_BDIR    := $(BUILDDIR)/gcc-$(GCC29)
-GCC29_SUFFIX  := 2.95
 
+GCC33_SUFFIX  := 3.3
 GCC33_SDIR    := $(SOURCE)/gcc-$(GCC33)
 GCC33_BDIR    := $(BUILDDIR)/gcc-$(GCC33)
-GCC33_SUFFIX  := 3.3
+GCC33_ADDONS  := AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+                 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+                 RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
+GCC34_SUFFIX  := 3.4
 GCC34_SDIR    := $(SOURCE)/gcc-$(GCC34)
 GCC34_BDIR    := $(BUILDDIR)/gcc-$(GCC34)
-GCC34_SUFFIX  := 3.4
+GCC34_ADDONS  := AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+                 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+                 RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
+GCC41_SUFFIX  := 4.1
 GCC41_SDIR    := $(SOURCE)/gcc-$(GCC41)
 GCC41_BDIR    := $(BUILDDIR)/gcc-$(GCC41)
-GCC41_SUFFIX  := 4.1
+GCC41_ADDONS  := AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+                 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+                 RANLIB_FOR_TARGET=$(TARGET)-ranlib
+
+ifeq ($(GCCLIBC), gcc33)
+GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC33)
+GCCLC_SUFFIX  := $(GCC33_SUFFIX)
+else
+ifeq ($(GCCLIBC), gcc34)
+GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC34)
+GCCLC_SUFFIX  := $(GCC34_SUFFIX)
+else
+ifeq ($(GCCLIBC), gcc41)
+GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC41)
+GCCLC_SUFFIX  := $(GCC41_SUFFIX)
+else
+GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC29)
+GCCLC_SUFFIX  := $(GCC29_SUFFIX)
+endif  # gcc41
+endif  # gcc34
+endif  # gcc33
 
 KHDR_SDIR     := $(SOURCE)/linux-$(KHDR)
 
@@ -214,18 +244,22 @@ $(BINUTILS_SDIR)/.extracted:
 	touch $@
 
 
-#### partial GCC needed to build glibc
+#### partial GCC needed to build glibc. The correct version to use is
+#### determined by the GCCLIBC variable, which means that GCCLC_BDIR will
+#### point to one of the GCCLC*_BDIR directories.
 
 gcc-libc: $(GCCLC_BDIR)/.installed
 
-$(GCCLC_BDIR)/.installed: $(GCCLC_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	@# we must first protect possibly existing gcc binaries from removal
-	@echo "Saving previous gcc binaries into .gcclc/"
-	mkdir -p $(TOOL_PREFIX)/bin/.gcclc
-	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
-	    $(TOOL_PREFIX)/bin/.gcclc/ >/dev/null 2>&1
+# GCC-2.95 for GLIBC
 
-	(cd $(GCCLC_BDIR) && \
+$(GCCLC29_BDIR)/.installed: $(GCCLC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+	@# we must first protect possibly existing gcc binaries from removal
+	@echo "Saving previous gcc binaries into .gcclc29/"
+	mkdir -p $(TOOL_PREFIX)/bin/.gcclc29
+	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
+	    $(TOOL_PREFIX)/bin/.gcclc29/ >/dev/null 2>&1
+
+	(cd $(GCCLC29_BDIR) && \
 	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
@@ -234,23 +268,19 @@ $(GCCLC_BDIR)/.installed: $(GCCLC_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 	@# we must protect the gcc binaries from removal by newer gcc versions
 	for i in gcov gcc cpp unprotoize protoize; do \
-	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCCLC_SUFFIX) || true; \
+	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_SUFFIX) || true; \
 	done
 
 	@# we can now restore previous gcc binaries
-	-mv $(TOOL_PREFIX)/bin/.gcclc/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
+	-mv $(TOOL_PREFIX)/bin/.gcclc29/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
-	rmdir $(TOOL_PREFIX)/bin/.gcclc >/dev/null 2>&1
-
+	rmdir $(TOOL_PREFIX)/bin/.gcclc29 >/dev/null 2>&1
 	touch $@
 
-# FIXME: This might be better with relative links like this :
-# ln -s ../target-root/usr/include  ../target-root/usr/sys-include $(TOOL_PREFIX)/$(TARGET)/
-$(GCCLC_BDIR)/.compiled: $(GCCLC_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-
+$(GCCLC29_BDIR)/.compiled: $(GCCLC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
-	cd $(GCCLC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) all-gcc
+	cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) all-gcc
 	touch $@
 
 # note: we will install this first-stage compiler in $PREFIX, but since it
@@ -261,8 +291,7 @@ $(GCCLC_BDIR)/.compiled: $(GCCLC_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 # Note: try to build this in a different directory with different options, such
 # as --enable-__cxa_atexit, --disable-threads, --with-newlib, --disable-multilib
 
-$(GCCLC_BDIR)/.configured: $(GCC29_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
-
+$(GCCLC29_BDIR)/.configured: $(GCC29_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
 	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
 	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
@@ -275,8 +304,8 @@ $(GCCLC_BDIR)/.configured: $(GCC29_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC
 
 	mkdir -p $(ROOT_PREFIX)/include
 	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
-	mkdir -p $(GCCLC_BDIR)
-	(cd $(GCCLC_BDIR) && PATH=$(TARGET_PATH) \
+	mkdir -p $(GCCLC29_BDIR)
+	(cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) \
 	 CC=$(HOSTCC) CC_FOR_BUILD=$(HOSTCC) \
 	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
 	 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
@@ -289,24 +318,218 @@ $(GCCLC_BDIR)/.configured: $(GCC29_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC
 	   --enable-languages=c )
 	touch $@
 
-$(GCC29_SDIR)/.patched: $(GCC29_SDIR)/.extracted
-	@# Patches from Erik Andersen to fix known bugs in gcc-2.95
-	[ -s "$(DOWNLOAD)/gcc2.95-mega.patch.bz2" ] && \
-		bzcat $(DOWNLOAD)/gcc2.95-mega.patch.bz2 | patch -p1 -d $(GCC29_SDIR)
 
-	@# Patch to allow gcc-2.95 to build on gcc-3
-	bzcat $(PATCHES)/gcc-2.95-gcc3-compfix.diff.bz2 | patch -p1 -d $(GCC29_SDIR)
+# GCC-3.3 for GLIBC
 
-	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
-	for p in patch-gcc295-{prefix-target-root,prefix-usage,displace-gcc-lib}; do \
-	   patch -p1 -d $(GCC29_SDIR) < $(PATCHES)/$$p ; \
+$(GCCLC33_BDIR)/.installed: $(GCCLC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+	@# we must first protect possibly existing gcc binaries from removal
+	@echo "Saving previous gcc binaries into .gcclc33/"
+	mkdir -p $(TOOL_PREFIX)/bin/.gcclc33
+	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gccbug,gcc,cpp} \
+	    $(TOOL_PREFIX)/bin/.gcclc33/ >/dev/null 2>&1
+
+	(cd $(GCCLC33_BDIR) && \
+	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+
+	@# this one is mis-named
+	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
+	mv $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
+
+	@# we must protect the gcc binaries from removal by newer gcc versions
+	for i in gcov gccbug gcc cpp; do \
+	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC33_SUFFIX) || true; \
 	done
+
+	@# we can now restore previous gcc binaries
+	-mv $(TOOL_PREFIX)/bin/.gcclc33/$(TARGET)-{gcov,gccbug,gcc,cpp} \
+	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
+	rmdir $(TOOL_PREFIX)/bin/.gcclc33 >/dev/null 2>&1
 	touch $@
 
-$(GCC29_SDIR)/.extracted:
-	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC29).tar.bz2
+$(GCCLC33_BDIR)/.compiled: $(GCCLC33_BDIR)/.configured $(BINUTILS_BDIR)/.installed
+	mkdir -p $(TOOL_PREFIX)/$(TARGET)
+	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
+	cd $(GCCLC33_BDIR) && \
+	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC33_ADDONS)
 	touch $@
+
+$(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+	@# this is needed to find the binutils
+	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
+	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	mkdir -p $(SYS_ROOT)
+
+	[ -e $(SYS_ROOT)/usr ] || \
+	   ln -sf $(ROOT_PREFIX) $(SYS_ROOT)/
+	[ -e $(SYS_ROOT)/lib ] || \
+	   ln -sf $(ROOTDIR)/lib $(SYS_ROOT)/
+
+	mkdir -p $(ROOT_PREFIX)/include
+	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
+	mkdir -p $(GCCLC33_BDIR)
+	(cd $(GCCLC33_BDIR) && CC="$(HOSTCC)" CC_FOR_BUILD=$(HOSTCC) \
+	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
+	 PATH=$(TARGET_PATH) $(GCC33_SDIR)/configure \
+           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
+	   --prefix=$(TOOL_PREFIX) \
+	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
+	   --disable-locale --disable-nls --disable-shared \
+	   --with-gnu-ld --with-gnu-as \
+	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
+	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
+	   --enable-version-specific-runtime-libs \
+	   --disable-multilib --with-newlib \
+	   --enable-symvers=gnu --enable-c99 --enable-long-long \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-local-prefix=$(SYS_ROOT) \
+	   --enable-languages=c \
+	   --program-suffix=-$(GCC33_SUFFIX) --program-prefix=$(TARGET)- \
+	   --with-cpu=$(TARGET_CPU))
+	touch $@
+
+
+$(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+	@# we must first protect possibly existing gcc binaries from removal
+	@echo "Saving previous gcc binaries into .gcclc34/"
+	mkdir -p $(TOOL_PREFIX)/bin/.gcclc34
+	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gccbug,gcc,cpp} \
+	    $(TOOL_PREFIX)/bin/.gcclc34/ >/dev/null 2>&1
+
+	(cd $(GCCLC34_BDIR) && \
+	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+
+	@# this one is mis-named
+	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
+	mv $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
+
+	@# we must protect the gcc binaries from removal by newer gcc versions
+	for i in gcov gccbug gcc cpp; do \
+	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC34_SUFFIX) || true; \
+	done
+
+	@# we can now restore previous gcc binaries
+	-mv $(TOOL_PREFIX)/bin/.gcclc34/$(TARGET)-{gcov,gccbug,gcc,cpp} \
+	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
+	rmdir $(TOOL_PREFIX)/bin/.gcclc34 >/dev/null 2>&1
+	touch $@
+
+$(GCCLC34_BDIR)/.compiled: $(GCCLC34_BDIR)/.configured $(BINUTILS_BDIR)/.installed
+	mkdir -p $(TOOL_PREFIX)/$(TARGET)
+	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
+	cd $(GCCLC34_BDIR) && \
+	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC34_ADDONS)
+	touch $@
+
+$(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+	@# this is needed to find the binutils
+	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
+	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	mkdir -p $(SYS_ROOT)
+
+	[ -e $(SYS_ROOT)/usr ] || \
+	   ln -sf $(ROOT_PREFIX) $(SYS_ROOT)/
+	[ -e $(SYS_ROOT)/lib ] || \
+	   ln -sf $(ROOTDIR)/lib $(SYS_ROOT)/
+
+	mkdir -p $(ROOT_PREFIX)/include
+	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
+	mkdir -p $(GCCLC34_BDIR)
+	(cd $(GCCLC34_BDIR) && CC="$(HOSTCC)" CC_FOR_BUILD=$(HOSTCC) \
+	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
+	 PATH=$(TARGET_PATH) $(GCC34_SDIR)/configure \
+           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
+	   --prefix=$(TOOL_PREFIX) \
+	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
+	   --disable-locale --disable-nls --disable-shared \
+	   --with-gnu-ld --with-gnu-as \
+	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
+	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
+	   --enable-version-specific-runtime-libs \
+	   --disable-multilib --with-newlib \
+	   --enable-symvers=gnu --enable-c99 --enable-long-long \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-local-prefix=$(SYS_ROOT) \
+	   --enable-languages=c \
+	   --program-suffix=-$(GCC34_SUFFIX) --program-prefix=$(TARGET)- \
+	   --with-cpu=$(TARGET_CPU))
+	touch $@
+
+
+$(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+	@# we must first protect possibly existing gcc binaries from removal
+	@echo "Saving previous gcc binaries into .gcclc41/"
+	mkdir -p $(TOOL_PREFIX)/bin/.gcclc41
+	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gccbug,gcc,cpp} \
+	    $(TOOL_PREFIX)/bin/.gcclc41/ >/dev/null 2>&1
+
+	(cd $(GCCLC41_BDIR) && \
+	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+
+	@# this one is mis-named
+	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
+	mv $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
+
+	@# we must protect the gcc binaries from removal by newer gcc versions
+	for i in gcov gccbug gcc cpp; do \
+	    mv $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC41_SUFFIX) || true; \
+	done
+
+	@# we can now restore previous gcc binaries
+	-mv $(TOOL_PREFIX)/bin/.gcclc41/$(TARGET)-{gcov,gccbug,gcc,cpp} \
+	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
+	rmdir $(TOOL_PREFIX)/bin/.gcclc41 >/dev/null 2>&1
+	touch $@
+
+$(GCCLC41_BDIR)/.compiled: $(GCCLC41_BDIR)/.configured $(BINUTILS_BDIR)/.installed
+	mkdir -p $(TOOL_PREFIX)/$(TARGET)
+	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
+	cd $(GCCLC41_BDIR) && \
+	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC41_ADDONS)
+	touch $@
+
+$(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+	@# this is needed to find the binutils
+	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
+	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	mkdir -p $(SYS_ROOT)
+
+	[ -e $(SYS_ROOT)/usr ] || \
+	   ln -sf $(ROOT_PREFIX) $(SYS_ROOT)/
+	[ -e $(SYS_ROOT)/lib ] || \
+	   ln -sf $(ROOTDIR)/lib $(SYS_ROOT)/
+
+	mkdir -p $(ROOT_PREFIX)/include
+	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
+	mkdir -p $(GCCLC41_BDIR)
+	(cd $(GCCLC41_BDIR) && CC="$(HOSTCC)" CC_FOR_BUILD=$(HOSTCC) \
+	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
+	 PATH=$(TARGET_PATH) $(GCC41_SDIR)/configure \
+           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
+	   --prefix=$(TOOL_PREFIX) \
+	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
+	   --disable-locale --disable-nls --disable-shared \
+	   --with-gnu-ld --with-gnu-as \
+	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
+	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
+	   --enable-version-specific-runtime-libs \
+	   --disable-multilib --with-newlib \
+	   --enable-symvers=gnu --enable-c99 --enable-long-long \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-local-prefix=$(SYS_ROOT) \
+	   --enable-languages=c \
+	   --program-suffix=-$(GCC41_SUFFIX) --program-prefix=$(TARGET)- \
+	   --with-cpu=$(TARGET_CPU))
+	touch $@
+
 
 
 #### kernel headers
@@ -377,6 +600,7 @@ $(GLIBC_HDIR)/.installed: $(GLIBC_HDIR)/.configured $(GLIBC_SDIR)/.patched $(BIN
 	     install_root=$(ROOTDIR) prefix=/usr slibdir=/lib \
 	     libdir=/usr/lib libexecdir=/usr/bin install-headers && \
 	 cp $(GLIBC_SDIR)/include/features.h $(ROOT_PREFIX)/include/ && \
+	 cp $(GLIBC_HDIR)/bits/stdio_lim.h $(ROOT_PREFIX)/include/bits/ && \
 	 mkdir -p $(ROOT_PREFIX)/include/gnu && \
 	 touch $(ROOT_PREFIX)/include/gnu/stubs.h && \
 	 rm -rf $(ROOT_PREFIX)/include/{asm,linux} && \
@@ -419,15 +643,16 @@ $(GLIBC_SDIR)/.extracted:
 
 default_gcc: default_$(GCCDEFAULT)
 
-#### full GCC 2.95
+
+#### GCC-2.95
 
 default_gcc29: $(GCC29_BDIR)/.default_gcc
+
 $(GCC29_BDIR)/.default_gcc: $(GCC29_BDIR)/.installed
 	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
 	    ln -snf $(TARGET)-$$i-$(GCC29_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
 	done
 	echo $@ > $(GCC29_BDIR)/.default_gcc
-
 
 gcc29: $(GCC29_BDIR)/.installed
 $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
@@ -486,7 +711,6 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	-mv $(TOOL_PREFIX)/bin/.gcc29/$(TARGET)-{gcov,g++,c++,gcc,cpp,c++filt,unprotoize,protoize} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcc29 >/dev/null 2>&1
-
 	touch $@
 
 $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
@@ -513,7 +737,6 @@ $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BI
 	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)'
 	touch $@
 
-
 $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC29_BDIR)
 
@@ -537,25 +760,35 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BIN
 	   --enable-languages=c,c++ --enable-threads )
 	touch $@
 
+$(GCC29_SDIR)/.patched: $(GCC29_SDIR)/.extracted
+	@# Patches from Erik Andersen to fix known bugs in gcc-2.95
+	[ -s "$(DOWNLOAD)/gcc2.95-mega.patch.bz2" ] && \
+		bzcat $(DOWNLOAD)/gcc2.95-mega.patch.bz2 | patch -p1 -d $(GCC29_SDIR)
+
+	@# Patch to allow gcc-2.95 to build on gcc-3
+	bzcat $(PATCHES)/gcc-2.95-gcc3-compfix.diff.bz2 | patch -p1 -d $(GCC29_SDIR)
+
+	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
+	for p in patch-gcc295-{prefix-target-root,prefix-usage,displace-gcc-lib}; do \
+	   patch -p1 -d $(GCC29_SDIR) < $(PATCHES)/$$p ; \
+	done
+	touch $@
+
+$(GCC29_SDIR)/.extracted:
+	mkdir -p $(SOURCE)
+	tar -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC29).tar.bz2
+	touch $@
 
 
 #### GCC-3.3
-#### it is provided here because there are packages which do not build anymore
-#### on older GCC versions. GCC>=3.3 is easy to build for such an environment ;
-#### we just have to use --with-sysroot to indicate where the root is.
-#### We set a dependency on previous GCC to be sure to complete after it.
-
-GCC33_ADDONS = AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-               NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-               RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
 default_gcc33: $(GCC33_BDIR)/.default_gcc
+
 $(GCC33_BDIR)/.default_gcc: $(GCC33_BDIR)/.installed
 	for i in gcov gccbug g++ c++ gcc cpp; do \
 	    ln -snf $(TARGET)-$$i-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
 	done
 	echo $@ > $(GCC33_BDIR)/.default_gcc
-
 
 gcc33: $(GCC33_BDIR)/.installed
 $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
@@ -582,15 +815,12 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	-mv $(TOOL_PREFIX)/bin/.gcc33/$(TARGET)-{gcov,gccbug,g++,c++,gcc,cpp} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcc33 >/dev/null 2>&1
-
 	touch $@
-
 
 $(GCC33_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC33_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC33_BDIR) && \
 	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC33_ADDONS)
 	touch $@
-
 
 $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC33_BDIR)
@@ -613,9 +843,7 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC33_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
-
 	touch $@
-
 
 $(GCC33_SDIR)/.patched: $(GCC33_SDIR)/.extracted
 	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
@@ -630,23 +858,15 @@ $(GCC33_SDIR)/.extracted:
 	touch $@
 
 
-
 #### GCC-3.4
-#### it is provided here because there are packages which do not build anymore
-#### on older GCC versions. GCC>=3.3 is easy to build for such an environment ;
-#### we just have to use --with-sysroot to indicate where the root is.
-
-GCC34_ADDONS = AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-               NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-               RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
 default_gcc34: $(GCC34_BDIR)/.default_gcc
+
 $(GCC34_BDIR)/.default_gcc: $(GCC34_BDIR)/.installed
 	for i in gcov gccbug g++ c++ gcc cpp; do \
 	    ln -snf $(TARGET)-$$i-$(GCC34_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
 	done
 	echo $@ > $(GCC34_BDIR)/.default_gcc
-
 
 gcc34: $(GCC34_BDIR)/.installed
 $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
@@ -655,14 +875,12 @@ $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC34)
-
 	touch $@
 
 $(GCC34_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC34_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
 	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC34_ADDONS)
 	touch $@
-
 
 $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC34_BDIR)
@@ -685,7 +903,6 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BIN
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC34_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
-
 	touch $@
 
 $(GCC34_SDIR)/.patched: $(GCC34_SDIR)/.extracted
@@ -700,18 +917,10 @@ $(GCC34_SDIR)/.extracted:
 	touch $@
 
 
-
 #### GCC-4.1
-#### it is provided here because there are packages which do not build anymore
-#### on older GCC versions. GCC>=3.3 is easy to build for such an environment ;
-#### we just have to use --with-sysroot to indicate where the root is.
-
-GCC41_ADDONS = AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-               NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-               RANLIB_FOR_TARGET=$(TARGET)-ranlib
-
 
 default_gcc41: $(GCC41_BDIR)/.default_gcc
+
 $(GCC41_BDIR)/.default_gcc: $(GCC41_BDIR)/.installed
 	for i in gcov gccbug g++ c++ gcc cpp; do \
 	    ln -snf $(TARGET)-$$i-$(GCC41_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
@@ -726,14 +935,12 @@ $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC41)
-
 	touch $@
 
 $(GCC41_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC41_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
 	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC41_ADDONS)
 	touch $@
-
 
 $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC41_BDIR)
@@ -756,7 +963,6 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BIN
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC41_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
-
 	touch $@
 
 $(GCC41_SDIR)/.patched: $(GCC41_SDIR)/.extracted
@@ -801,6 +1007,7 @@ $(DIETLIBC_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
 	tar -C $(SOURCE) -jxf $(DOWNLOAD)/dietlibc-$(DIETLIBC).tar.bz2
 	touch $@
+
 
 #### uclibc
 #### it is built with default gcc. The result is good enough.
