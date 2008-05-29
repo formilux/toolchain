@@ -405,6 +405,7 @@ $(GLIBC_HDIR)/.configured: $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(
 
 $(GLIBC_SDIR)/.patched: $(GLIBC_SDIR)/.extracted
 	patch -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.3.2-csu-Makefile.patch
+	patch -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.2.5-support-gcc4.diff
 	touch $@
 
 $(GLIBC_SDIR)/.extracted:
