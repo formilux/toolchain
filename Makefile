@@ -219,9 +219,28 @@ $(POOLDIR):
 	cp $(TOP)/tools/list-to-tgz.sh $@/groups/
 	cp $(TOP)/tools/list-to-pkgdir.sh $@/groups/
 
-################# start of build system ##############
 
-binutils: $(BINUTILS_BDIR)/.installed
+##### All symbolic rules should be grouped here for easier troubleshooting ####
+
+binutils:       $(BINUTILS_BDIR)/.installed
+gcc-libc:       $(GCCLC_BDIR)/.installed
+kernel-headers: $(KHDR_SDIR)/.completed
+glibc:          $(GLIBC_BDIR)/.installed
+glibc-headers:  $(GLIBC_HDIR)/.installed
+gcc29:          $(GCC29_BDIR)/.installed
+gcc33:          $(GCC33_BDIR)/.installed
+gcc34:          $(GCC34_BDIR)/.installed
+gcc41:          $(GCC41_BDIR)/.installed
+default_gcc:    default_$(GCCDEFAULT)
+default_gcc29:  $(GCC29_BDIR)/.default_gcc
+default_gcc33:  $(GCC33_BDIR)/.default_gcc
+default_gcc34:  $(GCC34_BDIR)/.default_gcc
+default_gcc41:  $(GCC41_BDIR)/.default_gcc
+dietlibc:       $(DIETLIBC_BDIR)/.installed
+uclibc:         $(UCLIBC_BDIR)/.installed
+
+
+################# start of build system ##############
 
 # Note: we link gnm to nm and gstrip to strip because GCC searches them
 # first in all of the system directories !
@@ -246,11 +265,10 @@ $(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.completed
 	)
 	touch $@
 
+
 #### partial GCC needed to build glibc. The correct version to use is
 #### determined by the GCCLIBC variable, which means that GCCLC_BDIR will
 #### point to one of the GCCLC*_BDIR directories.
-
-gcc-libc: $(GCCLC_BDIR)/.installed
 
 # GCC-2.95 for GLIBC
 
@@ -285,7 +303,7 @@ $(GCCLC29_BDIR)/.compiled: $(GCCLC29_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) all-gcc
 	touch $@
 
-# note: we will install this first-stage compiler in $PREFIX, but since it
+# Note: we will install this first-stage compiler in $PREFIX, but since it
 # will be a cross-compiler, gcc will implicitly use $PREFIX/$TARGET for the
 # includes, libraries and binaries, and we cannot do anything about that,
 # so we must install the glibc headers accordingly.
@@ -393,6 +411,8 @@ $(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 	touch $@
 
 
+# GCC-3.4 for GLIBC
+
 $(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	@# we must first protect possibly existing gcc binaries from removal
 	@echo "Saving previous gcc binaries into .gcclc34/"
@@ -462,6 +482,8 @@ $(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 	   --with-cpu=$(TARGET_CPU))
 	touch $@
 
+
+# GCC-4.1 for GLIBC
 
 $(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	@# we must first protect possibly existing gcc binaries from removal
@@ -545,8 +567,6 @@ $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 # Note: try this way instead of dep+dep-files :
 # make ARCH=$(TARGET_ARCH) allmodconfig symlinks include/linux/version.h
 
-kernel-headers: $(KHDR_SDIR)/.completed
-
 $(KHDR_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
 	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(TARGET_ARCH)-$(KHDR).tar.bz2 \
@@ -555,8 +575,6 @@ $(KHDR_SDIR)/.extracted:
 
 
 #### glibc
-
-glibc: $(GLIBC_BDIR)/.installed
 
 $(GLIBC_BDIR)/.installed: $(GLIBC_BDIR)/.compiled $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.completed
 	(cd $(GLIBC_BDIR) && \
@@ -588,8 +606,6 @@ $(GLIBC_BDIR)/.configured: $(GCCLC_BDIR)/.installed $(GLIBC_SDIR)/.completed $(K
 
 
 #### glibc headers only
-
-glibc-headers: $(GLIBC_HDIR)/.installed
 
 $(GLIBC_HDIR)/.installed: $(GLIBC_HDIR)/.configured $(GLIBC_SDIR)/.completed $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.completed
 	(cd $(GLIBC_HDIR) && \
@@ -631,23 +647,24 @@ $(GLIBC_SDIR)/.extracted:
 	$(cmd_tar) -C $(GLIBC_SDIR) -jxf $(DOWNLOAD)/glibc-linuxthreads-$(GLIBC).tar.bz2
 	touch $@
 
-#### We also want to set a default GCC. For this, pick one of
-#### "default_gcc29", "default_gcc33", "default_gcc34", "default_gcc41"
+# We also want to set a default GCC. For this, pick one of "default_gcc29",
+# "default_gcc33", "default_gcc34", "default_gcc41". Using "default_gcc" alone
+# wil result in the compiler designed as the default one being installed.
 
-default_gcc: default_$(GCCDEFAULT)
+# generic rule to set one compiler as the default one. All versionned existing
+# files are linked to their canonical name.
+$(BUILDDIR)/gcc-%/.default_gcc: $(BUILDDIR)/gcc-%/.installed
+	for i in gccbug gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
+	    suffix=$(patsubst $(BUILDDIR)/gcc-%/.default_gcc,%,$@); \
+	    if [ -e $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$$suffix ]; then \
+	        ln -snf $(TARGET)-$$i-$$suffix $(TOOL_PREFIX)/bin/$(TARGET)-$$i; \
+	    fi; \
+	done
+	touch $@
 
 
 #### GCC-2.95
 
-default_gcc29: $(GCC29_BDIR)/.default_gcc
-
-$(GCC29_BDIR)/.default_gcc: $(GCC29_BDIR)/.installed
-	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
-	    ln -snf $(TARGET)-$$i-$(GCC29_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
-	echo $@ > $(GCC29_BDIR)/.default_gcc
-
-gcc29: $(GCC29_BDIR)/.installed
 $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	@# we must first protect possibly existing gcc binaries from removal
 	@echo "Saving previous gcc binaries into .gcc29/"
@@ -756,15 +773,6 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.completed $(B
 
 #### GCC-3.3
 
-default_gcc33: $(GCC33_BDIR)/.default_gcc
-
-$(GCC33_BDIR)/.default_gcc: $(GCC33_BDIR)/.installed
-	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    ln -snf $(TARGET)-$$i-$(GCC33_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
-	echo $@ > $(GCC33_BDIR)/.default_gcc
-
-gcc33: $(GCC33_BDIR)/.installed
 $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	@# we must first protect possibly existing gcc binaries from removal
 	@echo "Saving previous gcc binaries into .gcc33/"
@@ -822,15 +830,6 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.completed $(B
 
 #### GCC-3.4
 
-default_gcc34: $(GCC34_BDIR)/.default_gcc
-
-$(GCC34_BDIR)/.default_gcc: $(GCC34_BDIR)/.installed
-	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    ln -snf $(TARGET)-$$i-$(GCC34_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
-	echo $@ > $(GCC34_BDIR)/.default_gcc
-
-gcc34: $(GCC34_BDIR)/.installed
 $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
 	  PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}' $(GCC34_ADDONS)
@@ -870,16 +869,6 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.completed $(B
 
 #### GCC-4.1
 
-default_gcc41: $(GCC41_BDIR)/.default_gcc
-
-$(GCC41_BDIR)/.default_gcc: $(GCC41_BDIR)/.installed
-	for i in gcov gccbug g++ c++ gcc cpp; do \
-	    ln -snf $(TARGET)-$$i-$(GCC41_SUFFIX) $(TOOL_PREFIX)/bin/$(TARGET)-$$i || true; \
-	done
-	echo $@ > $(GCC41_BDIR)/.default_gcc
-
-
-gcc41: $(GCC41_BDIR)/.installed
 $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
 	  PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC41_ADDONS)
@@ -921,8 +910,6 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.completed $(B
 #### Cannot be fully cross-compiled yet, the 'diet' program uses the
 #### cross-compiler while it should not.
 
-dietlibc: $(DIETLIBC_BDIR)/.installed
-
 $(DIETLIBC_BDIR)/.installed: $(DIETLIBC_BDIR)/.compiled
 	cd $(DIETLIBC_BDIR) && \
 	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
@@ -941,8 +928,6 @@ $(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.completed
 
 #### uclibc
 #### it is built with default gcc. The result is good enough.
-
-uclibc: $(UCLIBC_BDIR)/.installed
 
 $(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
