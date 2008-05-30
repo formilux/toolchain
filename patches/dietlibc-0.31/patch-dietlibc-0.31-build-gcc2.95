@@ -1,0 +1,32 @@
+--- dietlibc-0.31/lib/stackgap.c.bad	2008-05-30 20:01:52.000000000 +0200
++++ dietlibc-0.31/lib/stackgap.c	2008-05-30 20:09:50.000000000 +0200
+@@ -15,6 +15,9 @@
+ static tcbhead_t mainthread;
+ 
+ static void setup_tls(void) {
++#if defined(__i386__)
++  static unsigned int sd[4];
++#endif
+   mainthread.tcb=&mainthread;
+   mainthread.self=&mainthread;
+ #if defined(WANT_SSP)
+@@ -27,7 +30,6 @@
+ 
+ #elif defined(__i386__)
+ 
+-  static unsigned int sd[4];
+   sd[0]=-1;
+   sd[1]=(unsigned long int)&mainthread;
+   sd[2]=0xfffff; /* 4 GB limit */
+--- dietlibc-0.31/include/stdbool.h.bad	2008-05-30 20:09:01.000000000 +0200
++++ dietlibc-0.31/include/stdbool.h	2008-05-30 20:09:23.000000000 +0200
+@@ -5,6 +5,9 @@
+  * specifies this header, see
+  * http://www.opengroup.org/onlinepubs/007904975/basedefs/stdbool.h.html */
+ 
++#ifndef _Bool
++#define _Bool int
++#endif
+ #define bool _Bool
+ #define true 1
+ #define false 0
