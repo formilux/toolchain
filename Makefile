@@ -771,10 +771,6 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BIN
 	touch $@
 
 $(GCC29_SDIR)/.patched: $(GCC29_SDIR)/.extracted
-	@# Patches from Erik Andersen to fix known bugs in gcc-2.95. We want to
-	@# fail if it does not exist.
-	$(cmd_readall) $(DOWNLOAD)/gcc2.95-mega.patch.bz2 $(cmd_patch) -p1 -d $(GCC29_SDIR)
-
 	@# Patch to allow gcc-2.95 to build on gcc-3
 	@# + patches to allow gcc to find includes in $ROOT_PREFIX/include
 	$(cmd_readall) $(PATCHES)/gcc-$(GCC29) $(cmd_patch) -p1 -d $(GCC29_SDIR)

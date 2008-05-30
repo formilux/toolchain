@@ -16,8 +16,6 @@ $ time make INSTALLDIR=/build/toolchain-0.5.3 \
    - glibc-2.2.5.tar.bz2              : http://ftp.club-internet.fr/pub/mirrors/ftp.gnu.org/gnu/glibc/glibc-2.2.5.tar.gz
    - glibc-linuxthreads-2.2.5.tar.bz2 : http://ftp.club-internet.fr/pub/mirrors/ftp.gnu.org/gnu/glibc/glibc-linuxthreads-2.2.5.tar.gz
    - gcc-20011006.tar.bz2             : http://www.uclibc.org/downloads/toolchain/gcc-20011006.tar.bz2
-   - gcc2.95-mega.patch.bz2           : http://cvs.sourceforge.net/viewcvs.py/*checkout*/tuxscreen/buildroot-tux/sources/gcc2.95-mega.patch.bz2?rev=1.1
-     or extract it from http://www.fr.kernel.org/pub/linux/libs/uclibc/buildroot-0.9.27.tar.bz2
 
 Optional :
    - dietlibc-0.31.tar.bz2            : http://www.fr.kernel.org/pub/linux/libs/dietlibc/dietlibc-0.31.tar.bz2
