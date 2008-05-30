@@ -236,7 +236,7 @@ $(BINUTILS_BDIR)/.compiled: $(BINUTILS_BDIR)/.configured
 	cd $(BINUTILS_BDIR) && $(cmd_make) $(MPFLAGS)
 	touch $@
 
-$(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.patched
+$(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.completed
 	mkdir -p $(BINUTILS_BDIR)
 	(cd $(BINUTILS_BDIR) && CC=$(HOSTCC) $(BINUTILS_SDIR)/configure \
            --host=$(HOST) --target=$(TARGET) --prefix=$(TOOL_PREFIX) \
@@ -293,7 +293,7 @@ $(GCCLC29_BDIR)/.compiled: $(GCCLC29_BDIR)/.configured $(BINUTILS_BDIR)/.install
 # Note: try to build this in a different directory with different options, such
 # as --enable-__cxa_atexit, --disable-threads, --with-newlib, --disable-multilib
 
-$(GCCLC29_BDIR)/.configured: $(GCC29_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+$(GCCLC29_BDIR)/.configured: $(GCC29_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
 	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
 	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
@@ -356,7 +356,7 @@ $(GCCLC33_BDIR)/.compiled: $(GCCLC33_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC33_ADDONS)
 	touch $@
 
-$(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+$(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
 	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
 	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
@@ -426,7 +426,7 @@ $(GCCLC34_BDIR)/.compiled: $(GCCLC34_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC34_ADDONS)
 	touch $@
 
-$(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+$(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
 	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
 	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
@@ -496,7 +496,7 @@ $(GCCLC41_BDIR)/.compiled: $(GCCLC41_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC41_ADDONS)
 	touch $@
 
-$(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+$(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
 	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
 	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
@@ -533,7 +533,6 @@ $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLI
 	touch $@
 
 
-
 #### kernel headers
 # these headers have been build this way :
 # cd /usr/src/linux-2.4.32-wt8
@@ -546,7 +545,7 @@ $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLI
 # Note: try this way instead of dep+dep-files :
 # make ARCH=$(TARGET_ARCH) allmodconfig symlinks include/linux/version.h
 
-kernel-headers: $(KHDR_SDIR)/.patched
+kernel-headers: $(KHDR_SDIR)/.completed
 
 $(KHDR_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
@@ -559,7 +558,7 @@ $(KHDR_SDIR)/.extracted:
 
 glibc: $(GLIBC_BDIR)/.installed
 
-$(GLIBC_BDIR)/.installed: $(GLIBC_BDIR)/.compiled $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(GLIBC_BDIR)/.installed: $(GLIBC_BDIR)/.compiled $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.completed
 	(cd $(GLIBC_BDIR) && \
 	 $(cmd_make) $(MFLAGS) install slibdir=$(ROOTDIR)/lib \
 	    INSTALL_PROGRAM="\$${INSTALL} -s" \
@@ -572,7 +571,7 @@ $(GLIBC_BDIR)/.compiled: $(GCCLC_BDIR)/.installed $(GLIBC_BDIR)/.configured $(BI
 	cd $(GLIBC_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) $(MPFLAGS)
 	touch $@
 
-$(GLIBC_BDIR)/.configured: $(GCCLC_BDIR)/.installed $(GLIBC_SDIR)/.patched $(KHDR_SDIR)/.patched $(BINUTILS_BDIR)/.installed
+$(GLIBC_BDIR)/.configured: $(GCCLC_BDIR)/.installed $(GLIBC_SDIR)/.completed $(KHDR_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GLIBC_BDIR)
 	(cd $(GLIBC_BDIR) && \
 	 PATH=$(TARGET_PATH) CC=$(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCCLC_SUFFIX) \
@@ -592,7 +591,7 @@ $(GLIBC_BDIR)/.configured: $(GCCLC_BDIR)/.installed $(GLIBC_SDIR)/.patched $(KHD
 
 glibc-headers: $(GLIBC_HDIR)/.installed
 
-$(GLIBC_HDIR)/.installed: $(GLIBC_HDIR)/.configured $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(GLIBC_HDIR)/.installed: $(GLIBC_HDIR)/.configured $(GLIBC_SDIR)/.completed $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.completed
 	(cd $(GLIBC_HDIR) && \
 	 PATH=$(TARGET_PATH) \
 	   $(cmd_make) $(MFLAGS) cross-compiling=yes \
@@ -606,7 +605,7 @@ $(GLIBC_HDIR)/.installed: $(GLIBC_HDIR)/.configured $(GLIBC_SDIR)/.patched $(BIN
 	 (cd $(KHDR_SDIR)/include/ && $(cmd_tar) -cf - {asm,linux}/.) | (cd $(ROOT_PREFIX)/include/ && $(cmd_tar) xf -) )
 	touch $@
 
-$(GLIBC_HDIR)/.configured: $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(GLIBC_HDIR)/.configured: $(GLIBC_SDIR)/.completed $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.completed
 	mkdir -p $(GLIBC_HDIR)
 	(cd $(GLIBC_HDIR) && \
 	 PATH=$(TARGET_PATH) CC=$(HOSTCC) \
@@ -731,7 +730,7 @@ $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BI
 	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)'
 	touch $@
 
-$(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BINUTILS_BDIR)/.installed
+$(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC29_BDIR)
 
 	@# Those directories are important : gcc looks for "limits.h" there to
@@ -797,7 +796,7 @@ $(GCC33_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC33_BDIR)/.configured $(BI
 	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC33_ADDONS)
 	touch $@
 
-$(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BINUTILS_BDIR)/.installed
+$(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC33_BDIR)
 	(cd $(GCC33_BDIR) && CC="$(HOSTCC)" \
 	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
@@ -845,7 +844,7 @@ $(GCC34_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC34_BDIR)/.configured $(BI
 	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC34_ADDONS)
 	touch $@
 
-$(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BINUTILS_BDIR)/.installed
+$(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC34_BDIR)
 	(cd $(GCC34_BDIR) && CC="$(HOSTCC)" \
 	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
@@ -894,7 +893,7 @@ $(GCC41_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC41_BDIR)/.configured $(BI
 	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC41_ADDONS)
 	touch $@
 
-$(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BINUTILS_BDIR)/.installed
+$(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC41_BDIR)
 	(cd $(GCC41_BDIR) && CC="$(HOSTCC)" \
 	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
@@ -917,21 +916,6 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BIN
 	   --with-cpu=$(TARGET_CPU))
 	touch $@
 
-# Generic source patching rule : apply to source all patches from the patches
-# subdirectory with the exact same name and version as the package if it exists
-# and otherwise do nothing. Since it relies on the sources already being
-# extracted, Make automatically extracts it from the appropriate rule.
-$(SOURCE)/%/.patched: $(SOURCE)/%/.extracted
-	$(cmd_readall) $(PATCHES)/$(patsubst $(SOURCE)/%/.patched,%,$@) \
-	    $(cmd_patch) -p1 -d $(patsubst %/.patched,%,$@)
-	touch $@
-
-# Generic source extraction rule : extract download/XXX.tar.bz2 into source/XXX.
-$(SOURCE)/%/.extracted:
-	mkdir -p $(SOURCE)
-	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/$(patsubst $(SOURCE)/%/.extracted,%,$@).tar.bz2
-	touch $@
-
 
 #### dietlibc
 #### Cannot be fully cross-compiled yet, the 'diet' program uses the
@@ -944,12 +928,12 @@ $(DIETLIBC_BDIR)/.installed: $(DIETLIBC_BDIR)/.compiled
 	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
 
-$(DIETLIBC_BDIR)/.compiled: default_gcc $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(DIETLIBC_BDIR)/.compiled: default_gcc $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.completed
 	cd $(DIETLIBC_BDIR) && PATH=$(TARGET_PATH) \
 	   $(cmd_make) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
 
-$(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.patched
+$(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.completed
 	-rm -f $(DIETLIBC_BDIR) >/dev/null 2>&1
 	mkdir -p $(BUILDDIR)
 	$(cmd_tar) -C $(SOURCE) -cf - dietlibc-$(DIETLIBC) | $(cmd_tar) -C $(BUILDDIR) -xUf -
@@ -967,14 +951,14 @@ $(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
 	chmod 755 $(TOOL_PREFIX)/bin/uclibc
 	touch $@
 
-$(UCLIBC_BDIR)/.compiled: default_gcc $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
+$(UCLIBC_BDIR)/.compiled: default_gcc $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.completed
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) clean
 
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
 	   $(cmd_make) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
 	touch $@
 
-$(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.patched
+$(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.completed
 	-rm -rf $(UCLIBC_BDIR) >/dev/null 2>&1
 	mkdir -p $(BUILDDIR)
 	$(cmd_tar) -C $(SOURCE) -cf - uClibc-$(UCLIBC) | $(cmd_tar) -C $(BUILDDIR) -xUf -
@@ -985,7 +969,29 @@ $(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.patched
 	cd $(BUILDDIR)/uClibc-$(UCLIBC) && $(cmd_make) oldconfig
 	touch $@
 
-$(UCLIBC_SDIR)/.patched: $(UCLIBC_SDIR)/.extracted
+$(UCLIBC_SDIR)/.completed: $(UCLIBC_SDIR)/.patched
 	cp $(ADDONS)/uclibc-$(UCLIBC).config $(UCLIBC_SDIR)/.config
 	touch $@
 
+
+######### Generic rules #########
+
+# Generic source completion rule: after patching, some source require a
+# few addons and/or a little bit of tweaking. By defaults, it does nothing.
+$(SOURCE)/%/.completed: $(SOURCE)/%/.patched
+	touch $@
+
+# Generic source patching rule : apply to source all patches from the patches
+# subdirectory with the exact same name and version as the package if it exists
+# and otherwise do nothing. Since it relies on the sources already being
+# extracted, Make automatically extracts it from the appropriate rule.
+$(SOURCE)/%/.patched: $(SOURCE)/%/.extracted
+	$(cmd_readall) $(PATCHES)/$(patsubst $(SOURCE)/%/.patched,%,$@) \
+	    $(cmd_patch) -p1 -d $(patsubst %/.patched,%,$@)
+	touch $@
+
+# Generic source extraction rule : extract download/XXX.tar.bz2 into source/XXX.
+$(SOURCE)/%/.extracted:
+	mkdir -p $(SOURCE)
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/$(patsubst $(SOURCE)/%/.extracted,%,$@).tar.bz2
+	touch $@
