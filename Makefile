@@ -295,7 +295,7 @@ $(GCCLC29_BDIR)/.installed: $(GCCLC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	-mv $(TOOL_PREFIX)/bin/.gcclc29/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcclc29 >/dev/null 2>&1
-	touch $@
+	echo $(GCC29_SUFFIX) > $@
 
 $(GCCLC29_BDIR)/.compiled: $(GCCLC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
@@ -364,7 +364,7 @@ $(GCCLC33_BDIR)/.installed: $(GCCLC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	-mv $(TOOL_PREFIX)/bin/.gcclc33/$(TARGET)-{gcov,gccbug,gcc,cpp} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcclc33 >/dev/null 2>&1
-	touch $@
+	echo $(GCC33_SUFFIX) > $@
 
 $(GCCLC33_BDIR)/.compiled: $(GCCLC33_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	mkdir -p $(TOOL_PREFIX)/$(TARGET)
@@ -436,7 +436,7 @@ $(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	-mv $(TOOL_PREFIX)/bin/.gcclc34/$(TARGET)-{gcov,gccbug,gcc,cpp} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcclc34 >/dev/null 2>&1
-	touch $@
+	echo $(GCC34_SUFFIX) > $@
 
 $(GCCLC34_BDIR)/.compiled: $(GCCLC34_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	mkdir -p $(TOOL_PREFIX)/$(TARGET)
@@ -508,7 +508,7 @@ $(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	-mv $(TOOL_PREFIX)/bin/.gcclc41/$(TARGET)-{gcov,gccbug,gcc,cpp} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcclc41 >/dev/null 2>&1
-	touch $@
+	echo $(GCC41_SUFFIX) > $@
 
 $(GCCLC41_BDIR)/.compiled: $(GCCLC41_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	mkdir -p $(TOOL_PREFIX)/$(TARGET)
@@ -652,15 +652,16 @@ $(GLIBC_SDIR)/.extracted:
 # wil result in the compiler designed as the default one being installed.
 
 # generic rule to set one compiler as the default one. All versionned existing
-# files are linked to their canonical name.
+# files are linked to their canonical name. Note that the canonical name is
+# taken out of the .installed file.
 $(BUILDDIR)/gcc-%/.default_gcc: $(BUILDDIR)/gcc-%/.installed
 	for i in gccbug gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
-	    suffix=$(patsubst $(BUILDDIR)/gcc-%/.default_gcc,%,$@); \
+	    suffix=$$(cat $^); \
 	    if [ -e $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$$suffix ]; then \
 	        ln -snf $(TARGET)-$$i-$$suffix $(TOOL_PREFIX)/bin/$(TARGET)-$$i; \
 	    fi; \
 	done
-	touch $@
+	cp $^ $@
 
 
 #### GCC-2.95
@@ -721,7 +722,7 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	-mv $(TOOL_PREFIX)/bin/.gcc29/$(TARGET)-{gcov,g++,c++,gcc,cpp,c++filt,unprotoize,protoize} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcc29 >/dev/null 2>&1
-	touch $@
+	echo $(GCC29_SUFFIX) > $@
 
 $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	@# this is because of bugs in the libstdc++ path configuration
@@ -797,7 +798,7 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	-mv $(TOOL_PREFIX)/bin/.gcc33/$(TARGET)-{gcov,gccbug,g++,c++,gcc,cpp} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcc33 >/dev/null 2>&1
-	touch $@
+	echo $(GCC33_SUFFIX) > $@
 
 $(GCC33_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC33_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC33_BDIR) && \
@@ -836,7 +837,7 @@ $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC34)
-	touch $@
+	echo $(GCC34_SUFFIX) > $@
 
 $(GCC34_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC34_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
@@ -875,7 +876,7 @@ $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC41)
-	touch $@
+	echo $(GCC41_SUFFIX) > $@
 
 $(GCC41_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC41_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
@@ -910,8 +911,8 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.completed $(B
 #### Cannot be fully cross-compiled yet, the 'diet' program uses the
 #### cross-compiler while it should not.
 
-$(DIETLIBC_BDIR)/.installed: $(DIETLIBC_BDIR)/.compiled
-	cd $(DIETLIBC_BDIR) && \
+$(DIETLIBC_BDIR)/.installed: default_gcc $(DIETLIBC_BDIR)/.compiled
+	cd $(DIETLIBC_BDIR) && PATH=$(TARGET_PATH) \
 	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
 
@@ -929,7 +930,7 @@ $(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.completed
 #### uclibc
 #### it is built with default gcc. The result is good enough.
 
-$(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
+$(UCLIBC_BDIR)/.installed: default_gcc $(UCLIBC_BDIR)/.compiled
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
 	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
 	sed -e 's@%%TOOLDIR%%@$(TOOLDIR)@g' $(ADDONS)/uclibc.wrap >$(TOOL_PREFIX)/bin/uclibc
@@ -980,3 +981,6 @@ $(SOURCE)/%/.extracted:
 	mkdir -p $(SOURCE)
 	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/$(patsubst $(SOURCE)/%/.extracted,%,$@).tar.bz2
 	touch $@
+
+# implicit rule asking make not to remove intermediate files.
+.SECONDARY:
