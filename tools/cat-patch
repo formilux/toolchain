@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# cat-patch - Patch extractor - version 0.1.0 - 2008-05-30
+#
+# Copyright (C) 2001-2008 Benoit Dolez & Willy Tarreau
+#       mailto: benoit@ant-computing.com,willy@ant-computing.com
+#
+# This program is licenced under GPLv2 ( http://www.gnu.org/licenses/gpl.txt )
+
+# This script is used to extract patches to stdout from tar archives,
+# or plain patch form. In both cases, plain text patches, bzip2 and
+# gzip formats are supported.
+
+cmd_bzip2=${cmd_bzip2:-bzip2}
+cmd_gzip=${cmd_gzip:-gzip}
+cmd_tar=${cmd_tar:-tar}
+cmd_cat=${cmd_cat:-cat}
+
+if [ $# == 0 ]; then
+	echo "Usage: ${0##*/} patch{,.gz,.bz2,.tar,.tgz,.tar.bz2}[...]" >&2
+	echo "Will extract patches to stdout." >&2
+	exit 1
+fi
+
+for p in "$@"; do
+	if [ -e "$p" ]; then
+		case "$p" in
+		*.tar.bz2|*.tbz2|*.tbz)
+			${cmd_bzip2} -cd "$p" | ${cmd_tar} xOf -
+			;;
+		*.tar.gz|*.tgz)
+			${cmd_gzip} -cd "$p" | ${cmd_tar} -xOf -
+			;;
+		*.tar)
+			${cmd_tar} xOf "$p"
+			;;
+		*bz2)
+			${cmd_bzip2} -cd "$p"
+			;;
+		*gz)
+			${cmd_gzip}  -cd "$p"
+			;;
+		*)
+			${cmd_cat} "$p"
+			;;
+		esac
+	else
+		echo "WARNING: patch \"$p\" does not exist." >&2
+	fi
+done

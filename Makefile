@@ -18,6 +18,7 @@ TARGET        := $(TARGET_CPU)-flx-linux
 # It is generally not needed to change this
 TOP           := $(PWD)
 PATCHES       := $(TOP)/patches
+TOOLS         := $(TOP)/tools
 DOWNLOAD      := $(TOP)/download
 SOURCE        := $(TOP)/source
 BUILD         := $(TOP)/build
@@ -136,6 +137,7 @@ cmd_bzip2     := bzip2
 cmd_find      := find
 cmd_patch     := patch
 cmd_make      := $(MAKE)
+cmd_readall   := $(TOOLS)/readall
 
 ################# end of configuration ##############
 
@@ -636,8 +638,8 @@ $(GLIBC_HDIR)/.configured: $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(
 	touch $@
 
 $(GLIBC_SDIR)/.patched: $(GLIBC_SDIR)/.extracted
-	$(cmd_patch) -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.3.2-csu-Makefile.patch
-	$(cmd_patch) -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.2.5-support-gcc4.diff
+	$(cmd_readall) $(PATCHES)/glibc-2.3.2-csu-Makefile.patch $(cmd_patch) -p1 -d $(GLIBC_SDIR)
+	$(cmd_readall) $(PATCHES)/glibc-2.2.5-support-gcc4.diff  $(cmd_patch) -p1 -d $(GLIBC_SDIR)
 	touch $@
 
 $(GLIBC_SDIR)/.extracted:
@@ -770,15 +772,15 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BIN
 
 $(GCC29_SDIR)/.patched: $(GCC29_SDIR)/.extracted
 	@# Patches from Erik Andersen to fix known bugs in gcc-2.95
-	[ -s "$(DOWNLOAD)/gcc2.95-mega.patch.bz2" ] && \
-		bzcat $(DOWNLOAD)/gcc2.95-mega.patch.bz2 | $(cmd_patch) -p1 -d $(GCC29_SDIR)
+	[ ! -s "$(DOWNLOAD)/gcc2.95-mega.patch.bz2" ] || \
+		$(cmd_readall) $(DOWNLOAD)/gcc2.95-mega.patch.bz2 $(cmd_patch) -p1 -d $(GCC29_SDIR)
 
 	@# Patch to allow gcc-2.95 to build on gcc-3
-	bzcat $(PATCHES)/gcc-2.95-gcc3-compfix.diff.bz2 | $(cmd_patch) -p1 -d $(GCC29_SDIR)
+	$(cmd_readall) $(PATCHES)/gcc-2.95-gcc3-compfix.diff.bz2  $(cmd_patch) -p1 -d $(GCC29_SDIR)
 
 	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
 	for p in patch-gcc295-{prefix-target-root,prefix-usage,displace-gcc-lib}; do \
-	   $(cmd_patch) -p1 -d $(GCC29_SDIR) < $(PATCHES)/$$p ; \
+	   $(cmd_readall) $(PATCHES)/$$p $(cmd_patch) -p1 -d $(GCC29_SDIR); \
 	done
 	touch $@
 
@@ -856,7 +858,7 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 $(GCC33_SDIR)/.patched: $(GCC33_SDIR)/.extracted
 	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
 	for p in patch-gcc33-{install-script,fix-tooldir,not-outside-root}; do \
-	   $(cmd_patch) -p1 -d $(GCC33_SDIR) < $(PATCHES)/$$p ; \
+	   $(cmd_readall) $(PATCHES)/$$p $(cmd_patch) -p1 -d $(GCC33_SDIR) ; \
 	done
 	touch $@
 
@@ -915,7 +917,7 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BIN
 
 $(GCC34_SDIR)/.patched: $(GCC34_SDIR)/.extracted
 	for p in patch-gcc34-fix-tooldir patch-gcc34-not-outside-root; do \
-	   $(cmd_patch) -p1 -d $(GCC34_SDIR) < $(PATCHES)/$$p ; \
+	   $(cmd_readall) $(PATCHES)/$$p $(cmd_patch) -p1 -d $(GCC34_SDIR) ; \
 	done
 	touch $@
 
@@ -975,7 +977,7 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BIN
 
 $(GCC41_SDIR)/.patched: $(GCC41_SDIR)/.extracted
 	for p in patch-gcc41-{fix-tooldir,not-outside-root}; do \
-	   $(cmd_patch) -p1 -d $(GCC41_SDIR) < $(PATCHES)/$$p ; \
+	   $(cmd_readall) $(PATCHES)/$$p $(cmd_patch) -p1 -d $(GCC41_SDIR) ; \
 	done
 	touch $@
 
@@ -1008,7 +1010,7 @@ $(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.patched
 	touch $@
 
 $(DIETLIBC_SDIR)/.patched: $(DIETLIBC_SDIR)/.extracted
-	$(cmd_patch) -d $(DIETLIBC_SDIR) -p1 < $(PATCHES)/patch-dietlibc-0.28-cross-gcc
+	$(cmd_readall) $(PATCHES)/patch-dietlibc-0.28-cross-gcc $(cmd_patch) -d $(DIETLIBC_SDIR) -p1
 	touch $@
 
 $(DIETLIBC_SDIR)/.extracted:
