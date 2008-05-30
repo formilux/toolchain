@@ -246,15 +246,6 @@ $(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.patched
 	)
 	touch $@
 
-$(BINUTILS_SDIR)/.patched: $(BINUTILS_SDIR)/.extracted
-	touch $@
-
-$(BINUTILS_SDIR)/.extracted:
-	mkdir -p $(SOURCE)
-	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/binutils-$(BINUTILS).tar.bz2
-	touch $@
-
-
 #### partial GCC needed to build glibc. The correct version to use is
 #### determined by the GCCLIBC variable, which means that GCCLC_BDIR will
 #### point to one of the GCCLC*_BDIR directories.
@@ -557,9 +548,6 @@ $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLI
 
 kernel-headers: $(KHDR_SDIR)/.patched
 
-$(KHDR_SDIR)/.patched: $(KHDR_SDIR)/.extracted
-	touch $@
-
 $(KHDR_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
 	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(TARGET_ARCH)-$(KHDR).tar.bz2 \
@@ -636,10 +624,6 @@ $(GLIBC_HDIR)/.configured: $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(
 	   mkdir -p stdio-common ; \
 	   touch stdio-common/errlist-compat.c ; \
 	 fi )
-	touch $@
-
-$(GLIBC_SDIR)/.patched: $(GLIBC_SDIR)/.extracted
-	$(cmd_readall) $(PATCHES)/glibc-$(GLIBC) $(cmd_patch) -p1 -d $(GLIBC_SDIR)
 	touch $@
 
 $(GLIBC_SDIR)/.extracted:
@@ -770,17 +754,6 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BIN
 	   --enable-languages=c,c++ --enable-threads )
 	touch $@
 
-$(GCC29_SDIR)/.patched: $(GCC29_SDIR)/.extracted
-	@# Patch to allow gcc-2.95 to build on gcc-3
-	@# + patches to allow gcc to find includes in $ROOT_PREFIX/include
-	$(cmd_readall) $(PATCHES)/gcc-$(GCC29) $(cmd_patch) -p1 -d $(GCC29_SDIR)
-	touch $@
-
-$(GCC29_SDIR)/.extracted:
-	mkdir -p $(SOURCE)
-	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC29).tar.bz2
-	touch $@
-
 
 #### GCC-3.3
 
@@ -847,16 +820,6 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 	   --with-cpu=$(TARGET_CPU))
 	touch $@
 
-$(GCC33_SDIR)/.patched: $(GCC33_SDIR)/.extracted
-	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
-	$(cmd_readall) $(PATCHES)/gcc-$(GCC33) $(cmd_patch) -p1 -d $(GCC33_SDIR)
-	touch $@
-
-$(GCC33_SDIR)/.extracted:
-	mkdir -p $(SOURCE)
-	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC33).tar.bz2
-	touch $@
-
 
 #### GCC-3.4
 
@@ -903,16 +866,6 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BIN
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC34_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
-	touch $@
-
-$(GCC34_SDIR)/.patched: $(GCC34_SDIR)/.extracted
-	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
-	$(cmd_readall) $(PATCHES)/gcc-$(GCC34) $(cmd_patch) -p1 -d $(GCC34_SDIR)
-	touch $@
-
-$(GCC34_SDIR)/.extracted:
-	mkdir -p $(SOURCE)
-	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC34).tar.bz2
 	touch $@
 
 
@@ -964,14 +917,19 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BIN
 	   --with-cpu=$(TARGET_CPU))
 	touch $@
 
-$(GCC41_SDIR)/.patched: $(GCC41_SDIR)/.extracted
-	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
-	$(cmd_readall) $(PATCHES)/gcc-$(GCC41) $(cmd_patch) -p1 -d $(GCC41_SDIR)
+# Generic source patching rule : apply to source all patches from the patches
+# subdirectory with the exact same name and version as the package if it exists
+# and otherwise do nothing. Since it relies on the sources already being
+# extracted, Make automatically extracts it from the appropriate rule.
+$(SOURCE)/%/.patched: $(SOURCE)/%/.extracted
+	$(cmd_readall) $(PATCHES)/$(patsubst $(SOURCE)/%/.patched,%,$@) \
+	    $(cmd_patch) -p1 -d $(patsubst %/.patched,%,$@)
 	touch $@
 
-$(GCC41_SDIR)/.extracted:
+# Generic source extraction rule : extract download/XXX.tar.bz2 into source/XXX.
+$(SOURCE)/%/.extracted:
 	mkdir -p $(SOURCE)
-	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC41).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/$(patsubst $(SOURCE)/%/.extracted,%,$@).tar.bz2
 	touch $@
 
 
@@ -996,16 +954,6 @@ $(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.patched
 	mkdir -p $(BUILDDIR)
 	$(cmd_tar) -C $(SOURCE) -cf - dietlibc-$(DIETLIBC) | $(cmd_tar) -C $(BUILDDIR) -xUf -
 	touch $@
-
-$(DIETLIBC_SDIR)/.patched: $(DIETLIBC_SDIR)/.extracted
-	$(cmd_readall) $(PATCHES)/dietlibc-$(DIETLIBC) $(cmd_patch) -d $(DIETLIBC_SDIR) -p1
-	touch $@
-
-$(DIETLIBC_SDIR)/.extracted:
-	mkdir -p $(SOURCE)
-	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/dietlibc-$(DIETLIBC).tar.bz2
-	touch $@
-
 
 #### uclibc
 #### it is built with default gcc. The result is good enough.
@@ -1039,10 +987,5 @@ $(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.patched
 
 $(UCLIBC_SDIR)/.patched: $(UCLIBC_SDIR)/.extracted
 	cp $(ADDONS)/uclibc-$(UCLIBC).config $(UCLIBC_SDIR)/.config
-	touch $@
-
-$(UCLIBC_SDIR)/.extracted:
-	mkdir -p $(SOURCE)
-	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/uClibc-$(UCLIBC).tar.bz2
 	touch $@
 
