@@ -280,7 +280,7 @@ $(GCCLC29_BDIR)/.installed: $(GCCLC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc29/ >/dev/null 2>&1
 
 	(cd $(GCCLC29_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -349,7 +349,7 @@ $(GCCLC33_BDIR)/.installed: $(GCCLC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc33/ >/dev/null 2>&1
 
 	(cd $(GCCLC33_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC33_ADDONS) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -421,7 +421,7 @@ $(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc34/ >/dev/null 2>&1
 
 	(cd $(GCCLC34_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC34_ADDONS) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -493,7 +493,7 @@ $(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc41/ >/dev/null 2>&1
 
 	(cd $(GCCLC41_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC41_ADDONS) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -781,7 +781,7 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	    $(TOOL_PREFIX)/bin/.gcc33/ >/dev/null 2>&1
 
 	cd $(GCC33_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC33_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC33_ADDONS) INSTALL_PROGRAM_ARGS="-s"
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC33)
@@ -832,7 +832,7 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.completed $(B
 
 $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}' $(GCC34_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC34_ADDONS) INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}'
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC34)
@@ -871,7 +871,7 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.completed $(B
 
 $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC41_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC41_ADDONS) INSTALL_PROGRAM_ARGS="-s"
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC41)
