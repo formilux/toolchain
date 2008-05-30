@@ -19,6 +19,7 @@ TARGET        := $(TARGET_CPU)-flx-linux
 TOP           := $(PWD)
 PATCHES       := $(TOP)/patches
 TOOLS         := $(TOP)/tools
+ADDONS        := $(TOP)/addons
 DOWNLOAD      := $(TOP)/download
 SOURCE        := $(TOP)/source
 BUILD         := $(TOP)/build
@@ -1027,7 +1028,7 @@ uclibc: $(UCLIBC_BDIR)/.installed
 $(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
 	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
-	sed -e 's@%%TOOLDIR%%@$(TOOLDIR)@g' $(PATCHES)/uclibc.wrap >$(TOOL_PREFIX)/bin/uclibc
+	sed -e 's@%%TOOLDIR%%@$(TOOLDIR)@g' $(ADDONS)/uclibc.wrap >$(TOOL_PREFIX)/bin/uclibc
 	chmod 755 $(TOOL_PREFIX)/bin/uclibc
 	touch $@
 
@@ -1050,7 +1051,7 @@ $(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.patched
 	touch $@
 
 $(UCLIBC_SDIR)/.patched: $(UCLIBC_SDIR)/.extracted
-	cp $(PATCHES)/uclibc-$(UCLIBC).config $(UCLIBC_SDIR)/.config
+	cp $(ADDONS)/uclibc-$(UCLIBC).config $(UCLIBC_SDIR)/.config
 	touch $@
 
 $(UCLIBC_SDIR)/.extracted:
