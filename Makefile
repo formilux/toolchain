@@ -128,6 +128,14 @@ UCLIBC_BDIR   := $(BUILDDIR)/uClibc-$(UCLIBC)
 MFLAGS        :=
 MPFLAGS       := -j 2
 
+# various commands which can be overridden by the command line.
+
+cmd_gzip      := gzip
+cmd_tar       := tar
+cmd_bzip2     := bzip2
+cmd_find      := find
+cmd_patch     := patch
+cmd_make      := $(MAKE)
 
 ################# end of configuration ##############
 
@@ -178,24 +186,24 @@ space: remove-unneeded
 # make a bootstrap archive
 bootstrap-archive:
 	ln -s . toolchain-$(TOOLCHAIN)
-	tar cf - toolchain-$(TOOLCHAIN)/{CHANGELOG,HOWTO.txt,Makefile,patches,tools} \
+	$(cmd_tar) cf - toolchain-$(TOOLCHAIN)/{CHANGELOG,HOWTO.txt,Makefile,patches,tools} \
 	         toolchain-$(TOOLCHAIN)/tests/{FLXPKG,README.txt,*/.flxpkg} \
-	  | gzip -9 >flx-toolchain-$(TOOLCHAIN).tgz
+	  | $(cmd_gzip) -c9 >flx-toolchain-$(TOOLCHAIN).tgz
 	rm -f toolchain-$(TOOLCHAIN)
 
 # easier way to make a bootstrap archive based on git
 git-bootstrap-archive:
-	git tar-tree HEAD toolchain-$(TOOLCHAIN) | gzip -c9 >flx-toolchain-$(TOOLCHAIN).tgz
+	git tar-tree HEAD toolchain-$(TOOLCHAIN) | $(cmd_gzip) -c9 >flx-toolchain-$(TOOLCHAIN).tgz
 
 # build the archive containing the minimal binary tools.
 tool-archive: remove-unneeded
-	tar -cf - $(TARGETDIR)/tool-$(HOST) \
-	  | bzip2 -9 >flx-toolchain-$(TOOLCHAIN)-tool-$(HOST)_$(TARGET).tbz
+	$(cmd_tar) -cf - $(TARGETDIR)/tool-$(HOST) \
+	  | $(cmd_bzip2) -c9 >flx-toolchain-$(TOOLCHAIN)-tool-$(HOST)_$(TARGET).tbz
 
 # build the archive containing the minimal binary root files.
 root-archive: remove-unneeded $(POOLDIR)
-	tar -cf - $(TARGETDIR)/root $(TARGETDIR)/pool \
-	  | bzip2 -9 >flx-toolchain-$(TOOLCHAIN)-root-$(TARGET).tbz
+	$(cmd_tar) -cf - $(TARGETDIR)/root $(TARGETDIR)/pool \
+	  | $(cmd_bzip2) -c9 >flx-toolchain-$(TOOLCHAIN)-root-$(TARGET).tbz
 
 # moves root directory to turn it into a link to a group of profiles
 $(POOLDIR):
@@ -216,13 +224,13 @@ binutils: $(BINUTILS_BDIR)/.installed
 # first in all of the system directories !
 $(BINUTILS_BDIR)/.installed: $(BINUTILS_BDIR)/.compiled
 	(cd $(BINUTILS_BDIR) && \
-	 $(MAKE) $(MFLAGS) install INSTALL_PROGRAM="\$${INSTALL} -s" )
+	 $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM="\$${INSTALL} -s" )
 	 ln -sf nm $(TOOL_PREFIX)/$(TARGET)/bin/gnm
 	 ln -sf strip $(TOOL_PREFIX)/$(TARGET)/bin/gstrip
 	touch $@
 
 $(BINUTILS_BDIR)/.compiled: $(BINUTILS_BDIR)/.configured
-	cd $(BINUTILS_BDIR) && $(MAKE) $(MPFLAGS)
+	cd $(BINUTILS_BDIR) && $(cmd_make) $(MPFLAGS)
 	touch $@
 
 $(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.patched
@@ -240,7 +248,7 @@ $(BINUTILS_SDIR)/.patched: $(BINUTILS_SDIR)/.extracted
 
 $(BINUTILS_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/binutils-$(BINUTILS).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/binutils-$(BINUTILS).tar.bz2
 	touch $@
 
 
@@ -260,7 +268,7 @@ $(GCCLC29_BDIR)/.installed: $(GCCLC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc29/ >/dev/null 2>&1
 
 	(cd $(GCCLC29_BDIR) && \
-	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -280,7 +288,7 @@ $(GCCLC29_BDIR)/.installed: $(GCCLC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 $(GCCLC29_BDIR)/.compiled: $(GCCLC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
-	cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) all-gcc
+	cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) all-gcc
 	touch $@
 
 # note: we will install this first-stage compiler in $PREFIX, but since it
@@ -329,7 +337,7 @@ $(GCCLC33_BDIR)/.installed: $(GCCLC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc33/ >/dev/null 2>&1
 
 	(cd $(GCCLC33_BDIR) && \
-	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -351,7 +359,7 @@ $(GCCLC33_BDIR)/.compiled: $(GCCLC33_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	cd $(GCCLC33_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC33_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC33_ADDONS)
 	touch $@
 
 $(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
@@ -399,7 +407,7 @@ $(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc34/ >/dev/null 2>&1
 
 	(cd $(GCCLC34_BDIR) && \
-	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -421,7 +429,7 @@ $(GCCLC34_BDIR)/.compiled: $(GCCLC34_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	cd $(GCCLC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC34_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC34_ADDONS)
 	touch $@
 
 $(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
@@ -469,7 +477,7 @@ $(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc41/ >/dev/null 2>&1
 
 	(cd $(GCCLC41_BDIR) && \
-	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -491,7 +499,7 @@ $(GCCLC41_BDIR)/.compiled: $(GCCLC41_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	cd $(GCCLC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC41_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC41_ADDONS)
 	touch $@
 
 $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.patched $(GLIBC_SDIR)/.patched $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
@@ -551,8 +559,8 @@ $(KHDR_SDIR)/.patched: $(KHDR_SDIR)/.extracted
 
 $(KHDR_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(TARGET_ARCH)-$(KHDR).tar.bz2 \
-	  || tar -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(KHDR).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(TARGET_ARCH)-$(KHDR).tar.bz2 \
+	  || $(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/kernel-headers-$(KHDR).tar.bz2
 	touch $@
 
 
@@ -562,15 +570,15 @@ glibc: $(GLIBC_BDIR)/.installed
 
 $(GLIBC_BDIR)/.installed: $(GLIBC_BDIR)/.compiled $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
 	(cd $(GLIBC_BDIR) && \
-	 $(MAKE) $(MFLAGS) install slibdir=$(ROOTDIR)/lib \
+	 $(cmd_make) $(MFLAGS) install slibdir=$(ROOTDIR)/lib \
 	    INSTALL_PROGRAM="\$${INSTALL} -s" \
 	    INSTALL_SCRIPT="\$${INSTALL}" && \
 	 rm -rf $(ROOT_PREFIX)/include/{asm,linux} && \
-	 (cd $(KHDR_SDIR)/include/ && tar -cf - {asm,linux}/.) | (cd $(ROOT_PREFIX)/include/ && tar xf -) )
+	 (cd $(KHDR_SDIR)/include/ && $(cmd_tar) -cf - {asm,linux}/.) | (cd $(ROOT_PREFIX)/include/ && $(cmd_tar) xf -) )
 	touch $@
 
 $(GLIBC_BDIR)/.compiled: $(GCCLC_BDIR)/.installed $(GLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	cd $(GLIBC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MPFLAGS)
+	cd $(GLIBC_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) $(MPFLAGS)
 	touch $@
 
 $(GLIBC_BDIR)/.configured: $(GCCLC_BDIR)/.installed $(GLIBC_SDIR)/.patched $(KHDR_SDIR)/.patched $(BINUTILS_BDIR)/.installed
@@ -596,7 +604,7 @@ glibc-headers: $(GLIBC_HDIR)/.installed
 $(GLIBC_HDIR)/.installed: $(GLIBC_HDIR)/.configured $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
 	(cd $(GLIBC_HDIR) && \
 	 PATH=$(TARGET_PATH) \
-	   $(MAKE) $(MFLAGS) cross-compiling=yes \
+	   $(cmd_make) $(MFLAGS) cross-compiling=yes \
 	     install_root=$(ROOTDIR) prefix=/usr slibdir=/lib \
 	     libdir=/usr/lib libexecdir=/usr/bin install-headers && \
 	 cp $(GLIBC_SDIR)/include/features.h $(ROOT_PREFIX)/include/ && \
@@ -604,7 +612,7 @@ $(GLIBC_HDIR)/.installed: $(GLIBC_HDIR)/.configured $(GLIBC_SDIR)/.patched $(BIN
 	 mkdir -p $(ROOT_PREFIX)/include/gnu && \
 	 touch $(ROOT_PREFIX)/include/gnu/stubs.h && \
 	 rm -rf $(ROOT_PREFIX)/include/{asm,linux} && \
-	 (cd $(KHDR_SDIR)/include/ && tar -cf - {asm,linux}/.) | (cd $(ROOT_PREFIX)/include/ && tar xf -) )
+	 (cd $(KHDR_SDIR)/include/ && $(cmd_tar) -cf - {asm,linux}/.) | (cd $(ROOT_PREFIX)/include/ && $(cmd_tar) xf -) )
 	touch $@
 
 $(GLIBC_HDIR)/.configured: $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
@@ -621,21 +629,21 @@ $(GLIBC_HDIR)/.configured: $(GLIBC_SDIR)/.patched $(BINUTILS_BDIR)/.installed $(
 	   --disable-sanity-checks --enable-add-ons \
 	   --enable-kernel=2.4.0 --enable-hacker-mode && \
 	 if grep -q GLIBC_2.3 $(GLIBC_SDIR)/ChangeLog; then \
-	   PATH=$(TARGET_PATH) $(MAKE) sysdeps/gnu/errlist.c ; \
+	   PATH=$(TARGET_PATH) $(cmd_make) sysdeps/gnu/errlist.c ; \
 	   mkdir -p stdio-common ; \
 	   touch stdio-common/errlist-compat.c ; \
 	 fi )
 	touch $@
 
 $(GLIBC_SDIR)/.patched: $(GLIBC_SDIR)/.extracted
-	patch -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.3.2-csu-Makefile.patch
-	patch -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.2.5-support-gcc4.diff
+	$(cmd_patch) -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.3.2-csu-Makefile.patch
+	$(cmd_patch) -p1 -d $(GLIBC_SDIR) < $(PATCHES)/glibc-2.2.5-support-gcc4.diff
 	touch $@
 
 $(GLIBC_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/glibc-$(GLIBC).tar.bz2
-	tar -C $(GLIBC_SDIR) -jxf $(DOWNLOAD)/glibc-linuxthreads-$(GLIBC).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/glibc-$(GLIBC).tar.bz2
+	$(cmd_tar) -C $(GLIBC_SDIR) -jxf $(DOWNLOAD)/glibc-linuxthreads-$(GLIBC).tar.bz2
 	touch $@
 
 #### We also want to set a default GCC. For this, pick one of
@@ -664,7 +672,7 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 	echo "###############  installing 'gcc-cross'  ##################"
 	(cd $(GCC29_BDIR) && \
-	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-gcc-cross INSTALL_PROGRAM_ARGS="-s" \
+	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc-cross INSTALL_PROGRAM_ARGS="-s" \
 	    gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
@@ -678,7 +686,7 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	@# reserved for binutils, so we point libdir to the gcc directory.
 
 	(cd $(GCC29_BDIR) && \
-	 PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install-target INSTALL_PROGRAM_ARGS="-s" \
+	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-target INSTALL_PROGRAM_ARGS="-s" \
 	    gcclibdir='$(TOOL_PREFIX)/lib/gcc-lib' \
 	    libsubdir='$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' \
 	    libdir='$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' \
@@ -718,7 +726,7 @@ $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BI
 	( rmdir $(GCC29_BDIR)/$(TARGET) && ln -s . $(GCC29_BDIR)/$(TARGET) || true ) 2>/dev/null 
 
 	@# first, we will only build gcc
-	cd $(GCC29_BDIR) && PATH=$(TARGET_PATH) $(MAKE) all-gcc $(MFLAGS) \
+	cd $(GCC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS) \
 	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
@@ -730,7 +738,7 @@ $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BI
 	mv $(GCC29_BDIR)/gcc/specs- $(GCC29_BDIR)/gcc/specs
 
 	@# now we can make everything else (libio, libstdc++, ...)
-	cd $(GCC29_BDIR) && PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) \
+	cd $(GCC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) \
 	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
@@ -763,20 +771,20 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.patched $(BIN
 $(GCC29_SDIR)/.patched: $(GCC29_SDIR)/.extracted
 	@# Patches from Erik Andersen to fix known bugs in gcc-2.95
 	[ -s "$(DOWNLOAD)/gcc2.95-mega.patch.bz2" ] && \
-		bzcat $(DOWNLOAD)/gcc2.95-mega.patch.bz2 | patch -p1 -d $(GCC29_SDIR)
+		bzcat $(DOWNLOAD)/gcc2.95-mega.patch.bz2 | $(cmd_patch) -p1 -d $(GCC29_SDIR)
 
 	@# Patch to allow gcc-2.95 to build on gcc-3
-	bzcat $(PATCHES)/gcc-2.95-gcc3-compfix.diff.bz2 | patch -p1 -d $(GCC29_SDIR)
+	bzcat $(PATCHES)/gcc-2.95-gcc3-compfix.diff.bz2 | $(cmd_patch) -p1 -d $(GCC29_SDIR)
 
 	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
 	for p in patch-gcc295-{prefix-target-root,prefix-usage,displace-gcc-lib}; do \
-	   patch -p1 -d $(GCC29_SDIR) < $(PATCHES)/$$p ; \
+	   $(cmd_patch) -p1 -d $(GCC29_SDIR) < $(PATCHES)/$$p ; \
 	done
 	touch $@
 
 $(GCC29_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC29).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC29).tar.bz2
 	touch $@
 
 
@@ -799,7 +807,7 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	    $(TOOL_PREFIX)/bin/.gcc33/ >/dev/null 2>&1
 
 	cd $(GCC33_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC33_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC33_ADDONS)
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC33)
@@ -819,7 +827,7 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 $(GCC33_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC33_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC33_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC33_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC33_ADDONS)
 	touch $@
 
 $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BINUTILS_BDIR)/.installed
@@ -848,13 +856,13 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.patched $(BIN
 $(GCC33_SDIR)/.patched: $(GCC33_SDIR)/.extracted
 	@# patches to allow gcc to find includes in $ROOT_PREFIX/include
 	for p in patch-gcc33-{install-script,fix-tooldir,not-outside-root}; do \
-	   patch -p1 -d $(GCC33_SDIR) < $(PATCHES)/$$p ; \
+	   $(cmd_patch) -p1 -d $(GCC33_SDIR) < $(PATCHES)/$$p ; \
 	done
 	touch $@
 
 $(GCC33_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC33).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC33).tar.bz2
 	touch $@
 
 
@@ -871,7 +879,7 @@ $(GCC34_BDIR)/.default_gcc: $(GCC34_BDIR)/.installed
 gcc34: $(GCC34_BDIR)/.installed
 $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}' $(GCC34_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}' $(GCC34_ADDONS)
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC34)
@@ -879,7 +887,7 @@ $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 $(GCC34_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC34_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC34_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC34_ADDONS)
 	touch $@
 
 $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BINUTILS_BDIR)/.installed
@@ -907,13 +915,13 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.patched $(BIN
 
 $(GCC34_SDIR)/.patched: $(GCC34_SDIR)/.extracted
 	for p in patch-gcc34-fix-tooldir patch-gcc34-not-outside-root; do \
-	   patch -p1 -d $(GCC34_SDIR) < $(PATCHES)/$$p ; \
+	   $(cmd_patch) -p1 -d $(GCC34_SDIR) < $(PATCHES)/$$p ; \
 	done
 	touch $@
 
 $(GCC34_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC34).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC34).tar.bz2
 	touch $@
 
 
@@ -931,7 +939,7 @@ $(GCC41_BDIR)/.default_gcc: $(GCC41_BDIR)/.installed
 gcc41: $(GCC41_BDIR)/.installed
 $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC41_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install INSTALL_PROGRAM_ARGS="-s" $(GCC41_ADDONS)
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC41)
@@ -939,7 +947,7 @@ $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 
 $(GCC41_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC41_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(MAKE) all $(MPFLAGS) $(GCC41_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC41_ADDONS)
 	touch $@
 
 $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BINUTILS_BDIR)/.installed
@@ -967,13 +975,13 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.patched $(BIN
 
 $(GCC41_SDIR)/.patched: $(GCC41_SDIR)/.extracted
 	for p in patch-gcc41-{fix-tooldir,not-outside-root}; do \
-	   patch -p1 -d $(GCC41_SDIR) < $(PATCHES)/$$p ; \
+	   $(cmd_patch) -p1 -d $(GCC41_SDIR) < $(PATCHES)/$$p ; \
 	done
 	touch $@
 
 $(GCC41_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC41).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/gcc-$(GCC41).tar.bz2
 	touch $@
 
 
@@ -985,27 +993,27 @@ dietlibc: $(DIETLIBC_BDIR)/.installed
 
 $(DIETLIBC_BDIR)/.installed: $(DIETLIBC_BDIR)/.compiled
 	cd $(DIETLIBC_BDIR) && \
-	   $(MAKE) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
+	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
 
 $(DIETLIBC_BDIR)/.compiled: default_gcc $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
 	cd $(DIETLIBC_BDIR) && PATH=$(TARGET_PATH) \
-	   $(MAKE) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
+	   $(cmd_make) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
 	touch $@
 
 $(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.patched
 	-rm -f $(DIETLIBC_BDIR) >/dev/null 2>&1
 	mkdir -p $(BUILDDIR)
-	tar -C $(SOURCE) -cf - dietlibc-$(DIETLIBC) | tar -C $(BUILDDIR) -xUf -
+	$(cmd_tar) -C $(SOURCE) -cf - dietlibc-$(DIETLIBC) | $(cmd_tar) -C $(BUILDDIR) -xUf -
 	touch $@
 
 $(DIETLIBC_SDIR)/.patched: $(DIETLIBC_SDIR)/.extracted
-	patch -d $(DIETLIBC_SDIR) -p1 < $(PATCHES)/patch-dietlibc-0.28-cross-gcc
+	$(cmd_patch) -d $(DIETLIBC_SDIR) -p1 < $(PATCHES)/patch-dietlibc-0.28-cross-gcc
 	touch $@
 
 $(DIETLIBC_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/dietlibc-$(DIETLIBC).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/dietlibc-$(DIETLIBC).tar.bz2
 	touch $@
 
 
@@ -1016,27 +1024,27 @@ uclibc: $(UCLIBC_BDIR)/.installed
 
 $(UCLIBC_BDIR)/.installed: $(UCLIBC_BDIR)/.compiled
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
-	   $(MAKE) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
+	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
 	sed -e 's@%%TOOLDIR%%@$(TOOLDIR)@g' $(PATCHES)/uclibc.wrap >$(TOOL_PREFIX)/bin/uclibc
 	chmod 755 $(TOOL_PREFIX)/bin/uclibc
 	touch $@
 
 $(UCLIBC_BDIR)/.compiled: default_gcc $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.patched
-	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) $(MAKE) clean
+	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) clean
 
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
-	   $(MAKE) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
+	   $(cmd_make) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
 	touch $@
 
 $(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.patched
 	-rm -rf $(UCLIBC_BDIR) >/dev/null 2>&1
 	mkdir -p $(BUILDDIR)
-	tar -C $(SOURCE) -cf - uClibc-$(UCLIBC) | tar -C $(BUILDDIR) -xUf -
+	$(cmd_tar) -C $(SOURCE) -cf - uClibc-$(UCLIBC) | $(cmd_tar) -C $(BUILDDIR) -xUf -
 	echo 'KERNEL_SOURCE="$(KHDR_SDIR)"' >> $(BUILDDIR)/uClibc-$(UCLIBC)/.config
 	echo 'KERNEL_HEADERS="$(KHDR_SDIR)/include"' >> $(BUILDDIR)/uClibc-$(UCLIBC)/.config
 	echo 'RUNTIME_PREFIX="$(TOOLDIR)/uclibc/"' >> $(BUILDDIR)/uClibc-$(UCLIBC)/.config
 	echo 'DEVEL_PREFIX="$(TOOLDIR)/uclibc/usr/"' >> $(BUILDDIR)/uClibc-$(UCLIBC)/.config
-	cd $(BUILDDIR)/uClibc-$(UCLIBC) && $(MAKE) oldconfig
+	cd $(BUILDDIR)/uClibc-$(UCLIBC) && $(cmd_make) oldconfig
 	touch $@
 
 $(UCLIBC_SDIR)/.patched: $(UCLIBC_SDIR)/.extracted
@@ -1045,6 +1053,6 @@ $(UCLIBC_SDIR)/.patched: $(UCLIBC_SDIR)/.extracted
 
 $(UCLIBC_SDIR)/.extracted:
 	mkdir -p $(SOURCE)
-	tar -C $(SOURCE) -jxf $(DOWNLOAD)/uClibc-$(UCLIBC).tar.bz2
+	$(cmd_tar) -C $(SOURCE) -jxf $(DOWNLOAD)/uClibc-$(UCLIBC).tar.bz2
 	touch $@
 
