@@ -25,28 +25,70 @@ SOURCE        := $(TOP)/source
 BUILD         := $(TOP)/build
 
 # Result will be installed in $(INSTALLDIR)/$(TARGET). This is the definitive
-# installation directory. It must be accessible during.
+# installation directory. It must be accessible during and after build.
 INSTALLDIR    := $(TOP)
 
+# The list of compiler branches to build, and the default one
 GCCVERSIONS   := gcc29 gcc33 gcc34 gcc41
 GCCDEFAULT    := $(word 1,$(GCCVERSIONS))
-GCCLIBC       := gcc29
 
+# Exact versions of GCC. Those which will be build are defined by the
+# 'GCCVERSIONS' variable above. The version indicated here is the suffix
+# of the tar.gz file to extract which must also match the source directory
+# name after extraction
+GCC29         := 20011006
+GCC33         := 3.3.6
+GCC34         := 3.4.6
+GCC41         := 4.1.2
+
+# Default suffixes assigned to resulting GCC versions
+GCC29_SUFFIX  := 2.95
+GCC33_SUFFIX  := 3.3
+GCC34_SUFFIX  := 3.4
+GCC41_SUFFIX  := 4.1
+
+# various other packages (libc, binutils, kernel headers)
 GLIBC         := 2.2.5
 BINUTILS      := 2.16.1
 KHDR          := 2.4.32-wt8
 DIETLIBC      := 0.31
 UCLIBC        := 0.9.29
 
-# Additionnal GCC versions. Those which will be build are defined by the
-# 'GCCVERSIONS' variable below. The version indicated here is the suffix
-# of the tar.gz file to extract. Note that GCC29 will always be at least
-# partially built for libc.
+# Suffix of the compiler to use for building glibc. 2.95 is used by default,
+# but be aware that it is not much portable and may not build at all on recent
+# systems.
+GCCLIBC       := 2.95
 
-GCC29         := 20011006
-GCC33         := 3.3.6
-GCC34         := 3.4.6
-GCC41         := 4.1.2
+# various commands and options which can be overridden by the command line.
+
+cmd_gzip      := gzip
+cmd_tar       := tar
+cmd_bzip2     := bzip2
+cmd_find      := find
+cmd_patch     := patch
+cmd_make      := $(MAKE)
+cmd_readall   := $(TOOLS)/readall
+
+MFLAGS        :=
+MPFLAGS       := -j 2
+
+
+##### There are very little chances that you find anything to change below #####
+
+# map back the GCC suffixes from the versions
+GCC_SUFFIX-$(GCC29) := $(GCC29_SUFFIX)
+GCC_SUFFIX-$(GCC33) := $(GCC33_SUFFIX)
+GCC_SUFFIX-$(GCC34) := $(GCC34_SUFFIX)
+GCC_SUFFIX-$(GCC41) := $(GCC41_SUFFIX)
+
+# map the versions GCC from the suffixes
+GCC_VERSION-$(GCC29_SUFFIX) := $(GCC29)
+GCC_VERSION-$(GCC33_SUFFIX) := $(GCC33)
+GCC_VERSION-$(GCC34_SUFFIX) := $(GCC34)
+GCC_VERSION-$(GCC41_SUFFIX) := $(GCC41)
+
+# determine exact GCC version used for the glibc
+GCCLC         := $(GCC_VERSION-$(GCCLIBC))
 
 # Everything under TARGETDIR must remain together
 TARGETDIR     := $(INSTALLDIR)/$(TARGET)
@@ -57,60 +99,17 @@ TOOL_PREFIX   := $(TOOLDIR)/usr
 ROOT_PREFIX   := $(ROOTDIR)/usr
 SYS_ROOT      := $(TOOL_PREFIX)/target-root
 TARGET_PATH   := $(TOOL_PREFIX)/bin:$(PATH)
-CROSSPFX      := $(TARGET)-
 
 # no need to change this, it will be easier to clean it up
 BUILDDIR      := $(BUILD)/$(TARGET)/$(HOST)
-
 BINUTILS_SDIR := $(SOURCE)/binutils-$(BINUTILS)
 BINUTILS_BDIR := $(BUILDDIR)/binutils-$(BINUTILS)
-
-# The gcc used for building glibc. The resulting executable will eventually
-# be overwritten, so we can use the same suffix as the original one.
-GCCLC29_BDIR  := $(BUILDDIR)/gcc-libc-$(GCC29)
-GCCLC33_BDIR  := $(BUILDDIR)/gcc-libc-$(GCC33)
-GCCLC34_BDIR  := $(BUILDDIR)/gcc-libc-$(GCC34)
-GCCLC41_BDIR  := $(BUILDDIR)/gcc-libc-$(GCC41)
-
-GCC29_SUFFIX  := 2.95
-GCC29_SDIR    := $(SOURCE)/gcc-$(GCC29)
-GCC29_BDIR    := $(BUILDDIR)/gcc-$(GCC29)
-
-GCC33_SUFFIX  := 3.3
-GCC33_SDIR    := $(SOURCE)/gcc-$(GCC33)
-GCC33_BDIR    := $(BUILDDIR)/gcc-$(GCC33)
-
-GCC34_SUFFIX  := 3.4
-GCC34_SDIR    := $(SOURCE)/gcc-$(GCC34)
-GCC34_BDIR    := $(BUILDDIR)/gcc-$(GCC34)
-
-GCC41_SUFFIX  := 4.1
-GCC41_SDIR    := $(SOURCE)/gcc-$(GCC41)
-GCC41_BDIR    := $(BUILDDIR)/gcc-$(GCC41)
 
 # During gcc configuration, the program-prefix also affects binutils names, so
 # we have to enforce them.
 GCC_BU_NAMES  := AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
                  NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
                  RANLIB_FOR_TARGET=$(TARGET)-ranlib
-
-ifeq ($(GCCLIBC), gcc33)
-GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC33)
-GCCLC_SUFFIX  := $(GCC33_SUFFIX)
-else
-ifeq ($(GCCLIBC), gcc34)
-GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC34)
-GCCLC_SUFFIX  := $(GCC34_SUFFIX)
-else
-ifeq ($(GCCLIBC), gcc41)
-GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC41)
-GCCLC_SUFFIX  := $(GCC41_SUFFIX)
-else
-GCCLC_BDIR    := $(BUILDDIR)/gcc-libc-$(GCC29)
-GCCLC_SUFFIX  := $(GCC29_SUFFIX)
-endif  # gcc41
-endif  # gcc34
-endif  # gcc33
 
 KHDR_SDIR     := $(SOURCE)/linux-$(KHDR)
 
@@ -123,19 +122,6 @@ DIETLIBC_BDIR := $(BUILDDIR)/dietlibc-$(DIETLIBC)
 
 UCLIBC_SDIR   := $(SOURCE)/uClibc-$(UCLIBC)
 UCLIBC_BDIR   := $(BUILDDIR)/uClibc-$(UCLIBC)
-
-MFLAGS        :=
-MPFLAGS       := -j 2
-
-# various commands which can be overridden by the command line.
-
-cmd_gzip      := gzip
-cmd_tar       := tar
-cmd_bzip2     := bzip2
-cmd_find      := find
-cmd_patch     := patch
-cmd_make      := $(MAKE)
-cmd_readall   := $(TOOLS)/readall
 
 ################# end of configuration ##############
 
@@ -220,19 +206,19 @@ $(POOLDIR):
 ##### All symbolic rules should be grouped here for easier troubleshooting ####
 
 binutils:       $(BINUTILS_BDIR)/.installed
-gcc-libc:       $(GCCLC_BDIR)/.installed
+gcc-libc:       $(BUILDDIR)/gcc-libc-$(GCCLC)/.installed
 kernel-headers: $(KHDR_SDIR)/.completed
 glibc:          $(GLIBC_BDIR)/.installed
 glibc-headers:  $(GLIBC_HDIR)/.installed
-gcc29:          $(GCC29_BDIR)/.installed
-gcc33:          $(GCC33_BDIR)/.installed
-gcc34:          $(GCC34_BDIR)/.installed
-gcc41:          $(GCC41_BDIR)/.installed
+gcc29:          $(BUILDDIR)/gcc-$(GCC29)/.installed
+gcc33:          $(BUILDDIR)/gcc-$(GCC33)/.installed
+gcc34:          $(BUILDDIR)/gcc-$(GCC34)/.installed
+gcc41:          $(BUILDDIR)/gcc-$(GCC41)/.installed
 default_gcc:    default_$(GCCDEFAULT)
-default_gcc29:  $(GCC29_BDIR)/.default_gcc
-default_gcc33:  $(GCC33_BDIR)/.default_gcc
-default_gcc34:  $(GCC34_BDIR)/.default_gcc
-default_gcc41:  $(GCC41_BDIR)/.default_gcc
+default_gcc29:  $(BUILDDIR)/gcc-$(GCC29)/.default_gcc
+default_gcc33:  $(BUILDDIR)/gcc-$(GCC33)/.default_gcc
+default_gcc34:  $(BUILDDIR)/gcc-$(GCC34)/.default_gcc
+default_gcc41:  $(BUILDDIR)/gcc-$(GCC41)/.default_gcc
 dietlibc:       $(DIETLIBC_BDIR)/.installed
 uclibc:         $(UCLIBC_BDIR)/.installed
 
@@ -263,20 +249,20 @@ $(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.completed
 	touch $@
 
 
-#### partial GCC needed to build glibc. The correct version to use is
-#### determined by the GCCLIBC variable, which means that GCCLC_BDIR will
-#### point to one of the GCCLC*_BDIR directories.
+#### partial GCC needed to build glibc. The correct exact version to use is
+#### determined by the GCCLC variable, and the build directory is set to
+#### gcc-libc-$(GCCLC).
 
 # GCC-2.95 for GLIBC
 
-$(GCCLC29_BDIR)/.installed: $(GCCLC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+$(BUILDDIR)/gcc-libc-$(GCC29)/.installed: $(BUILDDIR)/gcc-libc-$(GCC29)/.compiled $(BINUTILS_BDIR)/.installed
 	@# we must first protect possibly existing gcc binaries from removal
 	@echo "Saving previous gcc binaries into .gcclc29/"
 	mkdir -p $(TOOL_PREFIX)/bin/.gcclc29
 	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
 	    $(TOOL_PREFIX)/bin/.gcclc29/ >/dev/null 2>&1
 
-	(cd $(GCCLC29_BDIR) && \
+	(cd $(BUILDDIR)/gcc-libc-$(GCC29) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
@@ -292,12 +278,12 @@ $(GCCLC29_BDIR)/.installed: $(GCCLC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	-mv $(TOOL_PREFIX)/bin/.gcclc29/$(TARGET)-{gcov,gcc,cpp,unprotoize,protoize} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcclc29 >/dev/null 2>&1
-	echo $(GCC29_SUFFIX) > $@
+	touch $@
 
-$(GCCLC29_BDIR)/.compiled: $(GCCLC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
+$(BUILDDIR)/gcc-libc-$(GCC29)/.compiled: $(BUILDDIR)/gcc-libc-$(GCC29)/.configured $(BINUTILS_BDIR)/.installed
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
-	cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS)
+	cd $(BUILDDIR)/gcc-libc-$(GCC29) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS)
 	touch $@
 
 # Note: we will install this first-stage compiler in $PREFIX, but since it
@@ -308,7 +294,7 @@ $(GCCLC29_BDIR)/.compiled: $(GCCLC29_BDIR)/.configured $(BINUTILS_BDIR)/.install
 # Note: try to build this in a different directory with different options, such
 # as --enable-__cxa_atexit, --disable-threads, --with-newlib, --disable-multilib
 
-$(GCCLC29_BDIR)/.configured: $(GCC29_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+$(BUILDDIR)/gcc-libc-$(GCC29)/.configured: $(SOURCE)/gcc-$(GCC29)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
 	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
 	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
@@ -321,13 +307,13 @@ $(GCCLC29_BDIR)/.configured: $(GCC29_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 
 	mkdir -p $(ROOT_PREFIX)/include
 	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
-	mkdir -p $(GCCLC29_BDIR)
-	(cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) \
+	mkdir -p $(BUILDDIR)/gcc-libc-$(GCC29)
+	(cd $(BUILDDIR)/gcc-libc-$(GCC29) && PATH=$(TARGET_PATH) \
 	 CC=$(HOSTCC) CC_FOR_BUILD=$(HOSTCC) \
 	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
 	 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
          RANLIB_FOR_TARGET=$(TARGET)-ranlib \
-	 $(GCC29_SDIR)/configure \
+	 $(SOURCE)/gcc-$(GCC29)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 	   --prefix=$(TOOL_PREFIX) --disable-shared --disable-nls \
 	   --disable-__cxa_atexit --disable-haifa \
@@ -336,137 +322,13 @@ $(GCCLC29_BDIR)/.configured: $(GCC29_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 	touch $@
 
 
-# GCC-3.3 for GLIBC
+# Generic rules to build GCC-3.3/3.4/4.1 for GLIBC
 
-$(GCCLC33_BDIR)/.installed: $(GCCLC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	(cd $(GCCLC33_BDIR) && \
+# Generic installation rule for glibc-specific gcc. This rule does not work for gcc <3
+$(BUILDDIR)/gcc-libc-%/.installed: $(BUILDDIR)/gcc-libc-%/.compiled $(BINUTILS_BDIR)/.installed
+	(cd $(patsubst %/.installed,%,$@) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
-	echo $(GCC33_SUFFIX) > $@
-
-$(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
-	@# this is needed to find the binutils
-	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
-	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
-	mkdir -p $(SYS_ROOT)
-
-	[ -e $(SYS_ROOT)/usr ] || \
-	   ln -sf $(ROOT_PREFIX) $(SYS_ROOT)/
-	[ -e $(SYS_ROOT)/lib ] || \
-	   ln -sf $(ROOTDIR)/lib $(SYS_ROOT)/
-
-	mkdir -p $(ROOT_PREFIX)/include
-	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
-	mkdir -p $(GCCLC33_BDIR)
-	(cd $(GCCLC33_BDIR) && CC="$(HOSTCC)" CC_FOR_BUILD=$(HOSTCC) \
-	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
-	 PATH=$(TARGET_PATH) $(GCC33_SDIR)/configure \
-           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) \
-	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
-	   --disable-locale --disable-nls --disable-shared \
-	   --with-gnu-ld --with-gnu-as \
-	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
-	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
-	   --enable-version-specific-runtime-libs \
-	   --disable-multilib --with-newlib \
-	   --enable-symvers=gnu --enable-c99 --enable-long-long \
-	   --with-sysroot=$(SYS_ROOT) \
-	   --with-local-prefix=$(SYS_ROOT) \
-	   --enable-languages=c \
-	   --program-suffix=-$(GCC33_SUFFIX) --program-prefix=$(TARGET)- \
-	   --with-cpu=$(TARGET_CPU))
 	touch $@
-
-
-# GCC-3.4 for GLIBC
-
-$(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	(cd $(GCCLC34_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
-	echo $(GCC34_SUFFIX) > $@
-
-$(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
-	@# this is needed to find the binutils
-	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
-	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
-	mkdir -p $(SYS_ROOT)
-
-	[ -e $(SYS_ROOT)/usr ] || \
-	   ln -sf $(ROOT_PREFIX) $(SYS_ROOT)/
-	[ -e $(SYS_ROOT)/lib ] || \
-	   ln -sf $(ROOTDIR)/lib $(SYS_ROOT)/
-
-	mkdir -p $(ROOT_PREFIX)/include
-	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
-	mkdir -p $(GCCLC34_BDIR)
-	(cd $(GCCLC34_BDIR) && CC="$(HOSTCC)" CC_FOR_BUILD=$(HOSTCC) \
-	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
-	 PATH=$(TARGET_PATH) $(GCC34_SDIR)/configure \
-           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) \
-	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
-	   --disable-locale --disable-nls --disable-shared \
-	   --with-gnu-ld --with-gnu-as \
-	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
-	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
-	   --enable-version-specific-runtime-libs \
-	   --disable-multilib --with-newlib \
-	   --enable-symvers=gnu --enable-c99 --enable-long-long \
-	   --with-sysroot=$(SYS_ROOT) \
-	   --with-local-prefix=$(SYS_ROOT) \
-	   --enable-languages=c \
-	   --program-suffix=-$(GCC34_SUFFIX) --program-prefix=$(TARGET)- \
-	   --with-cpu=$(TARGET_CPU))
-	touch $@
-
-
-# GCC-4.1 for GLIBC
-
-$(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	(cd $(GCCLC41_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
-	echo $(GCC41_SUFFIX) > $@
-
-$(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
-	@# this is needed to find the binutils
-	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
-	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
-	mkdir -p $(SYS_ROOT)
-
-	[ -e $(SYS_ROOT)/usr ] || \
-	   ln -sf $(ROOT_PREFIX) $(SYS_ROOT)/
-	[ -e $(SYS_ROOT)/lib ] || \
-	   ln -sf $(ROOTDIR)/lib $(SYS_ROOT)/
-
-	mkdir -p $(ROOT_PREFIX)/include
-	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
-	mkdir -p $(GCCLC41_BDIR)
-	(cd $(GCCLC41_BDIR) && CC="$(HOSTCC)" CC_FOR_BUILD=$(HOSTCC) \
-	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
-	 PATH=$(TARGET_PATH) $(GCC41_SDIR)/configure \
-           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) \
-	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
-	   --disable-locale --disable-nls --disable-shared \
-	   --with-gnu-ld --with-gnu-as \
-	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
-	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
-	   --enable-version-specific-runtime-libs \
-	   --disable-multilib --with-newlib \
-	   --enable-symvers=gnu --enable-c99 --enable-long-long \
-	   --with-sysroot=$(SYS_ROOT) \
-	   --with-local-prefix=$(SYS_ROOT) \
-	   --enable-languages=c \
-	   --program-suffix=-$(GCC41_SUFFIX) --program-prefix=$(TARGET)- \
-	   --with-cpu=$(TARGET_CPU))
-	touch $@
-
 
 # Generic build rule for glibc-specific gcc. This rule does not work for gcc <3
 $(BUILDDIR)/gcc-libc-%/.compiled: $(BUILDDIR)/gcc-libc-%/.configured $(BINUTILS_BDIR)/.installed
@@ -476,6 +338,46 @@ $(BUILDDIR)/gcc-libc-%/.compiled: $(BUILDDIR)/gcc-libc-%/.configured $(BINUTILS_
 	cd $(patsubst %/.compiled,%,$@) && \
 	  PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MPFLAGS) $(GCC_BU_NAMES)
 	touch $@
+
+# Generic configuration rule for glibc-specific gcc. This rule does not work for gcc <3
+$(BUILDDIR)/gcc-libc-%/.configured: $(SOURCE)/gcc-%/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
+	@# this is needed to find the binutils
+	@# ln -s $(TOOL_PREFIX) $(ROOT_PREFIX)/$(TARGET)
+	@# ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	mkdir -p $(SYS_ROOT)
+
+	[ -e $(SYS_ROOT)/usr ] || \
+	   ln -sf $(ROOT_PREFIX) $(SYS_ROOT)/
+	[ -e $(SYS_ROOT)/lib ] || \
+	   ln -sf $(ROOTDIR)/lib $(SYS_ROOT)/
+
+	mkdir -p $(ROOT_PREFIX)/include
+	rm -f $(ROOT_PREFIX)/sys-include ; ln -sf include $(ROOT_PREFIX)/sys-include
+	mkdir -p $(patsubst %/.configured,%,$@)
+	(cd $(patsubst %/.configured,%,$@) && CC="$(HOSTCC)" CC_FOR_BUILD=$(HOSTCC) \
+	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
+	 PATH=$(TARGET_PATH) \
+	 $(patsubst %/.completed,%,$<)/configure \
+           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
+	   --prefix=$(TOOL_PREFIX) \
+	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
+	   --disable-locale --disable-nls --disable-shared \
+	   --with-gnu-ld --with-gnu-as \
+	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
+	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
+	   --enable-version-specific-runtime-libs \
+	   --disable-multilib --with-newlib \
+	   --enable-symvers=gnu --enable-c99 --enable-long-long \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-local-prefix=$(SYS_ROOT) \
+	   --enable-languages=c \
+	   --program-suffix=-$(GCC_SUFFIX-$(patsubst $(BUILDDIR)/gcc-libc-%/.configured,%,$@)) \
+	   --program-prefix=$(TARGET)- \
+	   --with-cpu=$(TARGET_CPU))
+	touch $@
+
 
 #### kernel headers
 # these headers have been build this way :
@@ -507,14 +409,14 @@ $(GLIBC_BDIR)/.installed: $(GLIBC_BDIR)/.compiled $(GLIBC_HDIR)/.installed $(BIN
 	 (cd $(KHDR_SDIR)/include/ && $(cmd_tar) -cf - {asm,linux}/.) | (cd $(ROOT_PREFIX)/include/ && $(cmd_tar) xf -) )
 	touch $@
 
-$(GLIBC_BDIR)/.compiled: $(GCCLC_BDIR)/.installed $(GLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed
+$(GLIBC_BDIR)/.compiled: $(BUILDDIR)/gcc-libc-$(GCCLC)/.installed $(GLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	cd $(GLIBC_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) $(MPFLAGS)
 	touch $@
 
-$(GLIBC_BDIR)/.configured: $(GCCLC_BDIR)/.installed $(GLIBC_SDIR)/.completed $(KHDR_SDIR)/.completed $(BINUTILS_BDIR)/.installed
+$(GLIBC_BDIR)/.configured: $(BUILDDIR)/gcc-libc-$(GCCLC)/.installed $(GLIBC_SDIR)/.completed $(KHDR_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GLIBC_BDIR)
 	(cd $(GLIBC_BDIR) && \
-	 PATH=$(TARGET_PATH) CC=$(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCCLC_SUFFIX) \
+	 PATH=$(TARGET_PATH) CC=$(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC_SUFFIX-$(GCCLC)) \
 	   $(GLIBC_SDIR)/configure \
 	   --build=$(HOST) --host=$(TARGET) --target=$(TARGET) \
 	   --prefix=$(ROOT_PREFIX) --libexecdir=$(ROOT_PREFIX)/bin \
@@ -578,17 +480,17 @@ $(GLIBC_SDIR)/.extracted:
 # taken out of the .installed file.
 $(BUILDDIR)/gcc-%/.default_gcc: $(BUILDDIR)/gcc-%/.installed
 	for i in gccbug gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
-	    suffix=$$(cat $^); \
+	    suffix=$(GCC_SUFFIX-$(patsubst $(BUILDDIR)/gcc-%/.default_gcc,%,$@)); \
 	    if [ -e $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$$suffix ]; then \
 	        ln -snf $(TARGET)-$$i-$$suffix $(TOOL_PREFIX)/bin/$(TARGET)-$$i; \
 	    fi; \
 	done
-	cp $^ $@
+	touch $@
 
 
 #### GCC-2.95
 
-$(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
+$(BUILDDIR)/gcc-$(GCC29)/.installed: $(BUILDDIR)/gcc-$(GCC29)/.compiled $(BINUTILS_BDIR)/.installed
 	@# we must first protect possibly existing gcc binaries from removal
 	@echo "Saving previous gcc binaries into .gcc29/"
 	mkdir -p $(TOOL_PREFIX)/bin/.gcc29
@@ -596,7 +498,7 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	    $(TOOL_PREFIX)/bin/.gcc29/ >/dev/null 2>&1
 
 	echo "###############  installing 'gcc-cross'  ##################"
-	(cd $(GCC29_BDIR) && \
+	(cd $(BUILDDIR)/gcc-$(GCC29) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc-cross INSTALL_PROGRAM_ARGS="-s" \
 	    gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
@@ -610,7 +512,7 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	@# We also want to move libiberty to gcc-lib because the one in the root is
 	@# reserved for binutils, so we point libdir to the gcc directory.
 
-	(cd $(GCC29_BDIR) && \
+	(cd $(BUILDDIR)/gcc-$(GCC29) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-target INSTALL_PROGRAM_ARGS="-s" \
 	    gcclibdir='$(TOOL_PREFIX)/lib/gcc-lib' \
 	    libsubdir='$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' \
@@ -644,14 +546,14 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	-mv $(TOOL_PREFIX)/bin/.gcc29/$(TARGET)-{gcov,g++,c++,gcc,cpp,c++filt,unprotoize,protoize} \
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcc29 >/dev/null 2>&1
-	echo $(GCC29_SUFFIX) > $@
+	touch $@
 
-$(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
+$(BUILDDIR)/gcc-$(GCC29)/.compiled: $(BUILDDIR)/gcc-$(GCC29)/.configured $(GLIBC_BDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is because of bugs in the libstdc++ path configuration
-	( rmdir $(GCC29_BDIR)/$(TARGET) && ln -s . $(GCC29_BDIR)/$(TARGET) || true ) 2>/dev/null 
+	( rmdir $(BUILDDIR)/gcc-$(GCC29)/$(TARGET) && ln -s . $(BUILDDIR)/gcc-$(GCC29)/$(TARGET) || true ) 2>/dev/null 
 
 	@# first, we will only build gcc
-	cd $(GCC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS) \
+	cd $(BUILDDIR)/gcc-$(GCC29) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS) \
 	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
@@ -659,19 +561,19 @@ $(GCC29_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC29_BDIR)/.configured $(BI
 
 	@# we must reset the 'cross_compile' flag, otherwise the path to crt*.o gets stripped and
 	@# components such as libstdc++ cannot be built !
-	sed '/^\*cross_compile/,/^$$/s/^1/0/' < $(GCC29_BDIR)/gcc/specs > $(GCC29_BDIR)/gcc/specs-
-	mv $(GCC29_BDIR)/gcc/specs- $(GCC29_BDIR)/gcc/specs
+	sed '/^\*cross_compile/,/^$$/s/^1/0/' < $(BUILDDIR)/gcc-$(GCC29)/gcc/specs > $(BUILDDIR)/gcc-$(GCC29)/gcc/specs-
+	mv $(BUILDDIR)/gcc-$(GCC29)/gcc/specs- $(BUILDDIR)/gcc-$(GCC29)/gcc/specs
 
 	@# now we can make everything else (libio, libstdc++, ...)
-	cd $(GCC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) \
+	cd $(BUILDDIR)/gcc-$(GCC29) && PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) \
 	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
 	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)'
 	touch $@
 
-$(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.completed $(BINUTILS_BDIR)/.installed
-	mkdir -p $(GCC29_BDIR)
+$(BUILDDIR)/gcc-$(GCC29)/.configured: $(SOURCE)/gcc-$(GCC29)/.completed $(GLIBC_BDIR)/.installed $(BINUTILS_BDIR)/.installed
+	mkdir -p $(BUILDDIR)/gcc-$(GCC29)
 
 	@# Those directories are important : gcc looks for "limits.h" there to
 	@# know if it must chain to it or impose its own.
@@ -683,8 +585,8 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.completed $(B
 	@# WARNING! do not enable target-optspace, it corrupts CXX_FLAGS
 	@# in mt-frags which break c++ build. Also, we cannot use program-suffix
 	@# because it applies it to binutils too!
-	(cd $(GCC29_BDIR) && CC="$(HOSTCC)" \
-	 PATH=$(TARGET_PATH) $(GCC29_SDIR)/configure \
+	(cd $(BUILDDIR)/gcc-$(GCC29) && CC="$(HOSTCC)" \
+	 PATH=$(TARGET_PATH) $(SOURCE)/gcc-$(GCC29)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 	   --prefix=$(TOOL_PREFIX) --disable-locale --disable-nls \
 	   --enable-shared --disable-__cxa_atexit --with-gnu-ld \
@@ -694,111 +596,47 @@ $(GCC29_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC29_SDIR)/.completed $(B
 	touch $@
 
 
-#### GCC-3.3
+# Generic rules to build standard GCC-3.3/3.4/4.1
 
-$(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	cd $(GCC33_BDIR) && \
+# Generic installation rule for standard gcc. This rule does not work for gcc <3
+$(BUILDDIR)/gcc-%/.installed: $(BUILDDIR)/gcc-%/.compiled $(BINUTILS_BDIR)/.installed
+	cd $(patsubst %/.installed,%,$@) && \
 	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s"
 
 	@# this one is redundant
-	-rm -v $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC33)
-	echo $(GCC33_SUFFIX) > $@
-
-$(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.completed $(BINUTILS_BDIR)/.installed
-	mkdir -p $(GCC33_BDIR)
-	(cd $(GCC33_BDIR) && CC="$(HOSTCC)" \
-	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
-	 PATH=$(TARGET_PATH) $(GCC33_SDIR)/configure \
-           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) \
-	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
-	   --disable-locale --disable-nls \
-	   --enable-shared --with-gnu-ld --with-gnu-as \
-	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
-	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
-	   --enable-version-specific-runtime-libs --enable-threads \
-	   --enable-symvers=gnu --enable-c99 --enable-long-long \
-	   --with-sysroot=$(SYS_ROOT) \
-	   --with-local-prefix=$(SYS_ROOT) \
-	   --enable-languages=c,c++ \
-	   --program-suffix=-$(GCC33_SUFFIX) --program-prefix=$(TARGET)- \
-	   --with-cpu=$(TARGET_CPU))
-	touch $@
-
-
-#### GCC-3.4
-
-$(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	cd $(GCC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}'
-
-	@# this one is redundant
-	-rm -v $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC34)
-	echo $(GCC34_SUFFIX) > $@
-
-$(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.completed $(BINUTILS_BDIR)/.installed
-	mkdir -p $(GCC34_BDIR)
-	(cd $(GCC34_BDIR) && CC="$(HOSTCC)" \
-	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
-	 PATH=$(TARGET_PATH) $(GCC34_SDIR)/configure \
-           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) \
-	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
-	   --disable-locale --disable-nls \
-	   --enable-shared --with-gnu-ld --with-gnu-as \
-	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
-	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
-	   --enable-version-specific-runtime-libs --enable-threads \
-	   --enable-symvers=gnu --enable-c99 --enable-long-long \
-	   --with-sysroot=$(SYS_ROOT) \
-	   --with-local-prefix=$(SYS_ROOT) \
-	   --enable-languages=c,c++ \
-	   --program-suffix=-$(GCC34_SUFFIX) --program-prefix=$(TARGET)- \
-	   --with-cpu=$(TARGET_CPU))
-	touch $@
-
-
-#### GCC-4.1
-
-$(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	cd $(GCC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s"
-
-	@# this one is redundant
-	-rm -v $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC41)
-	echo $(GCC41_SUFFIX) > $@
-
-$(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.completed $(BINUTILS_BDIR)/.installed
-	mkdir -p $(GCC41_BDIR)
-	(cd $(GCC41_BDIR) && CC="$(HOSTCC)" \
-	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
-	 PATH=$(TARGET_PATH) $(GCC41_SDIR)/configure \
-           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
-	   --prefix=$(TOOL_PREFIX) \
-	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
-	   --disable-locale --disable-nls \
-	   --enable-shared --with-gnu-ld --with-gnu-as \
-	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
-	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
-	   --enable-version-specific-runtime-libs --enable-threads \
-	   --enable-symvers=gnu --enable-c99 --enable-long-long \
-	   --with-sysroot=$(SYS_ROOT) \
-	   --with-local-prefix=$(SYS_ROOT) \
-	   --enable-languages=c,c++ \
-	   --program-suffix=-$(GCC41_SUFFIX) --program-prefix=$(TARGET)- \
-	   --with-cpu=$(TARGET_CPU))
+	-rm -v $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(patsubst $(BUILDDIR)/gcc-%/.installed,%,$@)
 	touch $@
 
 # Generic build rule for standard gcc. This rule does not work for gcc <3
 $(BUILDDIR)/gcc-%/.compiled: $(BUILDDIR)/gcc-%/.configured $(GLIBC_BDIR)/.installed $(BINUTILS_BDIR)/.installed
 	cd $(patsubst %/.compiled,%,$@) && \
 	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC_BU_NAMES)
+	touch $@
+
+# Generic configuration rule for standard gcc. This rule does not work for gcc <3
+$(BUILDDIR)/gcc-%/.configured: $(SOURCE)/gcc-%/.completed $(GLIBC_BDIR)/.installed $(BINUTILS_BDIR)/.installed
+	mkdir -p $(patsubst %/.configured,%,$@)
+	(cd $(patsubst %/.configured,%,$@) && CC="$(HOSTCC)" \
+	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+         NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
+	 RANLIB_FOR_TARGET=$(TARGET)-ranlib \
+	 PATH=$(TARGET_PATH) \
+	 $(patsubst %/.completed,%,$<)/configure \
+           --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
+	   --prefix=$(TOOL_PREFIX) \
+	   --libdir=$(TOOL_PREFIX)/lib --libexecdir=$(TOOL_PREFIX)/lib \
+	   --disable-locale --disable-nls \
+	   --enable-shared --with-gnu-ld --with-gnu-as \
+	   --with-as=$(TOOL_PREFIX)/$(TARGET)/bin/as \
+	   --with-ld=$(TOOL_PREFIX)/$(TARGET)/bin/ld \
+	   --enable-version-specific-runtime-libs --enable-threads \
+	   --enable-symvers=gnu --enable-c99 --enable-long-long \
+	   --with-sysroot=$(SYS_ROOT) \
+	   --with-local-prefix=$(SYS_ROOT) \
+	   --enable-languages=c,c++ \
+	   --program-suffix=-$(GCC_SUFFIX-$(patsubst $(BUILDDIR)/gcc-%/.configured,%,$@)) \
+	   --program-prefix=$(TARGET)- \
+	   --with-cpu=$(TARGET_CPU))
 	touch $@
 
 
@@ -808,12 +646,12 @@ $(BUILDDIR)/gcc-%/.compiled: $(BUILDDIR)/gcc-%/.configured $(GLIBC_BDIR)/.instal
 
 $(DIETLIBC_BDIR)/.installed: default_gcc $(DIETLIBC_BDIR)/.compiled
 	cd $(DIETLIBC_BDIR) && PATH=$(TARGET_PATH) \
-	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
+	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(TARGET)- prefix=$(TOOLDIR)/diet
 	touch $@
 
 $(DIETLIBC_BDIR)/.compiled: default_gcc $(DIETLIBC_BDIR)/.configured $(BINUTILS_BDIR)/.installed $(KHDR_SDIR)/.completed
 	cd $(DIETLIBC_BDIR) && PATH=$(TARGET_PATH) \
-	   $(cmd_make) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX) prefix=$(TOOLDIR)/diet
+	   $(cmd_make) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(TARGET)- prefix=$(TOOLDIR)/diet
 	touch $@
 
 $(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.completed
@@ -827,7 +665,7 @@ $(DIETLIBC_BDIR)/.configured: $(DIETLIBC_SDIR)/.completed
 
 $(UCLIBC_BDIR)/.installed: default_gcc $(UCLIBC_BDIR)/.compiled
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
-	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
+	   $(cmd_make) $(MFLAGS) install ARCH=$(TARGET_ARCH) CROSS=$(TARGET)-
 	sed -e 's@%%TOOLDIR%%@$(TOOLDIR)@g' $(ADDONS)/uclibc.wrap >$(TOOL_PREFIX)/bin/uclibc
 	chmod 755 $(TOOL_PREFIX)/bin/uclibc
 	touch $@
@@ -836,7 +674,7 @@ $(UCLIBC_BDIR)/.compiled: default_gcc $(UCLIBC_BDIR)/.configured $(BINUTILS_BDIR
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) clean
 
 	cd $(UCLIBC_BDIR) && PATH=$(TARGET_PATH) \
-	   $(cmd_make) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(CROSSPFX)
+	   $(cmd_make) $(MPFLAGS) ARCH=$(TARGET_ARCH) CROSS=$(TARGET)-
 	touch $@
 
 $(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.completed
