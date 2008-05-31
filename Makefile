@@ -339,28 +339,8 @@ $(GCCLC29_BDIR)/.configured: $(GCC29_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 # GCC-3.3 for GLIBC
 
 $(GCCLC33_BDIR)/.installed: $(GCCLC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	@# we must first protect possibly existing gcc binaries from removal
-	@echo "Saving previous gcc binaries into .gcclc33/"
-	mkdir -p $(TOOL_PREFIX)/bin/.gcclc33
-	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gccbug,gcc,cpp} \
-	    $(TOOL_PREFIX)/bin/.gcclc33/ >/dev/null 2>&1
-
 	(cd $(GCCLC33_BDIR) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
-
-	@# this one is mis-named
-	mv -v $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
-	mv -v $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
-
-	@# we must protect the gcc binaries from removal by newer gcc versions
-	for i in gcov gccbug gcc cpp; do \
-	    mv -v $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC33_SUFFIX) || true; \
-	done
-
-	@# we can now restore previous gcc binaries
-	-mv $(TOOL_PREFIX)/bin/.gcclc33/$(TARGET)-{gcov,gccbug,gcc,cpp} \
-	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
-	rmdir $(TOOL_PREFIX)/bin/.gcclc33 >/dev/null 2>&1
 	echo $(GCC33_SUFFIX) > $@
 
 $(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
@@ -403,28 +383,8 @@ $(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 # GCC-3.4 for GLIBC
 
 $(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	@# we must first protect possibly existing gcc binaries from removal
-	@echo "Saving previous gcc binaries into .gcclc34/"
-	mkdir -p $(TOOL_PREFIX)/bin/.gcclc34
-	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gccbug,gcc,cpp} \
-	    $(TOOL_PREFIX)/bin/.gcclc34/ >/dev/null 2>&1
-
 	(cd $(GCCLC34_BDIR) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
-
-	@# this one is mis-named
-	mv -v $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
-	mv -v $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
-
-	@# we must protect the gcc binaries from removal by newer gcc versions
-	for i in gcov gccbug gcc cpp; do \
-	    mv -v $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC34_SUFFIX) || true; \
-	done
-
-	@# we can now restore previous gcc binaries
-	-mv $(TOOL_PREFIX)/bin/.gcclc34/$(TARGET)-{gcov,gccbug,gcc,cpp} \
-	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
-	rmdir $(TOOL_PREFIX)/bin/.gcclc34 >/dev/null 2>&1
 	echo $(GCC34_SUFFIX) > $@
 
 $(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
@@ -467,28 +427,8 @@ $(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 # GCC-4.1 for GLIBC
 
 $(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
-	@# we must first protect possibly existing gcc binaries from removal
-	@echo "Saving previous gcc binaries into .gcclc41/"
-	mkdir -p $(TOOL_PREFIX)/bin/.gcclc41
-	-mv $(TOOL_PREFIX)/bin/$(TARGET)-{gcov,gccbug,gcc,cpp} \
-	    $(TOOL_PREFIX)/bin/.gcclc41/ >/dev/null 2>&1
-
 	(cd $(GCCLC41_BDIR) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
-
-	@# this one is mis-named
-	mv -v $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
-	mv -v $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
-
-	@# we must protect the gcc binaries from removal by newer gcc versions
-	for i in gcov gccbug gcc cpp; do \
-	    mv -v $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC41_SUFFIX) || true; \
-	done
-
-	@# we can now restore previous gcc binaries
-	-mv $(TOOL_PREFIX)/bin/.gcclc41/$(TARGET)-{gcov,gccbug,gcc,cpp} \
-	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
-	rmdir $(TOOL_PREFIX)/bin/.gcclc41 >/dev/null 2>&1
 	echo $(GCC41_SUFFIX) > $@
 
 $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
@@ -695,7 +635,7 @@ $(GCC29_BDIR)/.installed: $(GCC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	mv -v $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
 	mv -v $(TOOL_PREFIX)/bin/gcov $(TOOL_PREFIX)/bin/$(TARGET)-gcov || true; \
 
-	@# we must protect the gcc binaries from removal	by newer gcc versions
+	@# we must protect the gcc binaries from removal by newer gcc versions
 	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
 	    mv -v $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_SUFFIX) || true; \
 	done
