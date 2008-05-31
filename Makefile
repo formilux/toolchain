@@ -79,21 +79,18 @@ GCC29_BDIR    := $(BUILDDIR)/gcc-$(GCC29)
 GCC33_SUFFIX  := 3.3
 GCC33_SDIR    := $(SOURCE)/gcc-$(GCC33)
 GCC33_BDIR    := $(BUILDDIR)/gcc-$(GCC33)
-GCC33_ADDONS  := AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-                 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-                 RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
 GCC34_SUFFIX  := 3.4
 GCC34_SDIR    := $(SOURCE)/gcc-$(GCC34)
 GCC34_BDIR    := $(BUILDDIR)/gcc-$(GCC34)
-GCC34_ADDONS  := AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
-                 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
-                 RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
 GCC41_SUFFIX  := 4.1
 GCC41_SDIR    := $(SOURCE)/gcc-$(GCC41)
 GCC41_BDIR    := $(BUILDDIR)/gcc-$(GCC41)
-GCC41_ADDONS  := AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
+
+# During gcc configuration, the program-prefix also affects binutils names, so
+# we have to enforce them.
+GCC_BU_NAMES  := AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
                  NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
                  RANLIB_FOR_TARGET=$(TARGET)-ranlib
 
@@ -300,7 +297,7 @@ $(GCCLC29_BDIR)/.installed: $(GCCLC29_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 $(GCCLC29_BDIR)/.compiled: $(GCCLC29_BDIR)/.configured $(BINUTILS_BDIR)/.installed
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
-	cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) all-gcc
+	cd $(GCCLC29_BDIR) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS)
 	touch $@
 
 # Note: we will install this first-stage compiler in $PREFIX, but since it
@@ -349,7 +346,7 @@ $(GCCLC33_BDIR)/.installed: $(GCCLC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc33/ >/dev/null 2>&1
 
 	(cd $(GCCLC33_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC33_ADDONS) INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -365,14 +362,6 @@ $(GCCLC33_BDIR)/.installed: $(GCCLC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcclc33 >/dev/null 2>&1
 	echo $(GCC33_SUFFIX) > $@
-
-$(GCCLC33_BDIR)/.compiled: $(GCCLC33_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	mkdir -p $(TOOL_PREFIX)/$(TARGET)
-	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
-	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
-	cd $(GCCLC33_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MPFLAGS) $(GCC33_ADDONS)
-	touch $@
 
 $(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
@@ -421,7 +410,7 @@ $(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc34/ >/dev/null 2>&1
 
 	(cd $(GCCLC34_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC34_ADDONS) INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -437,14 +426,6 @@ $(GCCLC34_BDIR)/.installed: $(GCCLC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcclc34 >/dev/null 2>&1
 	echo $(GCC34_SUFFIX) > $@
-
-$(GCCLC34_BDIR)/.compiled: $(GCCLC34_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	mkdir -p $(TOOL_PREFIX)/$(TARGET)
-	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
-	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
-	cd $(GCCLC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MPFLAGS) $(GCC34_ADDONS)
-	touch $@
 
 $(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
@@ -493,7 +474,7 @@ $(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/.gcclc41/ >/dev/null 2>&1
 
 	(cd $(GCCLC41_BDIR) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC41_ADDONS) INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -509,14 +490,6 @@ $(GCCLC41_BDIR)/.installed: $(GCCLC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installe
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcclc41 >/dev/null 2>&1
 	echo $(GCC41_SUFFIX) > $@
-
-$(GCCLC41_BDIR)/.compiled: $(GCCLC41_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	mkdir -p $(TOOL_PREFIX)/$(TARGET)
-	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
-	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
-	cd $(GCCLC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MPFLAGS) $(GCC41_ADDONS)
-	touch $@
 
 $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
 	@# this is needed to find the binutils
@@ -554,6 +527,15 @@ $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.completed $(GLIBC_SDIR)/.completed $
 	   --with-cpu=$(TARGET_CPU))
 	touch $@
 
+
+# Generic build rule for glibc-specific gcc. This rule does not work for gcc <3
+$(BUILDDIR)/gcc-libc-%/.compiled: $(BUILDDIR)/gcc-libc-%/.configured $(BINUTILS_BDIR)/.installed
+	mkdir -p $(TOOL_PREFIX)/$(TARGET)
+	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
+	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
+	cd $(patsubst %/.compiled,%,$@) && \
+	  PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MPFLAGS) $(GCC_BU_NAMES)
+	touch $@
 
 #### kernel headers
 # these headers have been build this way :
@@ -782,7 +764,7 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	    $(TOOL_PREFIX)/bin/.gcc33/ >/dev/null 2>&1
 
 	cd $(GCC33_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC33_ADDONS) INSTALL_PROGRAM_ARGS="-s"
+	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s"
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC33)
@@ -799,11 +781,6 @@ $(GCC33_BDIR)/.installed: $(GCC33_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	    $(TOOL_PREFIX)/bin/ >/dev/null 2>&1
 	rmdir $(TOOL_PREFIX)/bin/.gcc33 >/dev/null 2>&1
 	echo $(GCC33_SUFFIX) > $@
-
-$(GCC33_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC33_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	cd $(GCC33_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC33_ADDONS)
-	touch $@
 
 $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC33_BDIR)
@@ -833,16 +810,11 @@ $(GCC33_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC33_SDIR)/.completed $(B
 
 $(GCC34_BDIR)/.installed: $(GCC34_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC34_ADDONS) INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}'
+	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM='$${INSTALL} -s' INSTALL_SCRIPT='$${INSTALL}'
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC34)
 	echo $(GCC34_SUFFIX) > $@
-
-$(GCC34_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC34_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	cd $(GCC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC34_ADDONS)
-	touch $@
 
 $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC34_BDIR)
@@ -872,16 +844,11 @@ $(GCC34_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC34_SDIR)/.completed $(B
 
 $(GCC41_BDIR)/.installed: $(GCC41_BDIR)/.compiled $(BINUTILS_BDIR)/.installed
 	cd $(GCC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC41_ADDONS) INSTALL_PROGRAM_ARGS="-s"
+	  PATH=$(TARGET_PATH) $(cmd_make) install $(MFLAGS) $(GCC_BU_NAMES) INSTALL_PROGRAM_ARGS="-s"
 
 	@# this one is redundant
 	-rm -f $(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC41)
 	echo $(GCC41_SUFFIX) > $@
-
-$(GCC41_BDIR)/.compiled: $(GLIBC_BDIR)/.installed $(GCC41_BDIR)/.configured $(BINUTILS_BDIR)/.installed
-	cd $(GCC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC41_ADDONS)
-	touch $@
 
 $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GCC41_BDIR)
@@ -904,6 +871,12 @@ $(GCC41_BDIR)/.configured: $(GLIBC_BDIR)/.installed $(GCC41_SDIR)/.completed $(B
 	   --enable-languages=c,c++ \
 	   --program-suffix=-$(GCC41_SUFFIX) --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
+	touch $@
+
+# Generic build rule for standard gcc. This rule does not work for gcc <3
+$(BUILDDIR)/gcc-%/.compiled: $(BUILDDIR)/gcc-%/.configured $(GLIBC_BDIR)/.installed $(BINUTILS_BDIR)/.installed
+	cd $(patsubst %/.compiled,%,$@) && \
+	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC_BU_NAMES)
 	touch $@
 
 
@@ -960,7 +933,7 @@ $(UCLIBC_SDIR)/.completed: $(UCLIBC_SDIR)/.patched
 	touch $@
 
 
-######### Generic rules #########
+######### Generic rules applying to sources #########
 
 # Generic source completion rule: after patching, some source require a
 # few addons and/or a little bit of tweaking. By defaults, it does nothing.
