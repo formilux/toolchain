@@ -371,7 +371,7 @@ $(GCCLC33_BDIR)/.compiled: $(GCCLC33_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	cd $(GCCLC33_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC33_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MPFLAGS) $(GCC33_ADDONS)
 	touch $@
 
 $(GCCLC33_BDIR)/.configured: $(GCC33_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
@@ -443,7 +443,7 @@ $(GCCLC34_BDIR)/.compiled: $(GCCLC34_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	cd $(GCCLC34_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC34_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MPFLAGS) $(GCC34_ADDONS)
 	touch $@
 
 $(GCCLC34_BDIR)/.configured: $(GCC34_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
@@ -515,7 +515,7 @@ $(GCCLC41_BDIR)/.compiled: $(GCCLC41_BDIR)/.configured $(BINUTILS_BDIR)/.install
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
 	cd $(GCCLC41_BDIR) && \
-	  PATH=$(TARGET_PATH) $(cmd_make) all $(MPFLAGS) $(GCC41_ADDONS)
+	  PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MPFLAGS) $(GCC41_ADDONS)
 	touch $@
 
 $(GCCLC41_BDIR)/.configured: $(GCC41_SDIR)/.completed $(GLIBC_SDIR)/.completed $(GLIBC_HDIR)/.installed $(BINUTILS_BDIR)/.installed
