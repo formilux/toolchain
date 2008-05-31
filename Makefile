@@ -28,8 +28,10 @@ BUILD         := $(TOP)/build
 # installation directory. It must be accessible during and after build.
 INSTALLDIR    := $(TOP)
 
-# The list of compiler branches to build, and the default one
-GCCVERSIONS   := gcc29 gcc33 gcc34 gcc41
+# GCCVERSIONS indicates the list of compiler branches to be built for "gcc".
+# The default one may be forced by GCCDEFAULT, though that's rarely needed as
+# it is by default the first one in the list.
+GCCVERSIONS   := 2.95 3.3 3.4 4.1
 GCCDEFAULT    := $(word 1,$(GCCVERSIONS))
 
 # Exact versions of GCC. Those which will be build are defined by the
@@ -42,10 +44,10 @@ GCC34         := 3.4.6
 GCC41         := 4.1.2
 
 # Default suffixes assigned to resulting GCC versions
-GCC29_SUFFIX  := 2.95
-GCC33_SUFFIX  := 3.3
-GCC34_SUFFIX  := 3.4
-GCC41_SUFFIX  := 4.1
+GCC29_BRANCH  := 2.95
+GCC33_BRANCH  := 3.3
+GCC34_BRANCH  := 3.4
+GCC41_BRANCH  := 4.1
 
 # various other packages (libc, binutils, kernel headers)
 GLIBC         := 2.2.5
@@ -76,16 +78,16 @@ MPFLAGS       := -j 2
 ##### There are very little chances that you find anything to change below #####
 
 # map back the GCC suffixes from the versions
-GCC_SUFFIX-$(GCC29) := $(GCC29_SUFFIX)
-GCC_SUFFIX-$(GCC33) := $(GCC33_SUFFIX)
-GCC_SUFFIX-$(GCC34) := $(GCC34_SUFFIX)
-GCC_SUFFIX-$(GCC41) := $(GCC41_SUFFIX)
+GCC_BRANCH-$(GCC29) := $(GCC29_BRANCH)
+GCC_BRANCH-$(GCC33) := $(GCC33_BRANCH)
+GCC_BRANCH-$(GCC34) := $(GCC34_BRANCH)
+GCC_BRANCH-$(GCC41) := $(GCC41_BRANCH)
 
 # map the versions GCC from the suffixes
-GCC_VERSION-$(GCC29_SUFFIX) := $(GCC29)
-GCC_VERSION-$(GCC33_SUFFIX) := $(GCC33)
-GCC_VERSION-$(GCC34_SUFFIX) := $(GCC34)
-GCC_VERSION-$(GCC41_SUFFIX) := $(GCC41)
+GCC_VERSION-$(GCC29_BRANCH) := $(GCC29)
+GCC_VERSION-$(GCC33_BRANCH) := $(GCC33)
+GCC_VERSION-$(GCC34_BRANCH) := $(GCC34)
+GCC_VERSION-$(GCC41_BRANCH) := $(GCC41)
 
 # determine exact GCC version used for the glibc
 GCCLC         := $(GCC_VERSION-$(GCCLIBC))
@@ -128,32 +130,62 @@ UCLIBC_BDIR   := $(BUILDDIR)/uClibc-$(UCLIBC)
 help:
 	@echo
 	@echo "This Makefile supports the following targets :"
-	@echo "   - all: dietlibc uclibc glibc $(GCCVERSIONS) default_gcc[$(GCCDEFAULT)]"
-	@echo "   - binutils gcc-libc $(GCCVERSIONS)"
-	@echo "   - default_gcc29 default_gcc33 default_gcc34 default_gcc41"
-	@echo "   - glibc dietlibc uclibc"
-	@echo "   - kernel-headers glibc-headers"
-	@echo "   - install"
-	@echo "   - remove-unneeded space"
+	@echo "   - all, all-noclean: dietlibc uclibc glibc gcc default_gcc"
+	@echo "   - binutils gcc-libc $(addprefix gcc-,$(GCCVERSIONS))"
+	@echo "   - $(addprefix default_gcc-,$(GCCVERSIONS))"
+	@echo "   - kernel-headers glibc-headers glibc dietlibc uclibc"
+	@echo "   - install remove-unneeded space"
 	@echo "   - bootstrap-archive git-bootstrap-archive"
 	@echo "   - tool-archive root-archive"
+	@echo "   - help showconf"
 	@echo
 	@echo "Notes:"
-	@echo "   - GCC versions may be changed with GCCVERSIONS=\"gccXX ...\""
-	@echo "   - default GCC version is the first of the list (or GCCDEFAULT)"
+	@echo "   - GCC branches may be changed with GCCVERSIONS=\"2.95 3.3 ...\""
+	@echo "   - default GCC branch is the first of the list (or GCCDEFAULT)"
+	@echo "   - GCC used for libc may be changed with GCCLIBC=\"3.4\""
+	@echo "   - installation directory may be changed with INSTALLDIR=\"/...\""
 	@echo "   - parallel build may be changed with MPFLAGS=\"-jXX\""
 	@echo "   - using TARGET=$(TARGET) HOST=$(HOST) MPFLAGS=\"$(MPFLAGS)\""
-	@echo "   - installing under INSTALLDIR=$(INSTALLDIR)"
+	@echo "   - using GCCVERSIONS=\"$(GCCVERSIONS)\" GCCDEFAULT=$(GCCDEFAULT) GCCLIBC=$(GCCLIBC)"
+	@echo "   - using INSTALLDIR=$(INSTALLDIR)"
 	@echo
 
-# There are files which are not necessary to build anything, and if needed, they
-# should be extracted from their respective compiled packages. They don't have
-# their place in the toolchain, so we'll remove them.
-all: dietlibc uclibc glibc $(GCCVERSIONS) default_$(GCCDEFAULT)
+showconf:
+	@echo   "TOOLCHAIN : version $(TOOLCHAIN)"
+	@echo   "HOST      : $(HOST)  HOSTCC=$(HOSTCC)  (version: $(shell $(HOSTCC) -dumpversion))"
+	@echo   "TARGET    : $(TARGET)  TARGET_CPU=$(TARGET_CPU)  TARGET_ARCH=$(TARGET_ARCH)"
+	@echo   "INSTALLDIR:$(INSTALLDIR)"
+	@echo   "MAKE      : $(MAKE)  MFLAGS=\"$(MFLAGS)\"  MPFLAGS=\"$(MPFLAGS)\""
+	@printf "GLIBC     : version : %-10s  patches : %d  GCCLIBC : %s ($(GCCLC))\n" \
+	  $(GLIBC) $$(/bin/ls -1 $(PATCHES)/glibc-$(GLIBC) 2>/dev/null |wc -l) $(GCCLIBC)
+	@printf "BINUTILS  : version : %-10s  patches : %d\n" \
+	  $(BINUTILS) $$(/bin/ls -1 $(PATCHES)/binutils-$(BINUTILS) 2>/dev/null |wc -l)
+	@printf "DIETLIBC  : version : %-10s  patches : %d\n" \
+	  $(DIETLIBC) $$(/bin/ls -1 $(PATCHES)/dietlibc-$(DIETLIBC) 2>/dev/null |wc -l)
+	@printf "UCLIBC    : version : %-10s  patches : %d\n" \
+	  $(UCLIBC) $$(/bin/ls -1 $(PATCHES)/uClibc-$(UCLIBC) 2>/dev/null |wc -l)
+	@printf "KHDR      : version : %-10s  patches : %d\n" \
+	  $(KHDR) $$(/bin/ls -1 $(PATCHES)/kernel-headers-$(KHDR) 2>/dev/null |wc -l)
+	@echo   "GCC       : GCCVERSIONS=\"$(GCCVERSIONS)\"  GCCDEFAULT=$(GCCDEFAULT)"
+	@printf "  branch  : %-4s  version : %-8s  patches : %d\n" \
+	  $(GCC29_BRANCH) $(GCC29) $$(/bin/ls -1 $(PATCHES)/gcc-$(GCC29) 2>/dev/null |wc -l)
+	@printf "  branch  : %-4s  version : %-8s  patches : %d\n" \
+	  $(GCC33_BRANCH) $(GCC33) $$(/bin/ls -1 $(PATCHES)/gcc-$(GCC33) 2>/dev/null |wc -l)
+	@printf "  branch  : %-4s  version : %-8s  patches : %d\n" \
+	  $(GCC34_BRANCH) $(GCC34) $$(/bin/ls -1 $(PATCHES)/gcc-$(GCC34) 2>/dev/null |wc -l)
+	@printf "  branch  : %-4s  version : %-8s  patches : %d\n" \
+	  $(GCC41_BRANCH) $(GCC41) $$(/bin/ls -1 $(PATCHES)/gcc-$(GCC41) 2>/dev/null |wc -l)
+
+# The "all" target builds everything and removes a number of useless files.
+# These files are not necessary to build anything, and if needed, they should
+# be extracted from their respective compiled packages. They don't have their
+# place in the toolchain, so we remove them. If you want to keep them, use the
+# "all-noclean" target instead.
+all: all-noclean
 	rm -rf $(TOOL_PREFIX)/{man,info} $(TOOLDIR)/diet/man
 	rm -rf $(ROOT_PREFIX)/{bin,info,lib/gconv,sbin,share}
 
-all-noclean: dietlibc uclibc glibc $(POOLDIR) $(GCCVERSIONS)
+all-noclean: dietlibc uclibc glibc gcc default_gcc
 
 # finishes the installation.
 # "make space" may also be issued to regain all wasted space
@@ -210,17 +242,20 @@ gcc-libc:       $(BUILDDIR)/gcc-libc-$(GCCLC)/.installed
 kernel-headers: $(KHDR_SDIR)/.completed
 glibc:          $(GLIBC_BDIR)/.installed
 glibc-headers:  $(GLIBC_HDIR)/.installed
-gcc29:          $(BUILDDIR)/gcc-$(GCC29)/.installed
-gcc33:          $(BUILDDIR)/gcc-$(GCC33)/.installed
-gcc34:          $(BUILDDIR)/gcc-$(GCC34)/.installed
-gcc41:          $(BUILDDIR)/gcc-$(GCC41)/.installed
-default_gcc:    default_$(GCCDEFAULT)
-default_gcc29:  $(BUILDDIR)/gcc-$(GCC29)/.default_gcc
-default_gcc33:  $(BUILDDIR)/gcc-$(GCC33)/.default_gcc
-default_gcc34:  $(BUILDDIR)/gcc-$(GCC34)/.default_gcc
-default_gcc41:  $(BUILDDIR)/gcc-$(GCC41)/.default_gcc
+gcc:            $(addprefix gcc-,$(GCCVERSIONS))
+default_gcc:    $(addprefix default_gcc-,$(GCCDEFAULT))
 dietlibc:       $(DIETLIBC_BDIR)/.installed
 uclibc:         $(UCLIBC_BDIR)/.installed
+
+gcc-2.95:       $(BUILDDIR)/gcc-$(GCC_VERSION-2.95)/.installed
+gcc-3.3:        $(BUILDDIR)/gcc-$(GCC_VERSION-3.3)/.installed
+gcc-3.4:        $(BUILDDIR)/gcc-$(GCC_VERSION-3.4)/.installed
+gcc-4.1:        $(BUILDDIR)/gcc-$(GCC_VERSION-4.1)/.installed
+
+default_gcc-2.95: $(BUILDDIR)/gcc-$(GCC_VERSION-2.95)/.default_gcc
+default_gcc-3.3:  $(BUILDDIR)/gcc-$(GCC_VERSION-3.3)/.default_gcc
+default_gcc-3.4:  $(BUILDDIR)/gcc-$(GCC_VERSION-3.4)/.default_gcc
+default_gcc-4.1:  $(BUILDDIR)/gcc-$(GCC_VERSION-4.1)/.default_gcc
 
 
 ################# start of build system ##############
@@ -271,7 +306,7 @@ $(BUILDDIR)/gcc-libc-$(GCC29)/.installed: $(BUILDDIR)/gcc-libc-$(GCC29)/.compile
 
 	@# we must protect the gcc binaries from removal by newer gcc versions
 	for i in gcov gcc cpp unprotoize protoize; do \
-	    mv -v $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_SUFFIX) || true; \
+	    mv -v $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_BRANCH) || true; \
 	done
 
 	@# we can now restore previous gcc binaries
@@ -373,7 +408,7 @@ $(BUILDDIR)/gcc-libc-%/.configured: $(SOURCE)/gcc-%/.completed $(GLIBC_SDIR)/.co
 	   --with-sysroot=$(SYS_ROOT) \
 	   --with-local-prefix=$(SYS_ROOT) \
 	   --enable-languages=c \
-	   --program-suffix=-$(GCC_SUFFIX-$(patsubst $(BUILDDIR)/gcc-libc-%/.configured,%,$@)) \
+	   --program-suffix=-$(GCC_BRANCH-$(patsubst $(BUILDDIR)/gcc-libc-%/.configured,%,$@)) \
 	   --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
 	touch $@
@@ -416,7 +451,7 @@ $(GLIBC_BDIR)/.compiled: $(BUILDDIR)/gcc-libc-$(GCCLC)/.installed $(GLIBC_BDIR)/
 $(GLIBC_BDIR)/.configured: $(BUILDDIR)/gcc-libc-$(GCCLC)/.installed $(GLIBC_SDIR)/.completed $(KHDR_SDIR)/.completed $(BINUTILS_BDIR)/.installed
 	mkdir -p $(GLIBC_BDIR)
 	(cd $(GLIBC_BDIR) && \
-	 PATH=$(TARGET_PATH) CC=$(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC_SUFFIX-$(GCCLC)) \
+	 PATH=$(TARGET_PATH) CC=$(TOOL_PREFIX)/bin/$(TARGET)-gcc-$(GCC_BRANCH-$(GCCLC)) \
 	   $(GLIBC_SDIR)/configure \
 	   --build=$(HOST) --host=$(TARGET) --target=$(TARGET) \
 	   --prefix=$(ROOT_PREFIX) --libexecdir=$(ROOT_PREFIX)/bin \
@@ -471,16 +506,16 @@ $(GLIBC_SDIR)/.extracted:
 	$(cmd_tar) -C $(GLIBC_SDIR) -jxf $(DOWNLOAD)/glibc-linuxthreads-$(GLIBC).tar.bz2
 	touch $@
 
-# We also want to set a default GCC. For this, pick one of "default_gcc29",
-# "default_gcc33", "default_gcc34", "default_gcc41". Using "default_gcc" alone
-# wil result in the compiler designed as the default one being installed.
+# We also want to set a default GCC. For this, pick one of "default_gcc-2.95",
+# "default_gcc-3.3", "default_gcc-3.4", "default_gcc-4.1". Using "default_gcc"
+# alone will result in the compiler designed as the default one to be installed.
 
 # generic rule to set one compiler as the default one. All versionned existing
 # files are linked to their canonical name. Note that the canonical name is
 # taken out of the .installed file.
 $(BUILDDIR)/gcc-%/.default_gcc: $(BUILDDIR)/gcc-%/.installed
 	for i in gccbug gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
-	    suffix=$(GCC_SUFFIX-$(patsubst $(BUILDDIR)/gcc-%/.default_gcc,%,$@)); \
+	    suffix=$(GCC_BRANCH-$(patsubst $(BUILDDIR)/gcc-%/.default_gcc,%,$@)); \
 	    if [ -e $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$$suffix ]; then \
 	        ln -snf $(TARGET)-$$i-$$suffix $(TOOL_PREFIX)/bin/$(TARGET)-$$i; \
 	    fi; \
@@ -539,7 +574,7 @@ $(BUILDDIR)/gcc-$(GCC29)/.installed: $(BUILDDIR)/gcc-$(GCC29)/.compiled $(BINUTI
 
 	@# we must protect the gcc binaries from removal by newer gcc versions
 	for i in gcov g++ c++ gcc cpp c++filt unprotoize protoize; do \
-	    mv -v $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_SUFFIX) || true; \
+	    mv -v $(TOOL_PREFIX)/bin/$(TARGET)-$$i $(TOOL_PREFIX)/bin/$(TARGET)-$$i-$(GCC29_BRANCH) || true; \
 	done
 
 	@# we can now restore previous gcc binaries
@@ -634,7 +669,7 @@ $(BUILDDIR)/gcc-%/.configured: $(SOURCE)/gcc-%/.completed $(GLIBC_BDIR)/.install
 	   --with-sysroot=$(SYS_ROOT) \
 	   --with-local-prefix=$(SYS_ROOT) \
 	   --enable-languages=c,c++ \
-	   --program-suffix=-$(GCC_SUFFIX-$(patsubst $(BUILDDIR)/gcc-%/.configured,%,$@)) \
+	   --program-suffix=-$(GCC_BRANCH-$(patsubst $(BUILDDIR)/gcc-%/.configured,%,$@)) \
 	   --program-prefix=$(TARGET)- \
 	   --with-cpu=$(TARGET_CPU))
 	touch $@
