@@ -1,3 +1,6 @@
+2008/06/01 : version 0.6.0
+	* major reorganization to add support for gcc > 2.95
+
 2008/05/28 : version 0.5.3
 	* prevent ${TARGET}-{gcc,...} from vanishing
 	* update HOWTO
