@@ -1,3 +1,6 @@
+2008/06/01 : version 0.5.4
+	* support gcc 4.0-4.3 on the host
+
 2008/05/28 : version 0.5.3
 	* prevent ${TARGET}-{gcc,...} from vanishing
 	* update HOWTO
