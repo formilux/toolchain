@@ -1,0 +1,21 @@
+--- glibc-2.3.6/sysdeps/wordsize-32/Makefile	2002-09-18 23:47:56.000000000 -0700
++++ glibc-2.4/sysdeps/wordsize-32/Makefile	2005-11-16 11:19:03.000000000 -0800
+@@ -2,5 +2,6 @@ ifeq ($(subdir),csu)
+ ifeq (yes,$(build-shared))
+ sysdep_routines += divdi3
+ shared-only-routines += divdi3
++CPPFLAGS-divdi3.c = -Din_divdi3_c
+ endif
+ endif
+--- glibc-2.3.6/sysdeps/wordsize-32/symbol-hacks.h~     2004-03-08 12:59:34.000000000 -0800
++++ glibc-2.3.6/sysdeps/wordsize-32/symbol-hacks.h      2007-01-22 16:02:30.000000000 -0800
+@@ -22,7 +22,7 @@
+    therefore we get PLTs.  Unnecessarily so.  Changing gcc is a big
+    task which might not be worth it so we play tricks with the
+    assembler.  */
+-#if !defined __ASSEMBLER__ && !defined NOT_IN_libc && defined SHARED
++#if !defined __ASSEMBLER__ && !defined NOT_IN_libc && defined SHARED && !defined in_divdi3_c
+ asm ("__divdi3 = __divdi3_internal");
+ asm ("__udivdi3 = __udivdi3_internal");
+ asm ("__moddi3 = __moddi3_internal");
+
