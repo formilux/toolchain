@@ -1,0 +1,14 @@
+--- gcc-3.4.6/Makefile.in	2004-09-24 02:43:53.000000000 +0200
++++ gcc-3.4.6.bak/Makefile.in	2010-05-10 16:34:38.024645786 +0200
+@@ -23515,6 +23515,10 @@
+ 	  mv gcc/tmp-include gcc/include 2>/dev/null; \
+ 	else true; fi
+ 
++.PHONY: configure-libcpp all-libcpp 
++configure-libcpp:
++all-libcpp:
++
+ # --------------------------------------
+ # Dependencies between different modules
+ # --------------------------------------
+
