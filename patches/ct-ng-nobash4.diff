@@ -1,0 +1,545 @@
+diff -urN crosstool-ng-1.7.2/configure crosstool-ng-1.7.2-nobash4/configure
+--- crosstool-ng-1.7.2/configure	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/configure	2011-08-17 00:03:50 +0200
+@@ -337,8 +337,8 @@
+ # The regular list of tools we can now easily check for
+ has_or_abort prog=bash                              \
+              var=bash                               \
+-             ver='^GNU bash, version (3\.[1-9]|4)'  \
+-             err="'bash' 3.1 or above was not found"
++             ver='^GNU bash, version (3\.[0-9]|[4-9])'  \
++             err="'bash' 3.0 or above was not found"
+ has_or_abort prog=cut
+ has_or_abort prog=install var=install
+ has_or_abort prog=make                                  \
+diff -urN crosstool-ng-1.7.2/scripts/build/arch/arm.sh crosstool-ng-1.7.2-nobash4/scripts/build/arch/arm.sh
+--- crosstool-ng-1.7.2/scripts/build/arch/arm.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/arch/arm.sh	2011-08-17 00:02:07 +0200
+@@ -22,6 +22,6 @@
+     esac
+ 
+     if [ "${CT_ARCH_ARM_INTERWORKING}" = "y" ]; then
+-        CT_ARCH_TARGET_CFLAGS+=" -mthumb-interwork"
++        CT_ARCH_TARGET_CFLAGS="${CT_ARCH_TARGET_CFLAGS} -mthumb-interwork"
+     fi
+ }
+diff -urN crosstool-ng-1.7.2/scripts/build/binutils/binutils.sh crosstool-ng-1.7.2-nobash4/scripts/build/binutils/binutils.sh
+--- crosstool-ng-1.7.2/scripts/build/binutils/binutils.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/binutils/binutils.sh	2011-08-17 00:02:07 +0200
+@@ -26,8 +26,8 @@
+ 
+     # If GMP and MPFR were configured, then use that,
+     # otherwise let binutils find the system-wide libraries, if they exist.
+-    [ -z "${CT_GMP}"    ] || extra_config+=("--with-gmp=${CT_PREFIX_DIR}")
+-    [ -z "${CT_MPFR}"   ] || extra_config+=("--with-mpfr=${CT_PREFIX_DIR}")
++    [ -z "${CT_GMP}"    ] || extra_config=( "${extra_config[@]}" "--with-gmp=${CT_PREFIX_DIR}")
++    [ -z "${CT_MPFR}"   ] || extra_config=( "${extra_config[@]}" "--with-mpfr=${CT_PREFIX_DIR}")
+ 
+     CT_DoLog EXTRA "Configuring binutils"
+     CFLAGS="${CT_CFLAGS_FOR_HOST}"                              \
+@@ -76,17 +76,17 @@
+     local -a install_targets
+     local t
+ 
+-    [ "${CT_BINUTILS_FOR_TARGET_IBERTY}" = "y" ] && targets+=("libiberty")
+-    [ "${CT_BINUTILS_FOR_TARGET_BFD}"    = "y" ] && targets+=("bfd")
++    [ "${CT_BINUTILS_FOR_TARGET_IBERTY}" = "y" ] && targets=( "${targets[@]}" "libiberty")
++    [ "${CT_BINUTILS_FOR_TARGET_BFD}"    = "y" ] && targets=( "${targets[@]}" "bfd")
+     for t in "${targets[@]}"; do
+-        build_targets+=("all-${t}")
+-        install_targets+=("install-${t}")
++        build_targets=( "${build_targets[@]}" "all-${t}")
++        install_targets=( "${install_targets[@]}" "install-${t}")
+     done
+ 
+     # If GMP and MPFR were configured, then use that
+     if [ "${CT_BINUTILS_TARGET_USE_GMP_MPFR}" = "y" ]; then
+-        extra_config+=("--with-gmp=${CT_SYSROOT_DIR}/usr")
+-        extra_config+=("--with-mpfr=${CT_SYSROOT_DIR}/usr")
++        extra_config=( "${extra_config[@]}" "--with-gmp=${CT_SYSROOT_DIR}/usr")
++        extra_config=( "${extra_config[@]}" "--with-mpfr=${CT_SYSROOT_DIR}/usr")
+     fi
+ 
+     if [ "${#targets[@]}" -ne 0 ]; then
+diff -urN crosstool-ng-1.7.2/scripts/build/cc/gcc.sh crosstool-ng-1.7.2-nobash4/scripts/build/cc/gcc.sh
+--- crosstool-ng-1.7.2/scripts/build/cc/gcc.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/cc/gcc.sh	2011-08-17 00:02:07 +0200
+@@ -108,29 +108,29 @@
+     case "${mode}" in
+         static)
+             core_prefix_dir="${CT_CC_CORE_STATIC_PREFIX_DIR}"
+-            extra_config+=("--with-newlib")
+-            extra_config+=("--enable-threads=no")
+-            extra_config+=("--disable-shared")
++            extra_config=( "${extra_config[@]}" "--with-newlib")
++            extra_config=( "${extra_config[@]}" "--enable-threads=no")
++            extra_config=( "${extra_config[@]}" "--disable-shared")
+             copy_headers=y
+             ;;
+         shared)
+             core_prefix_dir="${CT_CC_CORE_SHARED_PREFIX_DIR}"
+-            extra_config+=("--enable-shared")
++            extra_config=( "${extra_config[@]}" "--enable-shared")
+             copy_headers=y
+             ;;
+         baremetal)
+             core_prefix_dir="${CT_PREFIX_DIR}"
+-            extra_config+=("--with-newlib")
+-            extra_config+=("--enable-threads=no")
+-            extra_config+=("--disable-shared")
++            extra_config=( "${extra_config[@]}" "--with-newlib")
++            extra_config=( "${extra_config[@]}" "--enable-threads=no")
++            extra_config=( "${extra_config[@]}" "--disable-shared")
+             [ "${CT_CC_LANG_CXX}" = "y" ] && lang_opt="${lang_opt},c++"
+             copy_headers=n
+             ;;
+     esac
+ 
+     # Bare metal delivers the core compiler as final compiler, so add version info and bugurl
+-    [ -n "${CT_CC_BUGURL}" ]     && extra_config+=("--with-bugurl=${CT_CC_BUGURL}")
+-    [ -n "${CT_CC_PKGVERSION}" ] && extra_config+=("--with-pkgversion=${CT_CC_PKGVERSION}")
++    [ -n "${CT_CC_BUGURL}" ]     && extra_config=( "${extra_config[@]}" "--with-bugurl=${CT_CC_BUGURL}")
++    [ -n "${CT_CC_PKGVERSION}" ] && extra_config=( "${extra_config[@]}" "--with-pkgversion=${CT_CC_PKGVERSION}")
+ 
+     if [ "${copy_headers}" = "y" ]; then
+         CT_DoLog DEBUG "Copying headers to install area of bootstrap gcc, so it can build libgcc2"
+@@ -142,13 +142,13 @@
+     for tmp in ARCH ABI CPU TUNE FPU FLOAT; do
+         eval tmp="\${CT_ARCH_WITH_${tmp}}"
+         if [ -n "${tmp}" ]; then
+-            extra_config+=("${tmp}")
++            extra_config=( "${extra_config[@]}" "${tmp}")
+         fi
+     done
+     if [ "${CT_CC_CXA_ATEXIT}" = "y" ]; then
+-        extra_config+=("--enable-__cxa_atexit")
++        extra_config=( "${extra_config[@]}" "--enable-__cxa_atexit")
+     else
+-        extra_config+=("--disable-__cxa_atexit")
++        extra_config=( "${extra_config[@]}" "--disable-__cxa_atexit")
+     fi
+ 
+     # When companion libraries are build static (eg !shared),
+@@ -158,16 +158,16 @@
+         core_LDFLAGS='-lstdc++'
+     fi
+     if [ "${CT_CC_GCC_USE_GMP_MPFR}" = "y" ]; then
+-        extra_config+=("--with-gmp=${CT_COMPLIBS_DIR}")
+-        extra_config+=("--with-mpfr=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-gmp=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-mpfr=${CT_COMPLIBS_DIR}")
+     fi
+     if [ "${CT_CC_GCC_USE_PPL_CLOOG_MPC}" = "y" ]; then
+-        extra_config+=("--with-ppl=${CT_COMPLIBS_DIR}")
+-        extra_config+=("--with-cloog=${CT_COMPLIBS_DIR}")
+-        extra_config+=("--with-mpc=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-ppl=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-cloog=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-mpc=${CT_COMPLIBS_DIR}")
+     fi
+     if [ "${CT_CC_GCC_USE_LIBELF}" = "y" ]; then
+-        extra_config+=("--with-libelf=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-libelf=${CT_COMPLIBS_DIR}")
+     fi
+ 
+     CT_DoLog DEBUG "Extra config passed: '${extra_config[*]}'"
+@@ -303,27 +303,27 @@
+     CT_Test "Building ${CT_CC_LANG_OTHERS//,/ } language(s) is not yet supported. Will try..." -n "${CT_CC_LANG_OTHERS}"
+     lang_opt=$(echo "${lang_opt},${CT_CC_LANG_OTHERS}" |sed -r -e 's/,+/,/g; s/,*$//;')
+ 
+-    extra_config+=("--enable-languages=${lang_opt}")
+-    extra_config+=("--disable-multilib")
++    extra_config=( "${extra_config[@]}" "--enable-languages=${lang_opt}")
++    extra_config=( "${extra_config[@]}" "--disable-multilib")
+     for tmp in ARCH ABI CPU TUNE FPU FLOAT; do
+         eval tmp="\${CT_ARCH_WITH_${tmp}}"
+         if [ -n "${tmp}" ]; then
+-            extra_config+=("${tmp}")
++            extra_config=( "${extra_config[@]}" "${tmp}")
+         fi
+     done
+ 
+-    [ "${CT_SHARED_LIBS}" = "y" ]                   || extra_config+=("--disable-shared")
+-    [ -n "${CT_CC_PKGVERSION}" ]                    && extra_config+=("--with-pkgversion=${CT_CC_PKGVERSION}")
+-    [ -n "${CT_CC_BUGURL}" ]                        && extra_config+=("--with-bugurl=${CT_CC_BUGURL}")
+-    [ "${CT_CC_SJLJ_EXCEPTIONS_USE}" = "y" ]        && extra_config+=("--enable-sjlj-exceptions")
+-    [ "${CT_CC_SJLJ_EXCEPTIONS_DONT_USE}" = "y" ]   && extra_config+=("--disable-sjlj-exceptions")
++    [ "${CT_SHARED_LIBS}" = "y" ]                   || extra_config=( "${extra_config[@]}" "--disable-shared")
++    [ -n "${CT_CC_PKGVERSION}" ]                    && extra_config=( "${extra_config[@]}" "--with-pkgversion=${CT_CC_PKGVERSION}")
++    [ -n "${CT_CC_BUGURL}" ]                        && extra_config=( "${extra_config[@]}" "--with-bugurl=${CT_CC_BUGURL}")
++    [ "${CT_CC_SJLJ_EXCEPTIONS_USE}" = "y" ]        && extra_config=( "${extra_config[@]}" "--enable-sjlj-exceptions")
++    [ "${CT_CC_SJLJ_EXCEPTIONS_DONT_USE}" = "y" ]   && extra_config=( "${extra_config[@]}" "--disable-sjlj-exceptions")
+     if [ "${CT_CC_CXA_ATEXIT}" = "y" ]; then
+-        extra_config+=("--enable-__cxa_atexit")
++        extra_config=( "${extra_config[@]}" "--enable-__cxa_atexit")
+     else
+-        extra_config+=("--disable-__cxa_atexit")
++        extra_config=( "${extra_config[@]}" "--disable-__cxa_atexit")
+     fi
+     if [ -n "${CC_ENABLE_CXX_FLAGS}" ]; then
+-        extra_config+=("--enable-cxx-flags=${CC_ENABLE_CXX_FLAGS}")
++        extra_config=( "${extra_config[@]}" "--enable-cxx-flags=${CC_ENABLE_CXX_FLAGS}")
+     fi
+ 
+     # When companion libraries are build static (eg !shared),
+@@ -333,25 +333,25 @@
+         final_LDFLAGS='-lstdc++'
+     fi
+     if [ "${CT_CC_GCC_USE_GMP_MPFR}" = "y" ]; then
+-        extra_config+=("--with-gmp=${CT_COMPLIBS_DIR}")
+-        extra_config+=("--with-mpfr=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-gmp=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-mpfr=${CT_COMPLIBS_DIR}")
+     fi
+     if [ "${CT_CC_GCC_USE_PPL_CLOOG_MPC}" = "y" ]; then
+-        extra_config+=("--with-ppl=${CT_COMPLIBS_DIR}")
+-        extra_config+=("--with-cloog=${CT_COMPLIBS_DIR}")
+-        extra_config+=("--with-mpc=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-ppl=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-cloog=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-mpc=${CT_COMPLIBS_DIR}")
+     fi
+     if [ "${CT_CC_GCC_USE_LIBELF}" = "y" ]; then
+-        extra_config+=("--with-libelf=${CT_COMPLIBS_DIR}")
++        extra_config=( "${extra_config[@]}" "--with-libelf=${CT_COMPLIBS_DIR}")
+     fi
+ 
+     if [ "${CT_THREADS}" = "none" ]; then
+-        extra_config+=("--disable-threads")
++        extra_config=( "${extra_config[@]}" "--disable-threads")
+         if [ "${CT_CC_GCC_4_2_or_later}" = y ]; then
+-            extra_config+=("--disable-libgomp")
++            extra_config=( "${extra_config[@]}" "--disable-libgomp")
+         fi
+     else
+-        extra_config+=("--enable-threads=posix")
++        extra_config=( "${extra_config[@]}" "--enable-threads=posix")
+     fi
+ 
+     CT_DoLog DEBUG "Extra config passed: '${extra_config[*]}'"
+diff -urN crosstool-ng-1.7.2/scripts/build/companion_libs/cloog.sh crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/cloog.sh
+--- crosstool-ng-1.7.2/scripts/build/companion_libs/cloog.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/cloog.sh	2011-08-17 00:02:07 +0200
+@@ -53,9 +53,9 @@
+     CT_DoLog EXTRA "Configuring CLooG/ppl"
+ 
+     if [ "${CT_COMPLIBS_SHARED}" = "y" ]; then
+-        cloog_opts+=( --enable-shared --disable-static )
++        cloog_opts=( ${cloog_opts[@]} --enable-shared --disable-static )
+     else
+-        cloog_opts+=( --disable-shared --enable-static )
++        cloog_opts=( ${cloog_opts[@]} --disable-shared --enable-static )
+         cloog_LDFLAGS='-lstdc++'
+     fi
+ 
+diff -urN crosstool-ng-1.7.2/scripts/build/companion_libs/gmp.sh crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/gmp.sh
+--- crosstool-ng-1.7.2/scripts/build/companion_libs/gmp.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/gmp.sh	2011-08-17 00:02:07 +0200
+@@ -34,9 +34,9 @@
+     CT_DoLog EXTRA "Configuring GMP"
+ 
+     if [ "${CT_COMPLIBS_SHARED}" = "y" ]; then
+-        gmp_opts+=( --enable-shared --disable-static )
++        gmp_opts=( ${gmp_opts[@]} --enable-shared --disable-static )
+     else
+-        gmp_opts+=( --disable-shared --enable-static )
++        gmp_opts=( ${gmp_opts[@]} --disable-shared --enable-static )
+     fi
+ 
+     CFLAGS="${CT_CFLAGS_FOR_HOST} -fexceptions"     \
+diff -urN crosstool-ng-1.7.2/scripts/build/companion_libs/libelf.sh crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/libelf.sh
+--- crosstool-ng-1.7.2/scripts/build/companion_libs/libelf.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/libelf.sh	2011-08-17 00:02:07 +0200
+@@ -31,9 +31,9 @@
+     CT_DoLog EXTRA "Configuring libelf"
+ 
+     if [ "${CT_COMPLIBS_SHARED}" = "y" ]; then
+-        libelf_opts+=( --enable-shared --disable-static )
++        libelf_opts=( ${libelf_opts[@]} --enable-shared --disable-static )
+     else
+-        libelf_opts+=( --disable-shared --enable-static )
++        libelf_opts=( ${libelf_opts[@]} --disable-shared --enable-static )
+     fi
+ 
+     CT_DoExecLog ALL                                        \
+diff -urN crosstool-ng-1.7.2/scripts/build/companion_libs/mpc.sh crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/mpc.sh
+--- crosstool-ng-1.7.2/scripts/build/companion_libs/mpc.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/mpc.sh	2011-08-17 00:02:07 +0200
+@@ -33,9 +33,9 @@
+     CT_DoLog EXTRA "Configuring MPC"
+ 
+     if [ "${CT_COMPLIBS_SHARED}" = "y" ]; then
+-        mpc_opts+=( --enable-shared --disable-static )
++        mpc_opts=( ${mpc_opts[@]} --enable-shared --disable-static )
+     else
+-        mpc_opts+=( --disable-shared --enable-static )
++        mpc_opts=( ${mpc_opts[@]} --disable-shared --enable-static )
+     fi
+ 
+     CFLAGS="${CT_CFLAGS_FOR_HOST}"                  \
+diff -urN crosstool-ng-1.7.2/scripts/build/companion_libs/mpfr.sh crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/mpfr.sh
+--- crosstool-ng-1.7.2/scripts/build/companion_libs/mpfr.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/mpfr.sh	2011-08-17 00:02:07 +0200
+@@ -76,16 +76,16 @@
+ 
+     # Under Cygwin, we can't build a thread-safe library
+     case "${CT_HOST}" in
+-        *cygwin*)   mpfr_opts+=( --disable-thread-safe );;
+-        *mingw*)    mpfr_opts+=( --disable-thread-safe );;
+-        *darwin*)   mpfr_opts+=( --disable-thread-safe );;
+-        *)          mpfr_opts+=( --enable-thread-safe  );;
++        *cygwin*)   mpfr_opts=( ${mpfr_opts[@]} --disable-thread-safe );;
++        *mingw*)    mpfr_opts=( ${mpfr_opts[@]} --disable-thread-safe );;
++        *darwin*)   mpfr_opts=( ${mpfr_opts[@]} --disable-thread-safe );;
++        *)          mpfr_opts=( ${mpfr_opts[@]} --enable-thread-safe  );;
+     esac
+ 
+     if [ "${CT_COMPLIBS_SHARED}" = "y" ]; then
+-        mpfr_opts+=( --enable-shared --disable-static )
++        mpfr_opts=( ${mpfr_opts[@]} --enable-shared --disable-static )
+     else
+-        mpfr_opts+=( --disable-shared --enable-static )
++        mpfr_opts=( ${mpfr_opts[@]} --disable-shared --enable-static )
+     fi
+ 
+     CT_DoLog EXTRA "Configuring MPFR"
+diff -urN crosstool-ng-1.7.2/scripts/build/companion_libs/ppl.sh crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/ppl.sh
+--- crosstool-ng-1.7.2/scripts/build/companion_libs/ppl.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/companion_libs/ppl.sh	2011-08-17 00:02:07 +0200
+@@ -35,9 +35,9 @@
+     CT_DoLog EXTRA "Configuring PPL"
+ 
+     if [ "${CT_COMPLIBS_SHARED}" = "y" ]; then
+-        ppl_opts+=( --enable-shared --disable-static )
++        ppl_opts=( ${ppl_opts[@]} --enable-shared --disable-static )
+     else
+-        ppl_opts+=( --disable-shared --enable-static )
++        ppl_opts=( ${ppl_opts[@]} --disable-shared --enable-static )
+     fi
+ 
+     CFLAGS="${CT_CFLAGS_FOR_HOST}"                  \
+diff -urN crosstool-ng-1.7.2/scripts/build/debug/100-dmalloc.sh crosstool-ng-1.7.2-nobash4/scripts/build/debug/100-dmalloc.sh
+--- crosstool-ng-1.7.2/scripts/build/debug/100-dmalloc.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/debug/100-dmalloc.sh	2011-08-17 00:02:07 +0200
+@@ -19,16 +19,16 @@
+     cd "${CT_BUILD_DIR}/build-dmalloc"
+ 
+     case "${CT_CC_LANG_CXX}" in
+-        y)  extra_config+=("--enable-cxx");;
+-        *)  extra_config+=("--disable-cxx");;
++        y)  extra_config=( "${extra_config[@]}" "--enable-cxx");;
++        *)  extra_config=( "${extra_config[@]}" "--disable-cxx");;
+     esac
+     case "${CT_THREADS}" in
+-        none)   extra_config+=("--disable-threads");;
+-        *)      extra_config+=("--enable-threads");;
++        none)   extra_config=( "${extra_config[@]}" "--disable-threads");;
++        *)      extra_config=( "${extra_config[@]}" "--enable-threads");;
+     esac
+     case "${CT_SHARED_LIBS}" in
+-        y)  extra_config+=("--enable-shlib");;
+-        *)  extra_config+=("--disable-shlib");;
++        y)  extra_config=( "${extra_config[@]}" "--enable-shlib");;
++        *)  extra_config=( "${extra_config[@]}" "--disable-shlib");;
+     esac
+ 
+     CT_DoLog DEBUG "Extra config passed: '${extra_config[*]}'"
+diff -urN crosstool-ng-1.7.2/scripts/build/debug/300-gdb.sh crosstool-ng-1.7.2-nobash4/scripts/build/debug/300-gdb.sh
+--- crosstool-ng-1.7.2/scripts/build/debug/300-gdb.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/debug/300-gdb.sh	2011-08-17 00:02:07 +0200
+@@ -61,7 +61,7 @@
+ 
+     # Version 6.3 and below behave badly with gdbmi
+     case "${CT_GDB_VERSION}" in
+-        6.2*|6.3)   extra_config+=("--disable-gdbmi");;
++        6.2*|6.3)   extra_config=( "${extra_config[@]}" "--disable-gdbmi");;
+     esac
+ 
+     if [ "${CT_GDB_CROSS}" = "y" ]; then
+@@ -75,15 +75,15 @@
+ 
+         cross_extra_config=("${extra_config[@]}")
+         if [ "${CT_GDB_CROSS_USE_GMP_MPFR}" = "y" ]; then
+-            cross_extra_config+=("--with-gmp=${CT_PREFIX_DIR}")
+-            cross_extra_config+=("--with-mpfr=${CT_PREFIX_DIR}")
++            cross_extra_config=( "${cross_extra_config[@]}" "--with-gmp=${CT_PREFIX_DIR}")
++            cross_extra_config=( "${cross_extra_config[@]}" "--with-mpfr=${CT_PREFIX_DIR}")
+         fi
+         if [ "${CT_GDB_CROSS_USE_MPC}" = "y" ]; then
+-            cross_extra_config+=("--with-mpc=${CT_PREFIX_DIR}")
++            cross_extra_config=( "${cross_extra_config[@]}" "--with-mpc=${CT_PREFIX_DIR}")
+         fi
+         case "${CT_THREADS}" in
+-            none)   cross_extra_config+=("--disable-threads");;
+-            *)      cross_extra_config+=("--enable-threads");;
++            none)   cross_extra_config=( "${cross_extra_config[@]}" "--disable-threads");;
++            *)      cross_extra_config=( "${cross_extra_config[@]}" "--enable-threads");;
+         esac
+ 
+         CC_for_gdb=
+@@ -126,8 +126,8 @@
+ 
+         CT_DoLog EXTRA "Building static target ncurses"
+ 
+-        [ "${CT_CC_LANG_CXX}" = "y" ] || ncurses_opts+=("--without-cxx" "--without-cxx-binding")
+-        [ "${CT_CC_LANG_ADA}" = "y" ] || ncurses_opts+=("--without-ada")
++        [ "${CT_CC_LANG_CXX}" = "y" ] || ncurses_opts=( "${ncurses_opts[@]}" "--without-cxx" "--without-cxx-binding")
++        [ "${CT_CC_LANG_ADA}" = "y" ] || ncurses_opts=( "${ncurses_opts[@]}" "--without-ada")
+ 
+         mkdir -p "${CT_BUILD_DIR}/build-ncurses-build-tic"
+         cd "${CT_BUILD_DIR}/build-ncurses-build-tic"
+@@ -188,12 +188,12 @@
+ 
+         native_extra_config=("${extra_config[@]}")
+         case "${CT_THREADS}" in
+-            none)   native_extra_config+=("--disable-threads");;
+-            *)      native_extra_config+=("--enable-threads");;
++            none)   native_extra_config=( "${native_extra_config[@]}" "--disable-threads");;
++            *)      native_extra_config=( "${native_extra_config[@]}" "--enable-threads");;
+         esac
+         if [ "${CT_GDB_NATIVE_USE_GMP_MPFR}" = "y" ]; then
+-            native_extra_config+=("--with-gmp=${CT_SYSROOT_DIR}/usr")
+-            native_extra_config+=("--with-mpfr=${CT_SYSROOT_DIR}/usr")
++            native_extra_config=( "${native_extra_config[@]}" "--with-gmp=${CT_SYSROOT_DIR}/usr")
++            native_extra_config=( "${native_extra_config[@]}" "--with-mpfr=${CT_SYSROOT_DIR}/usr")
+         fi
+ 
+         if [ "${CT_GDB_NATIVE_STATIC}" = "y" ]; then
+diff -urN crosstool-ng-1.7.2/scripts/build/libc/eglibc.sh crosstool-ng-1.7.2-nobash4/scripts/build/libc/eglibc.sh
+--- crosstool-ng-1.7.2/scripts/build/libc/eglibc.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/libc/eglibc.sh	2011-08-17 00:02:07 +0200
+@@ -269,32 +269,32 @@
+     # We don't need to be conditional on wether the user did set different
+     # values, as they CT_LIBC_GLIBC_EXTRA_CONFIG is passed after extra_config
+ 
+-    extra_config+=("--enable-kernel=$(echo ${CT_LIBC_GLIBC_MIN_KERNEL} |sed -r -e 's/^([^.]+\.[^.]+\.[^.]+)(|\.[^.]+)$/\1/;')")
++    extra_config=( "${extra_config[@]}" "--enable-kernel=$(echo ${CT_LIBC_GLIBC_MIN_KERNEL} |sed -r -e 's/^([^.]+\.[^.]+\.[^.]+)(|\.[^.]+)$/\1/;')")
+ 
+     case "${CT_THREADS}" in
+-        nptl)           extra_config+=("--with-__thread" "--with-tls");;
+-        linuxthreads)   extra_config+=("--with-__thread" "--without-tls" "--without-nptl");;
+-        none)           extra_config+=("--without-__thread" "--without-nptl")
++        nptl)           extra_config=( "${extra_config[@]}" "--with-__thread" "--with-tls");;
++        linuxthreads)   extra_config=( "${extra_config[@]}" "--with-__thread" "--without-tls" "--without-nptl");;
++        none)           extra_config=( "${extra_config[@]}" "--without-__thread" "--without-nptl")
+                         case "${CT_LIBC_GLIBC_EXTRA_CONFIG}" in
+                             *-tls*) ;;
+-                            *) extra_config+=("--without-tls");;
++                            *) extra_config=( "${extra_config[@]}" "--without-tls");;
+                         esac
+                         ;;
+     esac
+ 
+     case "${CT_SHARED_LIBS}" in
+-        y) extra_config+=("--enable-shared");;
+-        *) extra_config+=("--disable-shared");;
++        y) extra_config=( "${extra_config[@]}" "--enable-shared");;
++        *) extra_config=( "${extra_config[@]}" "--disable-shared");;
+     esac
+ 
+     case "${CT_ARCH_FLOAT_HW},${CT_ARCH_FLOAT_SW}" in
+-        y,) extra_config+=("--with-fp");;
+-        ,y) extra_config+=("--without-fp");;
++        y,) extra_config=( "${extra_config[@]}" "--with-fp");;
++        ,y) extra_config=( "${extra_config[@]}" "--without-fp");;
+     esac
+ 
+     case "$(do_libc_add_ons_list ,)" in
+         "") ;;
+-        *)  extra_config+=("--enable-add-ons=$(do_libc_add_ons_list ,)");;
++        *)  extra_config=( "${extra_config[@]}" "--enable-add-ons=$(do_libc_add_ons_list ,)");;
+     esac
+ 
+     extra_cc_args="${extra_cc_args} ${CT_ARCH_ENDIAN_OPT}"
+diff -urN crosstool-ng-1.7.2/scripts/build/libc/glibc.sh crosstool-ng-1.7.2-nobash4/scripts/build/libc/glibc.sh
+--- crosstool-ng-1.7.2/scripts/build/libc/glibc.sh	2010-07-30 00:18:02 +0200
++++ crosstool-ng-1.7.2-nobash4/scripts/build/libc/glibc.sh	2011-08-17 00:02:07 +0200
+@@ -114,10 +114,10 @@
+                            -e 's/ +/,/g; s/^,+//; s/,+$//;'     \
+                   )"
+ 
+-    extra_config+=("--enable-add-ons=${addons_list}")
++    extra_config=( "${extra_config[@]}" "--enable-add-ons=${addons_list}")
+ 
+-    extra_config+=("${addons_config}")
+-    extra_config+=("$(do_libc_min_kernel_config)")
++    extra_config=( "${extra_config[@]}" "${addons_config}")
++    extra_config=( "${extra_config[@]}" "$(do_libc_min_kernel_config)")
+ 
+     # Pre-seed the configparms file with values from the config option
+     printf "${CT_LIBC_GLIBC_CONFIGPARMS}\n" > configparms
+@@ -249,23 +249,23 @@
+     # Add some default glibc config options if not given by user.
+     case "${CT_LIBC_GLIBC_EXTRA_CONFIG}" in
+         *-tls*) ;;
+-        *) extra_config+=("--with-tls")
++        *) extra_config=( "${extra_config[@]}" "--with-tls")
+     esac
+     case "${CT_SHARED_LIBS}" in
+-        y) extra_config+=("--enable-shared");;
+-        *) extra_config+=("--disable-shared");;
++        y) extra_config=( "${extra_config[@]}" "--enable-shared");;
++        *) extra_config=( "${extra_config[@]}" "--disable-shared");;
+     esac
+     case "${CT_ARCH_FLOAT_HW},${CT_ARCH_FLOAT_SW}" in
+-        y,) extra_config+=("--with-fp");;
+-        ,y) extra_config+=("--without-fp");;
++        y,) extra_config=( "${extra_config[@]}" "--with-fp");;
++        ,y) extra_config=( "${extra_config[@]}" "--without-fp");;
+     esac
+     # Obviously, we want threads, as we come here only for NPTL
+-    extra_config+=("--with-__thread")
++    extra_config=( "${extra_config[@]}" "--with-__thread")
+ 
+     addons_config="--enable-add-ons=$(do_libc_add_ons_list ,)"
+-    extra_config+=("${addons_config}")
++    extra_config=( "${extra_config[@]}" "${addons_config}")
+ 
+-    extra_config+=("$(do_libc_min_kernel_config)")
++    extra_config=( "${extra_config[@]}" "$(do_libc_min_kernel_config)")
+ 
+     # Add some default CC args
+     glibc_version="$( grep -E '\<VERSION\>' "${CT_SRC_DIR}/glibc-${CT_LIBC_VERSION}/version.h"  \
+@@ -349,32 +349,32 @@
+     # values, as they CT_LIBC_GLIBC_EXTRA_CONFIG is passed after extra_config
+ 
+     case "${CT_THREADS}" in
+-        nptl)           extra_config+=("--with-__thread" "--with-tls");;
+-        linuxthreads)   extra_config+=("--with-__thread" "--without-tls" "--without-nptl");;
+-        none)           extra_config+=("--without-__thread" "--without-nptl")
++        nptl)           extra_config=( "${extra_config[@]}" "--with-__thread" "--with-tls");;
++        linuxthreads)   extra_config=( "${extra_config[@]}" "--with-__thread" "--without-tls" "--without-nptl");;
++        none)           extra_config=( "${extra_config[@]}" "--without-__thread" "--without-nptl")
+                         case "${CT_LIBC_GLIBC_EXTRA_CONFIG}" in
+                             *-tls*) ;;
+-                            *) extra_config+=("--without-tls");;
++                            *) extra_config=( "${extra_config[@]}" "--without-tls");;
+                         esac
+                         ;;
+     esac
+ 
+     case "${CT_SHARED_LIBS}" in
+-        y) extra_config+=("--enable-shared");;
+-        *) extra_config+=("--disable-shared");;
++        y) extra_config=( "${extra_config[@]}" "--enable-shared");;
++        *) extra_config=( "${extra_config[@]}" "--disable-shared");;
+     esac
+ 
+     case "${CT_ARCH_FLOAT_HW},${CT_ARCH_FLOAT_SW}" in
+-        y,) extra_config+=("--with-fp");;
+-        ,y) extra_config+=("--without-fp");;
++        y,) extra_config=( "${extra_config[@]}" "--with-fp");;
++        ,y) extra_config=( "${extra_config[@]}" "--without-fp");;
+     esac
+ 
+     case "$(do_libc_add_ons_list ,)" in
+         "") ;;
+-        *)  extra_config+=("--enable-add-ons=$(do_libc_add_ons_list ,)");;
++        *)  extra_config=( "${extra_config[@]}" "--enable-add-ons=$(do_libc_add_ons_list ,)");;
+     esac
+ 
+-    extra_config+=("$(do_libc_min_kernel_config)")
++    extra_config=( "${extra_config[@]}" "$(do_libc_min_kernel_config)")
+ 
+     # Add some default CC args
+     glibc_version="$( grep -E '\<VERSION\>' "${CT_SRC_DIR}/glibc-${CT_LIBC_VERSION}/version.h"  \
