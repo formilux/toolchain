@@ -1,0 +1,25 @@
+--- crosstool-ng-1.7.2/configure	2011-08-16 23:27:21 +0200
++++ crosstool-ng-1.7.2-nocheck/configure	2011-08-16 23:35:04 +0200
+@@ -160,7 +160,7 @@
+                 printf "Checking for '${item}'... "
+                 where="$( gcc -print-file-name="${item}" )"
+                 if [ "${where}" != "${item}" ]; then
+-                    where="$( readlink -e "${where}" )"
++                    where="$( readlink -f "${where}" )"
+                     status=yes
+                     break;
+                 fi
+@@ -351,12 +351,10 @@
+ has_or_abort prog=flex
+ has_or_abort prog=makeinfo
+ has_or_abort prog=automake                                                      \
+-             ver='\(GNU automake\) (1\.[[:digit:]]{2,}|[2-9][[:digit:]]*\.)'    \
+              err="'automake' 1.10 or above was not found"
+ has_or_abort prog=libtool                                                                           \
+-             ver='\(GNU libtool.*\) (2[[:digit:]]*\.|1\.6[[:digit:]]*\.|1\.5\.[2-9][[:digit:]]+)'   \
+              err="'libtool' 1.5.26 or above was not found"
+-has_or_abort prog=stat ver='GNU coreutils'
++has_or_abort prog=stat ver='coreutils'
+ has_or_abort prog="aria2c curl wget"
+ has_or_abort prog=cvs
+ has_or_abort prog=patch
