@@ -1,0 +1,11 @@
+--- crosstool-ng-1.7.2/scripts/build/cc/gcc.sh	2011-08-17 00:02:07 +0200
++++ ct-ng-1.7.2/scripts/build/cc/gcc.sh	2011-08-19 14:19:51 +0200
+@@ -360,6 +360,8 @@
+     # detection problem only matters for gcc-3.2.x and later, I think.
+     # --disable-nls to work around crash bug on ppc405, but also because
+     # embedded systems don't really need message catalogs...
++
++    CT_DoLog DEBUG "Using CC_FOR_BUILD=${CT_BUILD}-gcc CFLAGS=${CT_CFLAGS_FOR_HOST} LDFLAGS=${final_LDFLAGS} CFLAGS_FOR_TARGET=${CT_TARGET_CFLAGS} CXXFLAGS_FOR_TARGET=${CT_TARGET_CFLAGS} LDFLAGS_FOR_TARGET=${CT_TARGET_LDFLAGS}"
+     CC_FOR_BUILD="${CT_BUILD}-gcc"                  \
+     CFLAGS="${CT_CFLAGS_FOR_HOST}"                  \
+     LDFLAGS="${final_LDFLAGS}"                      \
