@@ -1,0 +1,15 @@
+C'est impossible de debugger un build qui ne dit jamais dans quel répertoire
+il rentre ni d'où il sort !
+
+--- ./ct-ng.in.bad	2010-07-30 00:18:02 +0200
++++ ./ct-ng.in	2011-08-19 22:41:29 +0200
+@@ -4,7 +4,8 @@
+ 
+ # Don't print directory as we descend into them
+ # Don't use built-in rules, we know what we're doing
+-MAKEFLAGS += --no-print-directory --no-builtin-rules
++#MAKEFLAGS += --no-print-directory --no-builtin-rules
++MAKEFLAGS += --no-builtin-rules
+ 
+ # Don't go parallel
+ .NOTPARALLEL:
