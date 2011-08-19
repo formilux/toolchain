@@ -1,0 +1,11 @@
+--- crosstool-ng-1.7.2/scripts/functions	2010-07-30 00:18:02 +0200
++++ ct-ng-1.7.2/scripts/functions	2011-08-19 14:12:18 +0200
+@@ -116,7 +116,7 @@
+ CT_DoExecLog() {
+     local level="$1"
+     shift
+-    CT_DoLog DEBUG "==> Executing: '${*}'"
++    CT_DoLog DEBUG "==> [PWD=$PWD] Executing: '${*}'"
+     "${@}" 2>&1 |CT_DoLog "${level}"
+ }
+ 
