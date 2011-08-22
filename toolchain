@@ -4,24 +4,24 @@
 
 # If a variable V is set, it is passed to most makefiles (use V=1 for more verbosity)
 
-TC_TMP=${TC_TMP-/tmp}
+TC_TMP="${TC_TMP-/tmp}"
 
-BUILD=${BUILD-$TC_TMP/flx}
-CT_LOCAL_TARBALLS_DIR=$BUILD/src/
+BUILD="${BUILD-$TC_TMP/flx}"
+CT_LOCAL_TARBALLS_DIR="$BUILD/src/"
 
 # Sources, patches and config are found in $TC_SRC/{src,patches,config,addons}/
-TC_SRC=${TC_SRC-/users/willy/toolchain}
-TC_DST=${TC_DST-/build/flx-toolchain}
-TC_USR=${TC_USR-willy}
-TC_GRP=${TC_GRP-dev}
+TC_SRC="${TC_SRC-/users/willy/toolchain}"
+TC_DST="${TC_DST-/build/flx-toolchain}"
+TC_USR="${TC_USR-willy}"
+TC_GRP="${TC_GRP-dev}"
 
-CT_PREFIX_DIR=$TC_DST/\${CT_TARGET}
+CT_PREFIX_DIR="$TC_DST/\${CT_TARGET}"
 
 CT_VERSION=1.7.2
 CT_BINUTILS_VERSION=2.20
 CT_KERNEL_VERSION=2.6.27.46
 CT_LIBC_VERSION=2.3.6
-UCLIBC_KERNEL_VERSION=${CT_KERNEL_VERSION}
+UCLIBC_KERNEL_VERSION="${CT_KERNEL_VERSION}"
 UCLIBC_VERSION=0.9.30.2
 SQUASHFS_VERSION=2.2-r2
 
@@ -46,23 +46,43 @@ die() {
 	exit ${1:-1}
 }
 
+clean_dest() {
+	[ -e "$TC_DST" ] || return
+	echo "Warning: destination directory exists ($TC_DST)"
+	echo "Ready to remove it, are you sure ?"
+	echo "Press Enter to continue or Ctrl-C to abort."
+	read
+
+	# first attempt without being root
+	echo "Removing $TC_DST."
+	rm -rf "$TC_DST"
+	if [ -e "$TC_DST" ]; then
+		echo "Some contents would not be removed, retrying as root."
+		sudo rm -rf "$TC_DST"
+	fi
+	if [ -e "$TC_DST" ]; then
+		die 1 "could not remove destination directory."
+	fi
+	echo "Done."
+}
+
 check_sources() {
 	# wget -c http://ymorin.is-a-geek.org/download/crosstool-ng/crosstool-ng-$CT_VERSION.tar.bz2
 	# wget http://www.kernel.org/pub/linux/kernel/v2.6/linux-$UCLIBC_KERNEL_VERSION.tar.bz2
 	# wget http://www.uclibc.org/downloads/old-releases/uClibc-$UCLIBC_VERSION.tar.bz2
 	# wget http://sourceforge.net/projects/squashfs/files/squashfs/squashfs$SQUASHFS_VERSION/squashfs$SQUASHFS_VERSION.tar.gz/download
 
-	[ -s "$TC_SRC/src/crosstool-ng-$CT_VERSION.tar.bz2" ] || die "$TC_SRC/src/crosstool-ng-$CT_VERSION.tar.bz2 not found"
-	[ -s "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2" ] || die "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2 not found"
-	[ -s "$TC_SRC/src/uClibc-$UCLIBC_VERSION.tar.bz2" ] || die "$TC_SRC/src/uClibc-$UCLIBC_VERSION.tar.bz2 not found"
-	[ -s "$TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz" ] || die "$TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz not found"
+	[ -s "$TC_SRC/src/crosstool-ng-$CT_VERSION.tar.bz2" ] || die 1 "$TC_SRC/src/crosstool-ng-$CT_VERSION.tar.bz2 not found"
+	[ -s "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2" ] || die 1 "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2 not found"
+	[ -s "$TC_SRC/src/uClibc-$UCLIBC_VERSION.tar.bz2" ] || die 1 "$TC_SRC/src/uClibc-$UCLIBC_VERSION.tar.bz2 not found"
+	[ -s "$TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz" ] || die 1 "$TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz not found"
 }
 
 extract_and_patch_ct_ng() {
-	cd $TC_TMP
+	cd "$TC_TMP" || die
 	echo "Extracting crosstool-ng from $TC_SRC/src ..."
-	tar jxf $TC_SRC/src/crosstool-ng-$CT_VERSION.tar.bz2
-	cd crosstool-ng-$CT_VERSION || die
+	tar jxf "$TC_SRC/src/crosstool-ng-$CT_VERSION.tar.bz2"
+	cd "crosstool-ng-$CT_VERSION" || die
 	for i in $CT_PATCHES; do
 		if [ -e "$TC_SRC/patches/$i" ]; then
 			echo "Applying patch $i"
@@ -72,98 +92,100 @@ extract_and_patch_ct_ng() {
 
 	if [ -n "${CT_REMOVE_PATCHES}" ]; then
 		for i in ${CT_REMOVE_PATCHES}; do
-			rm -vf patches/$i || die
+			rm -vf "patches/$i" || die
 		done
 	fi
 }
 
 build_ct_ng() {
-	./configure --prefix=$TC_DST/ct-ng ${BASH:+--with-bash=$BASH}
-	make ${V+V=$V} || die
-	sudo make ${V+V=$V} install || die
+	./configure --prefix="$TC_DST/ct-ng" ${BASH:+--with-bash="$BASH"}
+	make ${V+V="$V"} || die
+	sudo make ${V+V="$V"} install || die
 	cd ..
-	rm -rf crosstool-ng-$CT_VERSION
-	sudo chown -R $TC_USR:$TC_GRP $TC_DST
-	cp -rL $TC_SRC/patches $TC_DST/ct-ng/lib/ct-ng-$CT_VERSION/
+	rm -rf "crosstool-ng-$CT_VERSION"
+	sudo chown -R "$TC_USR":"$TC_GRP" "$TC_DST"
+	cp -rL "$TC_SRC/patches" "$TC_DST/ct-ng/lib/ct-ng-$CT_VERSION/"
 }
 
 build_toolchains() {
-    rm -rf $BUILD
+    rm -rf "$BUILD"
     for i in $ARCH_LIST; do
-	ARCH=$i
+	ARCH="$i"
 	for j in $GCC_VERSION_LIST; do
-		GCC_VERSION=$j
+		GCC_VERSION="$j"
 
 		CT_TARGET_VENDOR=gcc$(echo $GCC_VERSION | awk -F . '{ print $1$2 }')_glibc$(echo $CT_LIBC_VERSION | awk -F . '{ print $1$2 }')
-		CT_CC_VERSION=$GCC_VERSION
-		PREF=$ARCH-$CT_TARGET_VENDOR-linux-gnu
+		CT_CC_VERSION="$GCC_VERSION"
+		PREF="$ARCH"-"$CT_TARGET_VENDOR"-linux-gnu
 
-		mkdir -p $BUILD/src
+		mkdir -p "$BUILD" || die
+		cd "$BUILD" || die
 		echo "Copying source files from $TC_SRC/src ..."
-		cp $TC_SRC/src/* $BUILD/src/
-		cp $TC_SRC/config/CONFIG_GCC${j%%.*}_${i} $BUILD/.config
+		mkdir src && cp "$TC_SRC"/src/* src/ || die
 
-		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"$CT_LOCAL_TARBALLS_DIR\"#" $BUILD/.config
-		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"$CT_PREFIX_DIR\"#" $BUILD/.config
-		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"$CT_TARGET_VENDOR\"#" $BUILD/.config
-		sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"$CT_CC_VERSION\"#" $BUILD/.config
-		sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"$CT_BINUTILS_VERSION\"#" $BUILD/.config
-		sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"$CT_KERNEL_VERSION\"#" $BUILD/.config
-		sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"$CT_LIBC_VERSION\"#" $BUILD/.config
+		echo "Copying and processing config file from $TC_SRC/config ..."
 
-		cd $BUILD || die
-		$TC_DST/ct-ng/bin/ct-ng oldconfig
+		cp "$TC_SRC/config/CONFIG_GCC${j%%.*}_${i}" .config
+		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"$CT_LOCAL_TARBALLS_DIR\"#" .config
+		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"$CT_PREFIX_DIR\"#" .config
+		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"$CT_TARGET_VENDOR\"#" .config
+		sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"$CT_CC_VERSION\"#" .config
+		sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"$CT_BINUTILS_VERSION\"#" .config
+		sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"$CT_KERNEL_VERSION\"#" .config
+		sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"$CT_LIBC_VERSION\"#" .config
+
+		"$TC_DST/ct-ng/bin/ct-ng" oldconfig
 
 		echo ARCH=$ARCH GCC=$GCC_VERSION
 		echo "You should now review the configuration. Press [enter] to proceed."
 		read n
 
-		$TC_DST/ct-ng/bin/ct-ng menuconfig
+		"$TC_DST/ct-ng/bin/ct-ng" menuconfig
 
 		echo "Ready to build. Press [enter] to proceed."
 		read n
 
-		$TC_DST/ct-ng/bin/ct-ng build ${V+V=$V} || die
+		"$TC_DST/ct-ng/bin/ct-ng" build ${V+V="$V"} || die
 
-		sudo chown -R $TC_USR:$TC_GRP $TC_DST/$PREF
-		chmod -R 755 $TC_DST/$PREF
+		sudo chown -R "$TC_USR":"$TC_GRP" "$TC_DST/$PREF" || die
+		sudo chmod -R 755 "$TC_DST/$PREF" || die
 
-		rm -f $TC_DST/$PREF/$PREF/sys-root/lib/libgcc_s.so*
-		ln -s libgcc.a $TC_DST/$PREF/lib/gcc/$PREF/$GCC_VERSION/libgcc_s.a
+		rm -f "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so*
+		ln -s libgcc.a "$TC_DST/$PREF/lib/gcc/$PREF/$GCC_VERSION"/libgcc_s.a || die
 
-		cd $TC_DST/$PREF/$PREF || die
+		cd "$TC_DST/$PREF/$PREF" || die
 		echo "Archiving sys-root ..."
-		tar jcf sys-root_$PREF.tar.bz2 sys-root
+		tar jcf "sys-root_$PREF.tar.bz2" sys-root
 
 		echo "Removing build directory $BUILD ..."
-		rm -rf $BUILD
+		rm -rf "$BUILD"
 	done
     done
 }
 
 prepare_kernel() {
-	cd $TC_DST || die
+	cd "$TC_DST" || die
 	echo "Extracting kernel from $TC_SRC/src ..."
-	tar jxf $TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2
-	cd linux-$UCLIBC_KERNEL_VERSION || die
-	make ${V+V=$V} defconfig
-	make ${V+V=$V} prepare < /dev/null
-	make ${V+V=$V} clean
+	tar jxf "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2"
+	cd "linux-$UCLIBC_KERNEL_VERSION" || die
+	make ${V+V="$V"} defconfig || die
+	make ${V+V="$V"} prepare < /dev/null || die
+	make ${V+V="$V"} clean
 }
 
 build_uclibc_32b() {
 	KERNEL_SOURCE="$TC_DST/linux-$UCLIBC_KERNEL_VERSION"
 	KERNEL_HEADERS="$KERNEL_SOURCE/include"
-	RUNTIME_PREFIX=$TC_DST/\${TARGET_ARCH}-linux-uclibc/
-	DEVEL_PREFIX=$TC_DST/\${TARGET_ARCH}-linux-uclibc/usr/
+	RUNTIME_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/"
+	DEVEL_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/usr/"
 
-	cd $TC_TMP || die
+	cd "$TC_TMP" || die
 	echo "Extracting uClibc from $TC_SRC/src ..."
-	tar jxf $TC_SRC/src/uClibc-$UCLIBC_VERSION.tar.bz2
-	cd uClibc-$UCLIBC_VERSION || die
-	cp $TC_SRC/config/CONFIG_UCLIBC_I386 .config
+	tar jxf "$TC_SRC/src/uClibc-$UCLIBC_VERSION".tar.bz2
+	cd "uClibc-$UCLIBC_VERSION" || die
+	cp "$TC_SRC/config/CONFIG_UCLIBC_I386" .config
 
-	make ${V+V=$V} oldconfig < /dev/null
+	make ${V+V="$V"} oldconfig < /dev/null || die
 
 	sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
 	sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
@@ -172,7 +194,7 @@ build_uclibc_32b() {
 
 	echo "You should now review the configuration. Press [enter] to proceed."
 	read n
-	make menuconfig
+	make menuconfig || die
 
 	echo "Ready to build. Press [enter] to proceed."
 	read n
@@ -180,34 +202,37 @@ build_uclibc_32b() {
 	[ -z "${ARCH_LIST##*i586*}" ] && PREF=i586-gcc34_glibc23-linux-gnu
 	[ -z "${ARCH_LIST##*i386*}" ] && PREF=i386-gcc34_glibc23-linux-gnu
 
-	make ${V+V=$V} CROSS=$TC_DST/$PREF/bin/$PREF-
-	make ${V+V=$V} CROSS=$TC_DST/$PREF/bin/$PREF- install
+	make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
+	make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
+
+	cd ..
+	rm -rf "uClibc-$UCLIBC_VERSION"
 
 	# install uclibc wrapper
-	mkdir -p $TC_DST/tools/bin
-	cp $TC_SRC/addons/uclibc $TC_DST/tools/bin/
+	mkdir -p "$TC_DST/tools/bin" || die
+	cp "$TC_SRC/addons/uclibc" "$TC_DST/tools/bin/" || die
 }
 
 build_squashfs() {
-	cd $TC_TMP || die
+	cd "$TC_TMP" || die
 	echo "Extracting squashfs from $TC_SRC/src ..."
-	tar zxf $TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz
-	cd squashfs$SQUASHFS_VERSION/squashfs-tools || die
-	make
-	mkdir -p $TC_DST/tools/bin
-	mv mksquashfs $TC_DST/tools/bin/
+	tar zxf "$TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz"
+	cd "squashfs$SQUASHFS_VERSION/squashfs-tools" || die
+	make || die
+	mkdir -p "$TC_DST/tools/bin" || die
+	mv mksquashfs "$TC_DST/tools/bin/" || die
 	cd ../..
-	rm -rf squashfs$SQUASHFS_VERSION
+	rm -rf "squashfs$SQUASHFS_VERSION"
 }
 
 ###### Main entry point.
 
-sudo rm -rf $TC_DST
+clean_dest
 check_sources
 extract_and_patch_ct_ng
 build_ct_ng
 build_toolchains
-extract_kernel
+prepare_kernel
 build_uclibc_32b
 build_squashfs
 
