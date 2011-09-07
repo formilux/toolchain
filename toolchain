@@ -92,7 +92,7 @@ extract_and_patch_ct_ng() {
 
 	if [ -n "${CT_REMOVE_PATCHES}" ]; then
 		for i in ${CT_REMOVE_PATCHES}; do
-			rm -vf "patches/$i" || die
+			rm -vf patches/$i || die
 		done
 	fi
 }
@@ -108,7 +108,8 @@ build_ct_ng() {
 }
 
 build_toolchains() {
-    rm -rf "$BUILD"
+    rm -rf "$BUILD" || die "failed to remove directory '$BUILD' (permission issue ?)."
+
     for i in $ARCH_LIST; do
 	ARCH="$i"
 	for j in $GCC_VERSION_LIST; do
@@ -145,6 +146,7 @@ build_toolchains() {
 		echo "Ready to build. Press [enter] to proceed."
 		read n
 
+		sed -i -e "s#\. \.config#. $PWD/.config#" "$TC_DST/ct-ng/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
 		"$TC_DST/ct-ng/bin/ct-ng" build ${V+V="$V"} || die
 
 		sudo chown -R "$TC_USR":"$TC_GRP" "$TC_DST/$PREF" || die
