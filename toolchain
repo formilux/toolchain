@@ -5,7 +5,7 @@
 # If a variable V is set, it is passed to most makefiles (use V=1 for more verbosity)
 
 TC_TMP="${TC_TMP-/tmp}"
-
+PROMPT="${PROMPT}" # prompt config menus
 BUILD="${BUILD-$TC_TMP/flx}"
 CT_LOCAL_TARBALLS_DIR="$BUILD/src/"
 
@@ -17,17 +17,17 @@ TC_GRP="${TC_GRP-dev}"
 
 CT_PREFIX_DIR="$TC_DST/\${CT_TARGET}"
 
-CT_VERSION=1.7.2
-CT_BINUTILS_VERSION=2.20
-CT_KERNEL_VERSION=2.6.27.46
-CT_LIBC_VERSION=2.3.6
-UCLIBC_KERNEL_VERSION="${CT_KERNEL_VERSION}"
-UCLIBC_VERSION=0.9.30.2
-SQUASHFS_VERSION=2.2-r2
+CT_VERSION="${CT_VERSION-1.7.2}"
+CT_BINUTILS_VERSION="${CT_BINUTILS_VERSION-2.20}"
+CT_KERNEL_VERSION="${CT_KERNEL_VERSION-2.6.27.46}"
+CT_LIBC_VERSION="${CT_LIBC_VERSION-2.3.6}"
+UCLIBC_KERNEL_VERSION="${UCLIBC_KERNEL_VERSION-$CT_KERNEL_VERSION}"
+UCLIBC_VERSION="${UCLIBC_VERSION-0.9.30.2}"
+SQUASHFS_VERSION="${SQUASHFS_VERSION-2.2-r2}"
 
 #GCC_VERSION_LIST='3.4.6 4.2.4'
-GCC_VERSION_LIST='3.4.6'
-ARCH_LIST='i386 x86_64'
+GCC_VERSION_LIST="${GCC_VERSION_LIST-3.4.6}"
+ARCH_LIST="${ARCH_LIST-x86_64 i386}"
 
 # list of CT-ng patches to remove from the toolchain
 CT_REMOVE_PATCHES='binutils/*/*-use-relro.patch binutils/*/*-pt-pax-flags-20090909.patch binutils/*/*-generate-gnu-hash.patch'
@@ -51,7 +51,8 @@ clean_dest() {
 	echo "Warning: destination directory exists ($TC_DST)"
 	echo "Ready to remove it, are you sure ?"
 	echo "Press Enter to continue or Ctrl-C to abort."
-	read
+	read n
+	[ -n "$n" ] && exit 1
 
 	# first attempt without being root
 	echo "Removing $TC_DST."
@@ -138,13 +139,15 @@ build_toolchains() {
 		"$TC_DST/ct-ng/bin/ct-ng" oldconfig
 
 		echo ARCH=$ARCH GCC=$GCC_VERSION
-		echo "You should now review the configuration. Press [enter] to proceed."
-		read n
+		if [ "$PROMPT" == "1" ] ; then
+			echo "You should now review the configuration. Press [enter] to proceed."
+			read n
 
-		"$TC_DST/ct-ng/bin/ct-ng" menuconfig
+			"$TC_DST/ct-ng/bin/ct-ng" menuconfig
 
-		echo "Ready to build. Press [enter] to proceed."
-		read n
+			echo "Ready to build. Press [enter] to proceed."
+			read n
+		fi
 
 		sed -i -e "s#\. \.config#. $PWD/.config#" "$TC_DST/ct-ng/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
 		"$TC_DST/ct-ng/bin/ct-ng" build ${V+V="$V"} || die
@@ -175,7 +178,7 @@ prepare_kernel() {
 	make ${V+V="$V"} clean
 }
 
-build_uclibc_32b() {
+build_uclibc() {
 	KERNEL_SOURCE="$TC_DST/linux-$UCLIBC_KERNEL_VERSION"
 	KERNEL_HEADERS="$KERNEL_SOURCE/include"
 	RUNTIME_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/"
@@ -185,28 +188,32 @@ build_uclibc_32b() {
 	echo "Extracting uClibc from $TC_SRC/src ..."
 	tar jxf "$TC_SRC/src/uClibc-$UCLIBC_VERSION".tar.bz2
 	cd "uClibc-$UCLIBC_VERSION" || die
-	cp "$TC_SRC/config/CONFIG_UCLIBC_I386" .config
+    	for i in $ARCH_LIST; do
+		ARCH="$i"
+		make distclean
+		cp "$TC_SRC/config/CONFIG_UCLIBC_$i" .config
+		
+		make ${V+V="$V"} oldconfig < /dev/null || die
+		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
+		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
+		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
+		sed -i -e "s#\(DEVEL_PREFIX=\).*#\1\"$DEVEL_PREFIX\"#"     .config
 
-	make ${V+V="$V"} oldconfig < /dev/null || die
+		if [ "$PROMPT" == "1" ] ; then
+			echo "You should now review the configuration. Press [enter] to proceed."
+			read n
+			make menuconfig || die
 
-	sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
-	sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
-	sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
-	sed -i -e "s#\(DEVEL_PREFIX=\).*#\1\"$DEVEL_PREFIX\"#"     .config
+			echo "Ready to build. Press [enter] to proceed."
+			read n
+		fi
 
-	echo "You should now review the configuration. Press [enter] to proceed."
-	read n
-	make menuconfig || die
+		PREF=$i-gcc34_glibc23-linux-gnu
+	
+		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
+		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
 
-	echo "Ready to build. Press [enter] to proceed."
-	read n
-
-	[ -z "${ARCH_LIST##*i586*}" ] && PREF=i586-gcc34_glibc23-linux-gnu
-	[ -z "${ARCH_LIST##*i386*}" ] && PREF=i386-gcc34_glibc23-linux-gnu
-
-	make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
-	make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
-
+	done
 	cd ..
 	rm -rf "uClibc-$UCLIBC_VERSION"
 
@@ -214,6 +221,7 @@ build_uclibc_32b() {
 	mkdir -p "$TC_DST/tools/bin" || die
 	cp "$TC_SRC/addons/uclibc" "$TC_DST/tools/bin/" || die
 }
+
 
 build_squashfs() {
 	cd "$TC_TMP" || die
@@ -235,7 +243,7 @@ extract_and_patch_ct_ng
 build_ct_ng
 build_toolchains
 prepare_kernel
-build_uclibc_32b
+build_uclibc
 build_squashfs
 
 echo; echo "Finished, build appeared successful."
