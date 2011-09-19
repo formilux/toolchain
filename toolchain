@@ -22,7 +22,7 @@ CT_BINUTILS_VERSION="${CT_BINUTILS_VERSION-2.20}"
 CT_KERNEL_VERSION="${CT_KERNEL_VERSION-2.6.27.46}"
 CT_LIBC_VERSION="${CT_LIBC_VERSION-2.3.6}"
 UCLIBC_KERNEL_VERSION="${UCLIBC_KERNEL_VERSION-$CT_KERNEL_VERSION}"
-UCLIBC_VERSION="${UCLIBC_VERSION-0.9.30.2}"
+UCLIBC_VERSION="${UCLIBC_VERSION-0.9.28.3}"
 SQUASHFS_VERSION="${SQUASHFS_VERSION-2.2-r2}"
 
 #GCC_VERSION_LIST='3.4.6 4.2.4'
@@ -139,7 +139,7 @@ build_toolchains() {
 		"$TC_DST/ct-ng/bin/ct-ng" oldconfig
 
 		echo ARCH=$ARCH GCC=$GCC_VERSION
-		if [ "$PROMPT" == "1" ] ; then
+		if [ "$PROMPT" = "1" ] ; then
 			echo "You should now review the configuration. Press [enter] to proceed."
 			read n
 
@@ -160,7 +160,7 @@ build_toolchains() {
 
 		cd "$TC_DST/$PREF/$PREF" || die
 		echo "Archiving sys-root ..."
-		tar jcf "sys-root_$PREF.tar.bz2" sys-root
+		tar zcf "sys-root_$PREF.tar.gz" sys-root
 
 		echo "Removing build directory $BUILD ..."
 		rm -rf "$BUILD"
@@ -192,14 +192,13 @@ build_uclibc() {
 		ARCH="$i"
 		make distclean
 		cp "$TC_SRC/config/CONFIG_UCLIBC_$i" .config
-		
 		make ${V+V="$V"} oldconfig < /dev/null || die
 		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
 		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
 		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
 		sed -i -e "s#\(DEVEL_PREFIX=\).*#\1\"$DEVEL_PREFIX\"#"     .config
 
-		if [ "$PROMPT" == "1" ] ; then
+		if [ "$PROMPT" = "1" ] ; then
 			echo "You should now review the configuration. Press [enter] to proceed."
 			read n
 			make menuconfig || die
