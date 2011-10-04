@@ -1,0 +1,16 @@
+--- a/gcc/config/arm/linux-elf.h.dist	2011-10-04 15:14:07 +0200
++++ b/gcc/config/arm/linux-elf.h	2011-10-04 11:35:05 +0200
+@@ -37,11 +37,11 @@
+ #if TARGET_BIG_ENDIAN_DEFAULT
+ #define TARGET_ENDIAN_DEFAULT ARM_FLAG_BIG_END
+ #define TARGET_ENDIAN_OPTION "mbig-endian"
+-#define TARGET_LINKER_EMULATION "armelfb_linux"
++#define TARGET_LINKER_EMULATION "armelfb_linux_eabi"
+ #else
+ #define TARGET_ENDIAN_DEFAULT 0
+ #define TARGET_ENDIAN_OPTION "mlittle-endian"
+-#define TARGET_LINKER_EMULATION "armelf_linux"
++#define TARGET_LINKER_EMULATION "armelf_linux_eabi"
+ #endif
+ 
+ /*
