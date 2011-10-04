@@ -1,0 +1,5 @@
+Avec le compilo sans support pour FPU hardware.
+
+willy@wtap:arm$ /build/flx-toolchain/arm-gcc34_glibc23-linux-gnueabi/bin/arm-gcc34_glibc23-linux-gnueabi-gcc  -Wall -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing  -mlittle-endian -mtune=arm9tdmi -march=armv5  -fno-builtin -nostdinc -D_LIBC -I../../../../include -I.  -fstrict-aliasing -Os -funit-at-a-time   -isystem /build/flx-toolchain/arm-gcc34_glibc23-linux-gnueabi/lib/gcc/arm-gcc34_glibc23-linux-gnueabi/3.4.6/include -DNDEBUG -fPIC  -c __longjmp.S -o __longjmp.o
+__longjmp.S: Assembler messages:
+__longjmp.S:36: Error: selected processor does not support `lfmfd f4,4,[ip]!'
