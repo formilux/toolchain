@@ -38,6 +38,8 @@ CT_PATCHES="ct-ng-nobash4.diff ct-ng-version-check.diff
             ct-ng-show-pwd.diff ct-ng-fix-leaking-variables.diff
             ct-ng-display-directories.diff"
 
+# patches to apply on top of uclibc
+UCLIBC_PATCHES="uclibc-arm-no-asm-page.diff"
 
 ##### a few functions
 
@@ -149,9 +151,15 @@ build_toolchains() {
 			read n
 		fi
 
-		sed -i -e "s#\. \.config#. $PWD/.config#" "$TC_DST/ct-ng/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
+		sed -i -e "s#\. .*/\.config#. $PWD/.config#" "$TC_DST/ct-ng/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
 		"$TC_DST/ct-ng/bin/ct-ng" build ${V+V="$V"} || die
+		echo; echo "# ct-ng build complete.";echo
 
+		# Note: the installation directory might not match exactly
+		# because ct-ng might have added a suffix (eg: "eabi" for arm).
+		PREF=$(echo ${TC_DST}/${PREF}*)
+		PREF=${PREF##*/}
+		echo "Found toolchain under $PREF"
 		sudo chown -R "$TC_USR":"$TC_GRP" "$TC_DST/$PREF" || die
 		sudo chmod -R 755 "$TC_DST/$PREF" || die
 
@@ -172,10 +180,35 @@ prepare_kernel() {
 	cd "$TC_DST" || die
 	echo "Extracting kernel from $TC_SRC/src ..."
 	tar jxf "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2"
-	cd "linux-$UCLIBC_KERNEL_VERSION" || die
-	make ${V+V="$V"} defconfig || die
-	make ${V+V="$V"} prepare < /dev/null || die
-	make ${V+V="$V"} clean
+}
+
+# To be called with ARCH=<arch> and PREF=<valid cross-compiler prefix>
+prepare_kernel_for_arch() {
+	(
+	# do that in a sub-process to return to original directory
+	echo "Configuring kernel in $TC_DST/linux-$UCLIBC_KERNEL_VERSION"
+	cd "$TC_DST/linux-$UCLIBC_KERNEL_VERSION" || die
+	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} mrproper || die
+	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} defconfig || die
+	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} prepare < /dev/null || die
+	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} clean
+
+	# some archs' includes have moved in recent kernels
+	if [ ! -e "$TC_DST/linux-$UCLIBC_KERNEL_VERSION/include/asm/mman.h" ]; then
+		echo "Updating kernel include link"
+		rm -f $TC_DST/linux-$UCLIBC_KERNEL_VERSION/include/asm
+		ln -s ../arch/$ARCH/include/asm $TC_DST/linux-$UCLIBC_KERNEL_VERSION/include/asm
+	fi
+	)
+}
+
+clean_kernel() {
+	(
+	# do that in a sub-process to return to original directory
+	echo "Cleaning kernel in $TC_DST/linux-$UCLIBC_KERNEL_VERSION"
+	cd "$TC_DST/linux-$UCLIBC_KERNEL_VERSION" || die
+	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} mrproper || die
+	)
 }
 
 build_uclibc() {
@@ -188,8 +221,20 @@ build_uclibc() {
 	echo "Extracting uClibc from $TC_SRC/src ..."
 	tar jxf "$TC_SRC/src/uClibc-$UCLIBC_VERSION".tar.bz2
 	cd "uClibc-$UCLIBC_VERSION" || die
+
+	for i in $UCLIBC_PATCHES; do
+		echo "Applying patch $i"
+		patch -p1 < "$TC_SRC/patches/$i" || die
+	done
+
     	for i in $ARCH_LIST; do
 		ARCH="$i"
+		PREF=$(echo ${TC_DST}/$i-gcc34_glibc23-linux-gnu*)
+		PREF=${PREF##*/}
+		echo "Found toolchain under $PREF"
+
+		prepare_kernel_for_arch
+
 		make distclean
 		cp "$TC_SRC/config/CONFIG_UCLIBC_$i" .config
 		make ${V+V="$V"} oldconfig < /dev/null || die
@@ -207,12 +252,11 @@ build_uclibc() {
 			read n
 		fi
 
-		PREF=$i-gcc34_glibc23-linux-gnu
-	
 		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
 		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
 
 	done
+	clean_kernel
 	cd ..
 	rm -rf "uClibc-$UCLIBC_VERSION"
 
