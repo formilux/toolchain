@@ -1,0 +1,10 @@
+--- ./libc/sysdeps/linux/arm/ioperm.c.bad	2005-08-15 05:14:52 +0200
++++ ./libc/sysdeps/linux/arm/ioperm.c	2011-10-04 21:34:59 +0200
+@@ -44,7 +44,6 @@
+ #include <sys/types.h>
+ #include <sys/mman.h>
+ 
+-#include <asm/page.h>
+ #include <sys/sysctl.h>
+ 
+ #include <linux/version.h>
