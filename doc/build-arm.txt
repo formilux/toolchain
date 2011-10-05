@@ -1,0 +1,2 @@
+ARCH_LIST=arm CT_KERNEL_VERSION=2.6.25 TC_TMP=/build/temp TC_SRC=/build/flx-toolchain/source V=2 time ./toolchain8 2>&1 | tee -a build-arm.log
+ARCH_LIST=arm CT_KERNEL_VERSION=2.6.25 TC_TMP=/build/temp TC_SRC=/build/flx-toolchain/source V=2 time ./toolchain8 2>&1 | tee -a build-arm-scale.log
