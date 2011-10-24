@@ -39,7 +39,7 @@ CT_PATCHES="ct-ng-nobash4.diff ct-ng-version-check.diff
             ct-ng-display-directories.diff ct-ng-sparc.diff"
 
 # patches to apply on top of uclibc
-UCLIBC_PATCHES="uclibc-arm-no-asm-page.diff"
+UCLIBC_PATCHES="uclibc-arm-no-asm-page.diff uclibc-armv5te.diff"
 
 ##### a few functions
 
