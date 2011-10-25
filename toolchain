@@ -1,37 +1,37 @@
 #!/bin/bash
 
-# WARNING! need about 2GB in $TC_TMP !
-
-# If a variable V is set, it is passed to most makefiles (use V=1 for more verbosity)
-
-TC_TMP="${TC_TMP-/tmp}"
-BUILD="${BUILD-$TC_TMP/flx}"
-PROMPT="${PROMPT-}" # prompt config menus
-#CT_LOCAL_TARBALLS_DIR="$BUILD/src/"
-#
-# Sources, patches and config are found in $TC_SRC/{src,patches,config,tools}/
 MYSELF=$( readlink -f ${BASH_SOURCE[0]} )
-TC_SRC="${TC_SRC-${MYSELF%/*}}"
-TC_DST="${TC_DST-/w/dev}"
-#TC_USR="${TC_USR-willy}"
-#TC_GRP="${TC_GRP-dev}"
-#
-#CT_PREFIX_DIR="$TC_DST/\${CT_TARGET}"
-#
-CT_VERSION="${CT_VERSION-1.7.2}"
-#CT_BINUTILS_VERSION="${CT_BINUTILS_VERSION-2.20}"
-#CT_KERNEL_VERSION="${CT_KERNEL_VERSION-2.6.27.46}"
-#CT_LIBC_VERSION="${CT_LIBC_VERSION-2.3.6}"
-#UCLIBC_KERNEL_VERSION="${UCLIBC_KERNEL_VERSION-$CT_KERNEL_VERSION}"
-#
+TC_DIR="${TC_DIR-${MYSELF%/*}}"
+
+# source files and tarballs are found by default in the toolchain's "src/" dir.
+TC_SRC="${TC_SRC-$TC_DIR/src}"
+
+# WARNING! need about 2GB per toolchain in $TC_TMP !
+TC_DST="${TC_DST-/w/dev/tc2}"
+TC_TMP="${TC_TMP-/tmp}"
+
+# If set, then the toolchains will be chowned/chgrped to these respective user
+# and group name/id.
+TC_USR="${TC_USR-}"
+TC_GRP="${TC_GRP-}"
+
+# NOTE: If a variable V is set, it is passed to most makefiles (use V=1 for more verbosity)
+
+# Build directory for various steps, may be totally removed at any time
+BUILD="${BUILD-$TC_TMP/flx}"
+# Directory location where final config files will be stored.
+TC_CFG="${TC_CFG-$TC_DST/config}"
+
 # When multiple uclibc configs are available, the following variable tells
 # which version is preferred (eg: 0.9.28.3).
 UCLIBC_PREFERRED_VERSION="${UCLIBC_PREFERRED_VERSION-}"
+
+# Warning: using an improper crosstool-ng version can result in losing some
+# settings.
+#CT_VERSION="${CT_VERSION-1.7.2}"
+CT_VERSION="${CT_VERSION-1.13.0}"
+
 #SQUASHFS_VERSION="${SQUASHFS_VERSION-2.2-r2}"
-#
-##GCC_VERSION_LIST='3.4.6 4.2.4'
-#GCC_VERSION_LIST="${GCC_VERSION_LIST-3.4.6}"
-#ARCH_LIST="${ARCH_LIST-x86_64 i386}"
 #
 ## patches to apply on top of uclibc
 #UCLIBC_PATCHES="uclibc-arm-no-asm-page.diff uclibc-armv5te.diff"
@@ -70,11 +70,13 @@ usage() {
 	echo "    tc-init      copy config files to destination and fail on conflict"
 	echo "    tc-cond-init copy config files to destination only if not there"
 	echo "    tc-refresh   refresh destination config files (ct-ng oldconfig)"
-	echo "    tc-review    review destination config files (ct-ng menuconfig)"
+	echo "    tc-config    review destination config files (ct-ng menuconfig)"
 	echo "    tc-build     build toolchains based on destination config files"
+	echo "    tc-restart   restart a failed build from step \$RESTART"
 	echo "    tc-finish    finish toolchain installation (perms, static libgcc, ...)"
 	echo "    tc-sysroot   build the toolchains sysroot archives"
-	echo "  * tc-all       all previous tc-* steps except tc-init and tc-review"
+	echo "  * tc-all       tc-cond-init, tc-build, tc-finish, tc-sysroot"
+	echo "    uc-build     build uclibc for toolchains based on destination config files"
 	test -z "$1"
 	exit $?
 }
@@ -85,7 +87,7 @@ usage() {
 get_src_path() {
 	local ext
 	for ext in "" .tar .tar.gz .tgz .tar.bz2 .tbz .tar.xz .txz; do
-		REPLY="$TC_SRC/src/${1}${ext}"
+		REPLY="$TC_SRC/${1}${ext}"
 		[ -s "$REPLY" ] && return 0
 	done
 	return 1
@@ -96,7 +98,7 @@ get_src_path() {
 # found, die with an error.
 get_src_path_safe() {
 	get_src_path "$1" && return 0
-	die 1 "no source file found in $TC_SRC/src for '${1}'"
+	die 1 "no source file found in $TC_SRC for '${1}'"
 }
 
 # retrieves config name $1 (regex) from file $2 an returns it unquoted into
@@ -117,7 +119,7 @@ get_config_var() {
 ct_ng_extract() {
 	local p="$PWD"
 
-	cd "$BUILD" || die
+	mkdir -p "$BUILD" && cd "$BUILD" || die
 	rm -rf "crosstool-ng-$CT_VERSION" || die
 	get_src_path_safe "crosstool-ng-$CT_VERSION"
 	echo "Extracting $REPLY ..."
@@ -128,16 +130,16 @@ ct_ng_extract() {
 ct_ng_patch() {
 	local p="$PWD"
 
-	cd "$BUILD/crosstool-ng-$CT_VERSION" || die
-	if [ -d "$TC_SRC/patches/ct-ng-build/$CT_VERSION/." ]; then
-		for i in "$TC_SRC/patches/ct-ng-build/$CT_VERSION/"*; do
+	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
+	if [ -d "$TC_DIR/patches/ct-ng-build/$CT_VERSION/." ]; then
+		for i in "$TC_DIR/patches/ct-ng-build/$CT_VERSION/"*; do
 			echo "Applying patch $i"
 			patch -p1 < "$i"|| die
 		done
 	fi
 
-	if [ -s "$TC_SRC/patches/ct-ng-build/to-remove" ]; then
-		for i in $(cat "$TC_SRC/patches/ct-ng-build/to-remove"); do
+	if [ -s "$TC_DIR/patches/ct-ng-build/to-remove" ]; then
+		for i in $(cat "$TC_DIR/patches/ct-ng-build/to-remove"); do
 			rm -vf patches/$i || die
 		done
 	fi
@@ -146,8 +148,19 @@ ct_ng_patch() {
 
 ct_ng_build() {
 	local p="$PWD"
+	local bashver
 
-	cd "$BUILD/crosstool-ng-$CT_VERSION" || die
+	# ct-ng requires a bash 3.1 or later but does not really test it before crashing
+	BASH=${BASH:-$(which bash)}
+	[ -z "${BASH##/*}" ] || die 1 "bash not found, please re-run this script with it"
+
+	bashver=$("$BASH" -c 'echo ${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}')
+	case "$bashver" in
+	    3.[12]*|[4-9]*|[1-9][0-9]*) : ;;
+	    *) die 1 "bash version $bashver is too old, 3.1 minimum is required by crosstool-ng. Re-run this script from a more recent version" ;;
+	esac
+
+	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
 	./configure --prefix="$BUILD/ct-ng" ${BASH:+--with-bash="$BASH"} || die
 	make ${V+V="$V"} || die
 	cd "$p"
@@ -157,9 +170,9 @@ ct_ng_install() {
 	local p="$PWD"
 
 	rm -rf "$BUILD/ct-ng"
-	cd "$BUILD/crosstool-ng-$CT_VERSION" || die
+	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
 	make ${V+V="$V"} install || die
-	cp -rL "$TC_SRC/patches/ct-ng-patches/." "$BUILD/ct-ng/lib/ct-ng-$CT_VERSION/patches/"
+	cp -rL "$TC_DIR/patches/ct-ng-patches/." "$BUILD/ct-ng/lib/ct-ng-$CT_VERSION/patches/"
 	cd ..
 	rm -rf "crosstool-ng-$CT_VERSION"
 	cd "$p"
@@ -231,6 +244,22 @@ tc_set_names() {
 	PREF="$ARCH-$VENDOR-linux-gnu${ABI}"
 }
 
+# displays information on the currently loaded ct-ng settings
+show_ct_settings() {
+	echo "  [ mandatory ]  FAMILY=$FAMILY"
+	echo "  [ mandatory ]  ARCH=$ARCH"
+	echo "  [ mandatory ]  CC_BRANCH=$CC_BRANCH"
+	echo "  [ mandatory ]  CC_VERSION=$CC_VERSION"
+	echo "  [ mandatory ]  LIBC_BRANCH=$LIBC_BRANCH"
+	echo "  [ mandatory ]  LIBC_VERSION=$LIBC_VERSION"
+	echo "  [ mandatory ]  BINUTILS_VERSION=$BINUTILS_VERSION"
+	echo "  [ mandatory ]  KERNEL_VERSION=$KERNEL_VERSION"
+	echo "  [ optional  ]  VENDOR=$VENDOR"
+	echo "  [ optional  ]  ARCHIS64=$ARCHIS64"
+	echo "  [ optional  ]  ABI=$ABI"
+	echo "  [ computed  ]  PREF=$PREF"
+}
+
 # Check that all of the config files passed in arguments look right.
 tc_check_configs() {
 	local file
@@ -245,18 +274,7 @@ tc_check_configs() {
 		if [ -z "$FAMILY" -o -z "$ARCH" -o -z "$CC_VERSION" -o \
 		     -z "$LIBC_VERSION" -o -z "$VENDOR" -o -z "$PREF" ]; then
 			echo "Some settings are wrong or missing with config file $file :"
-			echo "  [ mandatory ]  FAMILY=$FAMILY"
-			echo "  [ mandatory ]  ARCH=$ARCH"
-			echo "  [ mandatory ]  CC_BRANCH=$CC_BRANCH"
-			echo "  [ mandatory ]  CC_VERSION=$CC_VERSION"
-			echo "  [ mandatory ]  LIBC_BRANCH=$LIBC_BRANCH"
-			echo "  [ mandatory ]  LIBC_VERSION=$LIBC_VERSION"
-			echo "  [ mandatory ]  BINUTILS_VERSION=$BINUTILS_VERSION"
-			echo "  [ mandatory ]  KERNEL_VERSION=$KERNEL_VERSION"
-			echo "  [ optional  ]  VENDOR=$VENDOR"
-			echo "  [ optional  ]  ARCHIS64=$ARCHIS64"
-			echo "  [ optional  ]  ABI=$ABI"
-			echo "  [ mandatory ]  PREF=$PREF"
+			show_ct_settings
 			die 1 "check arguments and/or config files."
 		fi
 	done
@@ -273,7 +291,7 @@ set_uclibc_version() {
 
 # Given a ct config file, report in $UCLIBC_FILE what looks like the best uclibc
 # config file match or an empty string. Returns 0 only if an exact match is
-# found. If a file matches, its name is returned in REPLY, the required uclibc
+# found. If a file matches, its name is returned in UCLIBC_FILE, the required uclibc
 # version is set in UCLIBC_VERSION, and zero is returned. Otherwise, all matches
 # (possibly none) are returned in UCLIBC_FILE and the result is non-zero.
 uc_find_best_match() {
@@ -335,18 +353,7 @@ uc_check_configs() {
 		if [ -n "$err" ]; then
 			echo "Failed to find a suitable uclibc config file for this toolchain :"
 			echo "    file=$file"
-			echo "    FAMILY=$FAMILY"
-			echo "    ARCH=$ARCH"
-			echo "    CC_BRANCH=$CC_BRANCH"
-			echo "    CC_VERSION=$CC_VERSION"
-			echo "    LIBC_BRANCH=$LIBC_BRANCH"
-			echo "    LIBC_VERSION=$LIBC_VERSION"
-			echo "    BINUTILS_VERSION=$BINUTILS_VERSION"
-			echo "    KERNEL_VERSION=$KERNEL_VERSION"
-			echo "    VENDOR=$VENDOR"
-			echo "    ARCHIS64=$ARCHIS64"
-			echo "    ABI=$ABI"
-			echo "    PREF=$PREF"
+			show_ct_settings
 			echo "$err"
 			die 1 "check config file names."
 		fi
@@ -365,19 +372,7 @@ cfg_info() {
 	for config in "$@"; do
 		[ -n "$V" ] && echo "Checking configuration file $config ..."
 		uc_find_best_match "$config"
-
-		echo "    FAMILY=$FAMILY"
-		echo "    ARCH=$ARCH"
-		echo "    CC_BRANCH=$CC_BRANCH"
-		echo "    CC_VERSION=$CC_VERSION"
-		echo "    LIBC_BRANCH=$LIBC_BRANCH"
-		echo "    LIBC_VERSION=$LIBC_VERSION"
-		echo "    BINUTILS_VERSION=$BINUTILS_VERSION"
-		echo "    KERNEL_VERSION=$KERNEL_VERSION"
-		echo "    VENDOR=$VENDOR"
-		echo "    ARCHIS64=$ARCHIS64"
-		echo "    ABI=$ABI"
-		echo "    PREF=$PREF"
+		show_ct_settings
 		echo "    UCLIBC_FILE=$UCLIBC_FILE"
 		echo "    UCLIBC_VERSION=$UCLIBC_VERSION"
 	done
@@ -400,7 +395,7 @@ src_check() {
 		uc_find_best_match "$config"
 		for file in "gcc-$CC_VERSION" "glibc-$LIBC_VERSION" "binutils-$BINUTILS_VERSION" "uClibc-$UCLIBC_VERSION" "linux-$KERNEL_VERSION"; do
 			if ! get_src_path "$file"; then
-				die 1 "$file source is missing from $TC_SRC/src"
+				die 1 "$file source is missing from $TC_SRC"
 			else
 				[ -n "$V" ] && echo "  -> found $REPLY"
 			fi
@@ -418,34 +413,35 @@ tc_init() {
 	tc_check_configs "$@"
 	uc_check_configs "$@"
 
+	mkdir -p "$TC_CFG" || die
 	for config in "$@"; do
 		uc_find_best_match "$config"
 
-		if [ ! -s "$TC_DST/config-$PREF" ]; then
-			echo "Copying config file $config to $TC_DST/config-$PREF ..."
-			cp "$config" "$TC_DST/config-$PREF" || die 1
-		elif ! cmp -s "$config" "$TC_DST/config-$PREF"; then
-			die 1 "Error: $TC_DST/config-$PREF already exists and differs from $config. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
+		if [ ! -s "$TC_CFG/config-$PREF" ]; then
+			echo "Copying config file $config to $TC_CFG/config-$PREF ..."
+			cp "$config" "$TC_CFG/config-$PREF" || die 1
+		elif ! cmp -s "$config" "$TC_CFG/config-$PREF"; then
+			die 1 "Error: $TC_CFG/config-$PREF already exists and differs from $config. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
 		fi
 
-		if [ ! -s "$TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" ]; then
-			echo "Copying uclibc config file $UCLIBC_FILE to $TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} ..."
-			cp "$UCLIBC_FILE" "$TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" || die 1
-		elif ! cmp -s "$UCLIBC_FILE" "$TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}"; then
-			die 1 "Error: $TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} already exists and differs from $UCLIBC_FILE. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
+		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" ]; then
+			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} ..."
+			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" || die 1
+		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}"; then
+			die 1 "Error: $TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} already exists and differs from $UCLIBC_FILE. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
 		fi
 
 		# Now check that there is no conflict in the destination directory.
 		# Also, calling tc_check_configs will result in updating all global
 		# variables including PREF. This is the right moment to check that
 		# they are not changed.
-		echo "Validating $TC_DST/config-$PREF..."
+		echo "Validating $TC_CFG/config-$PREF..."
 		oldpref="$PREF"
-		tc_check_configs "$TC_DST/config-$PREF"
+		tc_check_configs "$TC_CFG/config-$PREF"
 		if [ "$PREF" != "$oldpref" ]; then
-			die 1 "Config file $TC_DST/config-$oldpref should be renamed config-$PREF as it features different settings."
+			die 1 "Config file $TC_CFG/config-$oldpref should be renamed config-$PREF as it features different settings."
 		fi
-		uc_check_configs "$TC_DST/config-$PREF"
+		uc_check_configs "$TC_CFG/config-$PREF"
 	done
 }
 
@@ -455,40 +451,39 @@ tc_cond_init() {
 	local p="$PWD"
 	local config oldpref
 
-	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
-
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 	tc_check_configs "$@"
 	uc_check_configs "$@"
 
+	mkdir -p "$TC_CFG" || die
 	for config in "$@"; do
 		uc_find_best_match "$config"
 
-		if [ ! -s "$TC_DST/config-$PREF" ]; then
-			echo "Copying config file $config to $TC_DST/config-$PREF ..."
-			cp "$config" "$TC_DST/config-$PREF" || die 1
-		elif ! cmp -s "$config" "$TC_DST/config-$PREF"; then
-			echo "Note: $TC_DST/config-$PREF differs from $config."
+		if [ ! -s "$TC_CFG/config-$PREF" ]; then
+			echo "Copying config file $config to $TC_CFG/config-$PREF ..."
+			cp "$config" "$TC_CFG/config-$PREF" || die 1
+		elif ! cmp -s "$config" "$TC_CFG/config-$PREF"; then
+			echo "Note: $TC_CFG/config-$PREF differs from $config."
 		fi
 
-		if [ ! -s "$TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" ]; then
-			echo "Copying uclibc config file $UCLIBC_FILE to $TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} ..."
-			cp "$UCLIBC_FILE" "$TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" || die 1
-		elif ! cmp -s "$UCLIBC_FILE" "$TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}"; then
-			echo "Note: $TC_DST/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} differs from $UCLIBC_FILE."
+		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" ]; then
+			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} ..."
+			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" || die 1
+		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}"; then
+			echo "Note: $TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} differs from $UCLIBC_FILE."
 		fi
 
 		# Now check that there is no conflict in the destination directory.
 		# Also, calling tc_check_configs will result in updating all global
 		# variables including PREF. This is the right moment to check that
 		# they are not changed.
-		echo "Validating $TC_DST/config-$PREF..."
+		echo "Validating $TC_CFG/config-$PREF..."
 		oldpref="$PREF"
-		tc_check_configs "$TC_DST/config-$PREF"
+		tc_check_configs "$TC_CFG/config-$PREF"
 		if [ "$PREF" != "$oldpref" ]; then
-			die 1 "Config file $TC_DST/config-$oldpref should be renamed config-$PREF as it features different settings."
+			die 1 "Config file $TC_CFG/config-$oldpref should be renamed config-$PREF as it features different settings."
 		fi
-		uc_check_configs "$TC_DST/config-$PREF"
+		uc_check_configs "$TC_CFG/config-$PREF"
 	done
 }
 
@@ -500,6 +495,8 @@ tc_refresh() {
 	local p="$PWD"
 	local in_conf config oldpref
 
+	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
+
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 
 	tc_cond_init "$@"
@@ -510,7 +507,7 @@ tc_refresh() {
 
 	for in_conf in "$@"; do
 		tc_set_names "$in_conf"
-		config="$TC_DST/config-$PREF"
+		config="$TC_CFG/config-$PREF"
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
 
 		tc_check_configs "$config"
@@ -519,14 +516,10 @@ tc_refresh() {
 		# show config and retrieve mandatory information
 		[ -n "$V" ] && cfg_info "$config"
 
-		#echo "Copying source files from $TC_SRC/src ..."
-		#mkdir src && cp "$TC_SRC"/src/* src/ || die
-		#echo "Copying and processing config file from $TC_SRC/config ..."
-
 		# fixme: we should copy from an intermediary directory to let the user
 		# edit those files.
 		cp "$config" "$BUILD/tc/.config" || die 1
-		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}/src\"#" "$BUILD/tc/.config"
+		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc/.config"
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc/.config"
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc/.config"
 		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc/.config"
@@ -545,19 +538,95 @@ tc_refresh() {
 			cp "$BUILD/tc/.config" "$config" || die 1
 			echo " done."
 		else
-			echo "WARNING! some settings have changed which caused the target to change from $oldpref to $PREF."
-			echo "For this reason, I'm not overwriting the original file. This can happen when"
-			echo "using a different version of crosstool-ng than the one used to build the initial"
-			echo "file (current version: $CT_VERSION). Please see new versions below."
+			echo "WARNING! some settings have changed which caused the target to change from"
+			echo "'$oldpref' to '$PREF'. For this reason,"
+			echo "I'm not overwriting the original file. This can happen when using a different"
+			echo "version of crosstool-ng from the one used to build the initial file (current"
+			echo "version: '$CT_VERSION'). Please see new versions below :"
 			echo
-			cfg_info "$BUILD/tc/.config"
+			show_ct_settings
 			echo
-			if [ -s "$TC_DST/config-$PREF" ]; then
-				echo "$TC_DST/config-$PREF already exists, saving as $TC_DST/config-$PREF.new."
+			if [ -s "$TC_CFG/config-$PREF" ]; then
+				echo "$TC_CFG/config-$PREF already exists, saving as $TC_CFG/config-$PREF.new."
 				echo "Please fix by hand and re-run from this directory's files."
 				die 1
 			else
-				echo "The configuration has been saved as $TC_DST/config-$PREF."
+				echo "The configuration has been saved as $TC_CFG/config-$PREF."
+				echo "Please re-run from this directory's files to avoid any issue."
+				die 1
+			fi
+		fi
+	done
+	echo "Removing build directory $BUILD/tc ..."
+	rm -rf "$BUILD/tc"
+	cd "$p"
+}
+
+# run a "ct-ng menuconfig" on all destination config files. Note that the input
+# config files are automatically remapped to their destination counterpart so
+# that the input files are never overwritten. The function also supports being
+# called with destination files.
+tc_config() {
+	local p="$PWD"
+	local in_conf config oldpref
+
+	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
+
+	[ "$#" -gt 0 ] || die 1 "need at least one config file"
+
+	tc_cond_init "$@"
+	# now we know that the destination config files exist.
+
+	rm -rf "$BUILD/tc" || die "failed to remove directory '$BUILD/tc' (permission issue ?)."
+	mkdir -p "$BUILD/tc" || die
+
+	for in_conf in "$@"; do
+		tc_set_names "$in_conf"
+		config="$TC_CFG/config-$PREF"
+		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
+
+		tc_check_configs "$config"
+		uc_check_configs "$config"
+
+		# show config and retrieve mandatory information
+		[ -n "$V" ] && cfg_info "$config"
+
+		# fixme: we should copy from an intermediary directory to let the user
+		# edit those files.
+		cp "$config" "$BUILD/tc/.config" || die 1
+		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc/.config"
+		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc/.config"
+		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc/.config"
+		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc/.config"
+		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc/.config"
+		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc/.config"
+		#sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"${LIBC_VERSION}\"#" "$BUILD/tc/.config"
+
+		cd "$BUILD/tc" || die
+		"$BUILD/ct-ng/bin/ct-ng" menuconfig || die 1
+		cd "$p"
+
+		oldpref="$PREF"
+		tc_set_names "$BUILD/tc/.config"
+		if [ "$PREF" == "$oldpref" ]; then
+			echo -n "Updating $config ..."
+			cp "$BUILD/tc/.config" "$config" || die 1
+			echo " done."
+		else
+			echo "WARNING! some settings have changed which caused the target to change from"
+			echo "'$oldpref' to '$PREF'. For this reason,"
+			echo "I'm not overwriting the original file. This can happen when using a different"
+			echo "version of crosstool-ng from the one used to build the initial file (current"
+			echo "version: '$CT_VERSION'). Please see new versions below :"
+			echo
+			show_ct_settings
+			echo
+			if [ -s "$TC_CFG/config-$PREF" ]; then
+				echo "$TC_CFG/config-$PREF already exists, saving as $TC_CFG/config-$PREF.new."
+				echo "Please fix by hand and re-run from this directory's files."
+				die 1
+			else
+				echo "The configuration has been saved as $TC_CFG/config-$PREF."
 				echo "Please re-run from this directory's files to avoid any issue."
 				die 1
 			fi
@@ -571,13 +640,26 @@ tc_refresh() {
 # build all toolchains for configs passed in arguments
 tc_build() {
 	local p="$PWD"
-	local config
+	local in_conf config cfg_list
+
+	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
 
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
-	tc_check_configs "$@"
-	uc_check_configs "$@"
+	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
+	# their uclibc-* counter parts exist too. Let's rebuild the config list
+	# from the destination files now.
+	cfg_list=( )
+	for in_conf in "$@"; do
+		tc_set_names "$in_conf"
+		config="$TC_CFG/config-$PREF"
+		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
+		cfg_list[${#cfg_list[@]}]="$config"
+	done
 
-	for config in "$@"; do
+	yes "" | tc_refresh "${cfg_list[@]}" || die 1 "config inconsistency detected, please run tc-refresh or tc-config first !"
+	src_check "${cfg_list[@]}"
+
+	for config in "${cfg_list[@]}"; do
 		echo "Building toolchain for configuration file $config ..."
 		# show config and retrieve mandatory information
 		cfg_info "$config"
@@ -586,16 +668,18 @@ tc_build() {
 
 		mkdir -p "$BUILD/tc" || die
 		cd "$BUILD/tc" || die
-		#echo "Copying source files from $TC_SRC/src ..."
-		#mkdir src && cp "$TC_SRC"/src/* src/ || die
-		#echo "Copying and processing config file from $TC_SRC/config ..."
+		#echo "Copying source files from $TC_SRC ..."
+		#mkdir src && cp "$TC_SRC"/* src/ || die
+		#echo "Copying and processing config file from $TC_DIR/config ..."
 
 		# fixme: we should copy from an intermediary directory to let the user
 		# edit those files.
 		cp "$config" .config
-		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}/src\"#" .config
+		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" .config
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" .config
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" .config
+		sed -i -e "s#\(CT_WORK_DIR=\).*#\1\"${BUILD}\"#" .config
+
 		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" .config
 		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" .config
 		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" .config
@@ -603,35 +687,14 @@ tc_build() {
 
 		"$BUILD/ct-ng/bin/ct-ng" oldconfig
 
-		echo ARCH=$ARCH GCC=$GCC_VERSION
-		if [ "$PROMPT" = "1" ] ; then
-			echo "You should now review the configuration. Press [enter] to proceed."
-			read n
-
-			"$BUILD/ct-ng/bin/ct-ng" menuconfig
-
-			echo "Ready to build. Press [enter] to proceed."
-			read n
-		fi
-
+		# fix an obscure bug which happened in crosstool-NG
 		sed -i -e "s#\. .*/\.config#. $PWD/.config#" "$BUILD/ct-ng/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
-		"$BUILD/ct-ng/bin/ct-ng" build ${V+V="$V"} || die
-		echo; echo "# ct-ng build complete.";echo
 
-		# Note: the installation directory might not match exactly
-		# because ct-ng might have added a suffix (eg: "eabi" for arm).
-		PREF=$(echo ${TC_DST}/${PREF}*)
-		PREF=${PREF##*/}
-		echo "Found toolchain under $PREF"
-		sudo chown -R "$TC_USR":"$TC_GRP" "$TC_DST/$PREF" || die
-		sudo chmod -R 755 "$TC_DST/$PREF" || die
-
-		rm -f "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so*
-		ln -s libgcc.a "$TC_DST/$PREF/lib/gcc/$PREF/$GCC_VERSION"/libgcc_s.a || die
-
-		cd "$TC_DST/$PREF/$PREF" || die
-		echo "Archiving sys-root ..."
-		tar zcf "sys-root_$PREF.tar.gz" sys-root
+		# Build but only pass "V=2" if any verbosity is required, otherwise
+		# libgmp will break in the libtool crap with V=0/V=1 due to the ECHO
+		# variable being redefined as ":".
+		"$BUILD/ct-ng/bin/ct-ng" build ${V+V="2"} || die
+		echo; echo "# ct-ng build complete for toolchain $PREF.";echo
 
 		echo "Removing build directory $BUILD/tc ..."
 		rm -rf "$BUILD/tc"
@@ -639,15 +702,302 @@ tc_build() {
 	cd "$p"
 }
 
+# restart build of a specific toolchain after an error
+tc_restart() {
+	local p="$PWD"
+
+	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
+
+	[ -n "$RESTART" ] || die 1 "Must set the restart step in the RESTART variable when doing tc-restart. List the steps using $BUILD/ct-ng/bin/ct-ng list-steps"
+
+	cd "$BUILD/tc" || die
+	tc_set_names .config
+
+	"$BUILD/ct-ng/bin/ct-ng" build ${V+V="$V"} RESTART="$RESTART" || die
+	echo; echo "# ct-ng build complete for toolchain $PREF."; echo
+
+	echo "Removing build directory $BUILD/tc ..."
+	rm -rf "$BUILD/tc"
+	cd "$p"
+}
+
+# build all toolchains for configs passed in arguments. It can work both with
+# original or destination config files.
+tc_finish() {
+	local p="$PWD"
+	local in_conf config cfg_list
+
+	[ "$#" -gt 0 ] || die 1 "need at least one config file"
+	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
+	# their uclibc-* counter parts exist too. Let's rebuild the config list
+	# from the destination files now.
+	cfg_list=( )
+	for in_conf in "$@"; do
+		tc_set_names "$in_conf"
+		config="$TC_CFG/config-$PREF"
+		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
+		cfg_list[${#cfg_list[@]}]="$config"
+	done
+
+	for config in "${cfg_list[@]}"; do
+		tc_set_names "$config"
+		echo "Fixing permissions in toolchain $PREF ..."
+		[ -d "$TC_DST/$PREF/." ] || die 1 "no directory named $TC_DST/$PREF ! Crosstool-ng might have ignored our prefix !"
+
+		# Fix permissions
+		chmod -R u+rw,og-w,og+rX "$TC_DST/$PREF" || die
+		if [ -n "$TC_USR" ]; then
+			sudo chown -R "$TC_USR" "$TC_DST/$PREF" || die
+		fi
+		if [ -n "$TC_GRP" ]; then
+			sudo chgrp -R "$TC_GRP" "$TC_DST/$PREF" || die
+		fi
+
+		# We want a static libgcc_s. On some platforms and with certain version of GCC,
+		# we also have libgcc_eh.a which contains exception handlers and which are needed
+		# in libgcc_s too if static. Thus we rebuild libgcc_s.a from libgcc.a + libgcc_eh.a,
+		# and for this we have to extract them both first.
+
+		echo "Making static libgcc for toolchain $PREF (libgcc_s.a) ..."
+		if [ -e "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so ]; then
+			rename "libgcc_s" ".unused.libgcc_s" "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so* || die
+		fi
+
+		if [ ! -s "$TC_DST/$PREF/lib/gcc/$PREF/$CC_VERSION"/libgcc_s.a ]; then
+			cd "$TC_DST/$PREF/lib/gcc/$PREF/$CC_VERSION"/ || die
+			mkdir tmp && cd tmp || die
+			if [ -e ../libgcc.a ]; then
+				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc.a || die
+			fi
+			if [ -e ../libgcc_eh.a ]; then
+				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc_eh.a || die
+			fi
+			"$TC_DST/$PREF/bin/$PREF-ar" r ../libgcc_s.a *.o || die
+			"$TC_DST/$PREF/bin/$PREF-ranlib" ../libgcc_s.a || die
+			cd .. && rm -rf tmp || die
+		fi
+	done
+	cd "$p"
+}
+
+# package the sysroots for the specified toolchains
+tc_sysroot() {
+	local p="$PWD"
+	local in_conf config cfg_list
+
+	[ "$#" -gt 0 ] || die 1 "need at least one config file"
+	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
+	# their uclibc-* counter parts exist too. Let's rebuild the config list
+	# from the destination files now.
+	cfg_list=( )
+	for in_conf in "$@"; do
+		tc_set_names "$in_conf"
+		config="$TC_CFG/config-$PREF"
+		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
+		cfg_list[${#cfg_list[@]}]="$config"
+	done
+
+	for config in "${cfg_list[@]}"; do
+		tc_set_names "$config"
+		echo "Archiving sysroot in toolchain $PREF ..."
+		[ -d "$TC_DST/$PREF/." ] || die 1 "no directory named $TC_DST/$PREF ! Crosstool-ng might have ignored our prefix !"
+
+		cd "$TC_DST/$PREF/$PREF" || die
+		tar cf - sys-root | gzip -nc9 > "sys-root.tar.gz" 
+	done
+	cd "$p"
+}
+
+# A FINIR
+uc_build() {
+	local p="$PWD"
+	local in_conf config cfg_list
+
+	[ "$#" -gt 0 ] || die 1 "need at least one config file"
+
+	tc_cond_init "$@"
+	uc_check_configs "$@"
+
+	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
+	# their uclibc-* counter parts exist too. Let's rebuild the config list
+	# from the destination files now.
+	cfg_list=( )
+	for in_conf in "$@"; do
+		tc_set_names "$in_conf"
+		config="$TC_CFG/config-$PREF"
+		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
+		cfg_list[${#cfg_list[@]}]="$config"
+	done
+
+	src_check "${cfg_list[@]}"
+
+	mkdir -p "$BUILD" && cd "$BUILD" || die
+
+	# note: at this point, the source file necessarily exists
+	for config in "${cfg_list[@]}"; do
+		[ -n "$V" ] && echo "Building uClibc for config file $config ..."
+		tc_set_names "$config"
+		uc_find_best_match "$config" || die
+
+		cd "$BUILD" || die
+		rm -rf "uClibc-$UCLIBC_VERSION" || die
+		get_src_path_safe "uClibc-$UCLIBC_VERSION"
+		echo "Extracting $REPLY ..."
+		tar xf "$REPLY" || die
+
+		cd "uClibc-$UCLIBC_VERSION" || die
+
+		for i in $UCLIBC_PATCHES; do
+			echo "Applying patch $i"
+			patch -p1 < "$TC_DIR/patches/$i" || die
+		done
+
+		make distclean
+		cp "$UCLIBC_FILE" .config
+		make ${V+V="$V"} oldconfig < /dev/null || die
+		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"${TC_DST}/${PREF}/${PREF}/sys-root/usr\"#"          .config
+		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"${TC_DST}/${PREF}/${PREF}/sys-root/usr/include\"#" .config
+		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"${TC_DST}/${PREF}/${PREF}/uclibc-root\"#"          .config
+		sed -i -e "s#\(DEVEL_PREFIX=\).*#\1\"${TC_DST}/${PREF}/${PREF}/uclibc-root/usr\"#"        .config
+
+		# Note: build is entirely done again when installing on newer versions, so it's
+		# pointless to run make first (at least on 0.9.3x). However, in 0.9.32, the install
+		# fails if the target dir "lib" does not exist.
+		if [ -z "${UCLIBC_VERSION##0.9.2*}" ]; then
+			# make all is still needed in 0.9.2x
+			make ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" || die
+		fi
+		mkdir -p "${TC_DST}/${PREF}/${PREF}/uclibc-root/lib" || die
+		make ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" install || die
+		cd ..
+		rm -rf "uClibc-$UCLIBC_VERSION"
+	done
+
+	cd "$p"
+}
+
+build_uclibc() {
+	KERNEL_SOURCE="$TC_DST/linux-$UCLIBC_KERNEL_VERSION"
+	KERNEL_HEADERS="$KERNEL_SOURCE/include"
+	RUNTIME_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/"
+	DEVEL_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/usr/"
+
+	cd "$BUILD" || die
+	echo "Extracting uClibc from $TC_SRC ..."
+	tar jxf "$TC_SRC/uClibc-$UCLIBC_VERSION".tar.bz2
+	cd "uClibc-$UCLIBC_VERSION" || die
+
+	for i in $UCLIBC_PATCHES; do
+		echo "Applying patch $i"
+		patch -p1 < "$TC_DIR/patches/$i" || die
+	done
+
+    	for i in $ARCH_LIST; do
+		ARCH="$i"
+		PREF=$(echo ${TC_DST}/$i-gcc34_glibc23-linux-gnu*)
+		PREF=${PREF##*/}
+		echo "Found toolchain under $PREF"
+
+		prepare_kernel_for_arch
+
+		make distclean
+		cp "$TC_DIR/config/CONFIG_UCLIBC_$i" .config
+		make ${V+V="$V"} oldconfig < /dev/null || die
+		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
+		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
+		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
+		sed -i -e "s#\(DEVEL_PREFIX=\).*#\1\"$DEVEL_PREFIX\"#"     .config
+
+		if [ "$PROMPT" = "1" ] ; then
+			echo "You should now review the configuration. Press [enter] to proceed."
+			read n
+			make menuconfig || die
+
+			echo "Ready to build. Press [enter] to proceed."
+			read n
+		fi
+
+		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
+		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
+
+	done
+	clean_kernel
+	cd ..
+	rm -rf "uClibc-$UCLIBC_VERSION"
+
+	# install uclibc wrapper
+	mkdir -p "$TC_DST/tools/bin" || die
+	cp "$TC_DIR/addons/uclibc" "$TC_DST/tools/bin/" || die
+}
+
+
+build_uclibc() {
+	KERNEL_SOURCE="$TC_DST/linux-$UCLIBC_KERNEL_VERSION"
+	KERNEL_HEADERS="$KERNEL_SOURCE/include"
+	RUNTIME_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/"
+	DEVEL_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/usr/"
+
+	cd "$BUILD" || die
+	echo "Extracting uClibc from $TC_SRC ..."
+	tar jxf "$TC_SRC/uClibc-$UCLIBC_VERSION".tar.bz2
+	cd "uClibc-$UCLIBC_VERSION" || die
+
+	for i in $UCLIBC_PATCHES; do
+		echo "Applying patch $i"
+		patch -p1 < "$TC_DIR/patches/$i" || die
+	done
+
+    	for i in $ARCH_LIST; do
+		ARCH="$i"
+		PREF=$(echo ${TC_DST}/$i-gcc34_glibc23-linux-gnu*)
+		PREF=${PREF##*/}
+		echo "Found toolchain under $PREF"
+
+		prepare_kernel_for_arch
+
+		make distclean
+		cp "$TC_DIR/config/CONFIG_UCLIBC_$i" .config
+		make ${V+V="$V"} oldconfig < /dev/null || die
+		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
+		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
+		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
+		sed -i -e "s#\(DEVEL_PREFIX=\).*#\1\"$DEVEL_PREFIX\"#"     .config
+
+		if [ "$PROMPT" = "1" ] ; then
+			echo "You should now review the configuration. Press [enter] to proceed."
+			read n
+			make menuconfig || die
+
+			echo "Ready to build. Press [enter] to proceed."
+			read n
+		fi
+
+		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
+		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
+
+	done
+	clean_kernel
+	cd ..
+	rm -rf "uClibc-$UCLIBC_VERSION"
+
+	# install uclibc wrapper
+	mkdir -p "$TC_DST/tools/bin" || die
+	cp "$TC_DIR/addons/uclibc" "$TC_DST/tools/bin/" || die
+}
+
+
+
+
 
 ############################# MAIN ############################
 
 # comma-delimited list of known actions, must start and end with a comma.
-valid_actions=",help,show,all,ct-extract,ct-patch,ct-build,ct-install,ct-all,ct-clean,tc-check,uc-check,cfg-info,src-check,tc-init,tc-cond-init,tc-refresh,"
+valid_actions=",help,show,all,ct-extract,ct-patch,ct-build,ct-install,ct-all,ct-clean,tc-check,uc-check,cfg-info,src-check,tc-init,tc-cond-init,tc-refresh,tc-config,tc-build,tc-restart,tc-finish,tc-sysroot,uc-build,"
 
 # actions to be executed in sequence
 all_actions=( ct-extract ct-patch ct-build ct-install ct-clean )
 ct_all_actions=( ct-extract ct-patch ct-build ct-install )
+tc_all_actions=( tc-cond-init tc-build tc-finish tc-sysroot )
 run_actions=( )
 cmd_actions="$1"
 shift
@@ -660,6 +1010,9 @@ while [ -n "$cmd_actions" ]; do
 			;;
 
 		ct-all) run_actions=( "${run_actions[@]}" "${ct_all_actions[@]}" )
+			;;
+
+		tc-all) run_actions=( "${run_actions[@]}" "${tc_all_actions[@]}" )
 			;;
 
 		-*)     # remove this action from all previous actions. Note: do this
@@ -698,12 +1051,19 @@ while [ ${#run_actions[@]} -gt 0 ]; do
 		tc-check)     tc_check_configs "$@" ;;
 		uc-check)     uc_check_configs "$@" ;;
 
+		cfg-info)     cfg_info "$@" ;;
+		src-check)    src_check "$@" ;;
+
 		tc-init)      tc_init "$@" ;;
 		tc-cond-init) tc_cond_init "$@" ;;
 		tc-refresh)   tc_refresh "$@" ;;
+		tc-config)    tc_config "$@" ;;
+		tc-build)     tc_build "$@" ;;
+		tc-restart)   tc_restart "$@" ;;
+		tc-finish)    tc_finish "$@" ;;
+		tc-sysroot)   tc_sysroot "$@" ;;
 
-		cfg-info)     cfg_info "$@" ;;
-		src-check)    src_check "$@" ;;
+		uc-build)     uc_build "$@" ;;
 
 	esac
 done
@@ -711,7 +1071,7 @@ done
 #############################################################################
 
 exit 0
-echo "TC_SRC=$TC_SRC"
+echo "TC_DIR=$TC_DIR"
 
 tc_check_configs "$@"
 uc_check_configs "$@"
@@ -766,111 +1126,10 @@ check_sources() {
 	# wget http://www.uclibc.org/downloads/old-releases/uClibc-$UCLIBC_VERSION.tar.bz2
 	# wget http://sourceforge.net/projects/squashfs/files/squashfs/squashfs$SQUASHFS_VERSION/squashfs$SQUASHFS_VERSION.tar.gz/download
 
-	[ -s "$TC_SRC/src/crosstool-ng-$CT_VERSION.tar.bz2" ] || die 1 "$TC_SRC/src/crosstool-ng-$CT_VERSION.tar.bz2 not found"
-	[ -s "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2" ] || die 1 "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2 not found"
-	[ -s "$TC_SRC/src/uClibc-$UCLIBC_VERSION.tar.bz2" ] || die 1 "$TC_SRC/src/uClibc-$UCLIBC_VERSION.tar.bz2 not found"
-	[ -s "$TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz" ] || die 1 "$TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz not found"
-}
-
-build_toolchains() {
-    rm -rf "$BUILD/tc" || die "failed to remove directory '$BUILD/tc' (permission issue ?)."
-
-    for i in $ARCH_LIST; do
-	ARCH="$i"
-	for j in $GCC_VERSION_LIST; do
-		GCC_VERSION="$j"
-
-		CT_TARGET_VENDOR=gcc$(echo $GCC_VERSION | awk -F . '{ print $1$2 }')_glibc$(echo $CT_LIBC_VERSION | awk -F . '{ print $1$2 }')
-		CT_CC_VERSION="$GCC_VERSION"
-		PREF="$ARCH"-"$CT_TARGET_VENDOR"-linux-gnu
-
-		mkdir -p "$BUILD/tc" || die
-		cd "$BUILD/tc" || die
-		echo "Copying source files from $TC_SRC/src ..."
-		mkdir src && cp "$TC_SRC"/src/* src/ || die
-
-		echo "Copying and processing config file from $TC_SRC/config ..."
-
-		cp "$TC_SRC/config/CONFIG_GCC${j%%.*}_${i}" .config
-		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"$CT_LOCAL_TARBALLS_DIR\"#" .config
-		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"$CT_PREFIX_DIR\"#" .config
-		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"$CT_TARGET_VENDOR\"#" .config
-		sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"$CT_CC_VERSION\"#" .config
-		sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"$CT_BINUTILS_VERSION\"#" .config
-		sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"$CT_KERNEL_VERSION\"#" .config
-		sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"$CT_LIBC_VERSION\"#" .config
-
-		"$TC_DST/ct-ng/bin/ct-ng" oldconfig
-
-		echo ARCH=$ARCH GCC=$GCC_VERSION
-		if [ "$PROMPT" = "1" ] ; then
-			echo "You should now review the configuration. Press [enter] to proceed."
-			read n
-
-			"$TC_DST/ct-ng/bin/ct-ng" menuconfig
-
-			echo "Ready to build. Press [enter] to proceed."
-			read n
-		fi
-
-		sed -i -e "s#\. .*/\.config#. $PWD/.config#" "$TC_DST/ct-ng/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
-		"$TC_DST/ct-ng/bin/ct-ng" build ${V+V="$V"} || die
-		echo; echo "# ct-ng build complete.";echo
-
-		# Note: the installation directory might not match exactly
-		# because ct-ng might have added a suffix (eg: "eabi" for arm).
-		PREF=$(echo ${TC_DST}/${PREF}*)
-		PREF=${PREF##*/}
-		echo "Found toolchain under $PREF"
-		sudo chown -R "$TC_USR":"$TC_GRP" "$TC_DST/$PREF" || die
-		sudo chmod -R 755 "$TC_DST/$PREF" || die
-
-		rm -f "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so*
-		ln -s libgcc.a "$TC_DST/$PREF/lib/gcc/$PREF/$GCC_VERSION"/libgcc_s.a || die
-
-		cd "$TC_DST/$PREF/$PREF" || die
-		echo "Archiving sys-root ..."
-		tar zcf "sys-root_$PREF.tar.gz" sys-root
-
-		echo "Removing build directory $BUILD/tc ..."
-		rm -rf "$BUILD/tc"
-	done
-    done
-}
-
-prepare_kernel() {
-	cd "$TC_DST" || die
-	echo "Extracting kernel from $TC_SRC/src ..."
-	tar jxf "$TC_SRC/src/linux-$UCLIBC_KERNEL_VERSION.tar.bz2"
-}
-
-# To be called with ARCH=<arch> and PREF=<valid cross-compiler prefix>
-prepare_kernel_for_arch() {
-	(
-	# do that in a sub-process to return to original directory
-	echo "Configuring kernel in $TC_DST/linux-$UCLIBC_KERNEL_VERSION"
-	cd "$TC_DST/linux-$UCLIBC_KERNEL_VERSION" || die
-	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} mrproper || die
-	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} defconfig || die
-	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} prepare < /dev/null || die
-	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} clean
-
-	# some archs' includes have moved in recent kernels
-	if [ ! -e "$TC_DST/linux-$UCLIBC_KERNEL_VERSION/include/asm/mman.h" ]; then
-		echo "Updating kernel include link"
-		rm -f $TC_DST/linux-$UCLIBC_KERNEL_VERSION/include/asm
-		ln -s ../arch/$ARCH/include/asm $TC_DST/linux-$UCLIBC_KERNEL_VERSION/include/asm
-	fi
-	)
-}
-
-clean_kernel() {
-	(
-	# do that in a sub-process to return to original directory
-	echo "Cleaning kernel in $TC_DST/linux-$UCLIBC_KERNEL_VERSION"
-	cd "$TC_DST/linux-$UCLIBC_KERNEL_VERSION" || die
-	make ARCH=$ARCH CROSS_COMPILE="$TC_DST/$PREF/bin/$PREF-" ${V+V="$V"} mrproper || die
-	)
+	[ -s "$TC_SRC/crosstool-ng-$CT_VERSION.tar.bz2" ] || die 1 "$TC_SRC/crosstool-ng-$CT_VERSION.tar.bz2 not found"
+	[ -s "$TC_SRC/linux-$UCLIBC_KERNEL_VERSION.tar.bz2" ] || die 1 "$TC_SRC/linux-$UCLIBC_KERNEL_VERSION.tar.bz2 not found"
+	[ -s "$TC_SRC/uClibc-$UCLIBC_VERSION.tar.bz2" ] || die 1 "$TC_SRC/uClibc-$UCLIBC_VERSION.tar.bz2 not found"
+	[ -s "$TC_SRC/squashfs$SQUASHFS_VERSION.tar.gz" ] || die 1 "$TC_SRC/squashfs$SQUASHFS_VERSION.tar.gz not found"
 }
 
 build_uclibc() {
@@ -880,13 +1139,13 @@ build_uclibc() {
 	DEVEL_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/usr/"
 
 	cd "$BUILD" || die
-	echo "Extracting uClibc from $TC_SRC/src ..."
-	tar jxf "$TC_SRC/src/uClibc-$UCLIBC_VERSION".tar.bz2
+	echo "Extracting uClibc from $TC_SRC ..."
+	tar jxf "$TC_SRC/uClibc-$UCLIBC_VERSION".tar.bz2
 	cd "uClibc-$UCLIBC_VERSION" || die
 
 	for i in $UCLIBC_PATCHES; do
 		echo "Applying patch $i"
-		patch -p1 < "$TC_SRC/patches/$i" || die
+		patch -p1 < "$TC_DIR/patches/$i" || die
 	done
 
     	for i in $ARCH_LIST; do
@@ -898,7 +1157,7 @@ build_uclibc() {
 		prepare_kernel_for_arch
 
 		make distclean
-		cp "$TC_SRC/config/CONFIG_UCLIBC_$i" .config
+		cp "$TC_DIR/config/CONFIG_UCLIBC_$i" .config
 		make ${V+V="$V"} oldconfig < /dev/null || die
 		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
 		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
@@ -924,14 +1183,14 @@ build_uclibc() {
 
 	# install uclibc wrapper
 	mkdir -p "$TC_DST/tools/bin" || die
-	cp "$TC_SRC/addons/uclibc" "$TC_DST/tools/bin/" || die
+	cp "$TC_DIR/addons/uclibc" "$TC_DST/tools/bin/" || die
 }
 
 
 build_squashfs() {
 	cd "$BUILD" || die
-	echo "Extracting squashfs from $TC_SRC/src ..."
-	tar zxf "$TC_SRC/src/squashfs$SQUASHFS_VERSION.tar.gz"
+	echo "Extracting squashfs from $TC_SRC ..."
+	tar zxf "$TC_SRC/squashfs$SQUASHFS_VERSION.tar.gz"
 	cd "squashfs$SQUASHFS_VERSION/squashfs-tools" || die
 	make || die
 	mkdir -p "$TC_DST/tools/bin" || die
