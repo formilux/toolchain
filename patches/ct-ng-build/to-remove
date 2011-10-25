@@ -1,0 +1,3 @@
+binutils/*/*-use-relro.patch
+binutils/*/*-pt-pax-flags-20090909.patch
+binutils/*/*-generate-gnu-hash.patch
