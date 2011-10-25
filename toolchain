@@ -143,6 +143,9 @@ ct_ng_patch() {
 			rm -vf patches/$i || die
 		done
 	fi
+
+	cp -rL "$TC_DIR/patches/ct-ng-patches/." patches/
+
 	cd "$p"
 }
 
@@ -172,7 +175,6 @@ ct_ng_install() {
 	rm -rf "$BUILD/ct-ng"
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
 	make ${V+V="$V"} install || die
-	cp -rL "$TC_DIR/patches/ct-ng-patches/." "$BUILD/ct-ng/lib/ct-ng-$CT_VERSION/patches/"
 	cd ..
 	rm -rf "crosstool-ng-$CT_VERSION"
 	cd "$p"
