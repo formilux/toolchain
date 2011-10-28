@@ -724,7 +724,7 @@ $(UCLIBC_BDIR)/.configured: $(UCLIBC_SDIR)/.completed
 	touch $@
 
 $(UCLIBC_SDIR)/.completed: $(UCLIBC_SDIR)/.patched
-	cp $(ADDONS)/uclibc-$(UCLIBC).config $(UCLIBC_SDIR)/.config
+	cp $(CONFIG)/uclibc-$(UCLIBC).$(TARGET_CPU) $(UCLIBC_SDIR)/.config
 	touch $@
 
 
