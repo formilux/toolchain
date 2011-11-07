@@ -1,0 +1,10 @@
+--- glibc-2.3.6/sysdeps/unix/sysv/linux/arm/ioperm.c.bad	2011-10-04 16:52:11 +0200
++++ glibc-2.3.6/sysdeps/unix/sysv/linux/arm/ioperm.c	2011-10-04 16:52:24 +0200
+@@ -44,7 +44,6 @@
+ #include <sys/types.h>
+ #include <sys/mman.h>
+ 
+-#include <asm/page.h>
+ #include <sys/sysctl.h>
+ 
+ #define PATH_ARM_SYSTYPE	"/etc/arm_systype"

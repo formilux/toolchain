@@ -1,0 +1,20 @@
+--- ./config/libc/glibc.in.bad	2011-10-24 22:06:36 +0200
++++ ./config/libc/glibc.in	2011-11-07 14:54:18 +0100
+@@ -112,6 +112,12 @@
+     depends on OBSOLETE
+     select LIBC_SUPPORT_LINUXTHREADS
+ 
++config LIBC_GLIBC_V_2_3_6
++    bool
++    prompt "2.3.6 (OBSOLETE)"
++    depends on OBSOLETE
++    select LIBC_SUPPORT_LINUXTHREADS
++
+ endchoice
+ 
+ config LIBC_VERSION
+@@ -132,3 +138,4 @@
+     default "2.6" if LIBC_GLIBC_V_2_6
+     default "2.5.1" if LIBC_GLIBC_V_2_5_1
+     default "2.5" if LIBC_GLIBC_V_2_5
++    default "2.3.6" if LIBC_GLIBC_V_2_3_6

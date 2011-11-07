@@ -1,0 +1,11 @@
+--- ./elf/dl-sysdep.c.bad	2007-07-04 23:17:34 +0200
++++ ./elf/dl-sysdep.c	2011-10-28 14:28:45 +0200
+@@ -411,7 +411,7 @@
+   /* Create temporary data structure to generate result table.  */
+   temp = (struct r_strlenpair *) alloca (cnt * sizeof (*temp));
+   m = 0;
+-#if defined NEED_DL_SYSINFO || defined NEED_DL_SYSINFO_DSO
++#if (defined NEED_DL_SYSINFO || defined NEED_DL_SYSINFO_DSO) && defined SHARED
+   if (dsocaps != NULL)
+     {
+       const ElfW(Word) mask = ((const ElfW(Word) *) dsocaps)[-1];
