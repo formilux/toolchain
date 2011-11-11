@@ -1,0 +1,214 @@
+Organisation
+
+toolchain-MAJOR.MINOR/
+	add-ons/	<- files (uclibc, ...)
+	config/		<- config files
+	doc/		<- documentation
+	lists/		<- tarball lists per platform
+	local/		<- tarballs of required local tools
+	patches/	<- patches to ct-ng and to add to ct-ng
+	src/		<- sources required to build packages
+	bin/		<- output files for local tools + ct-ng
+	lib/		<- output files for local tools + ct-ng
+	share/		<- output files for local tools + ct-ng
+	arch/		<- output of all toolchains
+	tmp/		<- may be used during build
+
+---------
+
+build steps
+
+
+1) ct-ng
+
+mkdir tmp
+cd tmp
+tar xf ../local/crosstool-ng-1.13.0.tar.bz2
+cd crosstool-ng-1.13.0/
+
+# patches? => ct-ng-1.13.0-glibc-1.14.1.diff
+
+./configure --with-bash=/bin/bash4 --prefix=/build/toolchain-2.0
+make
+make install
+cd ..
+rm -rf crosstool-ng-1.13.0
+cd ..
+
+
+2) build gcc+glibc
+
+ cd tmp
+ cp ../config/config-gcc446-glibc2141-armeabi .config
+ ../bin/ct-ng oldconfig
+ vi .config   # (edit paths)
+ ../bin/ct-ng oldconfig
+ ../bin/ct-ng build
+
+----------------------
+Note on host compilers :
+ - gcc-4.1.2 works and needs to be build first just for this.
+ - gcc-3.4.6 cannot build due to old g++
+ - gcc-4.2.1 causes build errors when installing gcc-core (__ctype_*).
+ - gcc-4.1.1 causes even earlier build errors, GMP >= 4.1.3 is not
+   found despite being installed, because a scary -L/usr/lib/gcc/.. is
+   added to the build of PPL :
+
+[CFG  ]    checking how to link with libgmp... /build/toolchain-2.0/tmp/arm-flx-linux-gnueabi/build/static/lib/libgmp.a
+[CFG  ]    checking how to link with libgmpxx... /build/toolchain-2.0/tmp/arm-flx-linux-gnueabi/build/static/lib/libgmpxx.a -L/usr/lib/gcc/.. /build/toolchain-2.0/tmp/arm-flx-linux-gnueabi/build/static/lib/libgmp.a
+[CFG  ]    checking for the GMP library version 4.1.3 or above... no
+[ERROR]    configure: error: Cannot find GMP version 4.1.3 or higher.
+
+The build dirs use 3 GB of temp space :
+
+willy@wtap:tmp$ du -sc *
+1551590 arm-flx-linux-gnueabi
+29529   build.log
+1565529 src
+1       tarballs
+44      tools
+3146691 total
+
+The resulting toolchain is 120 MB only :
+
+willy@wtap:toolchain-2.0$ du -sc arch/arm-flx-linux-gnueabi/*
+89027   arch/arm-flx-linux-gnueabi/arm-flx-linux-gnueabi
+4420    arch/arm-flx-linux-gnueabi/bin
+1125    arch/arm-flx-linux-gnueabi/build.log.bz2
+0       arch/arm-flx-linux-gnueabi/include
+1754    arch/arm-flx-linux-gnueabi/lib
+24776   arch/arm-flx-linux-gnueabi/libexec
+0       arch/arm-flx-linux-gnueabi/share
+121101  total
+
+Note: native utilities (gdb, strace, ...) are not stripped !
+      sysroot is not stripped either (probably better this way) !
+
+ATTENTION !
+
+kernel headers MUST be installed in the sysroot prior to building glibc :
+
+'make' '-C' '/build/toolchain-2.0/tmp/src/linux-3.0.4' 'O=/build/toolchain-2.0/tmp/arm-flx-linux-gnueabi/build/build-kernel-headers' 'ARCH=arm' 'INSTALL_HDR_PATH=/build/toolchain-2.0/arch/arm-flx-linux-gnueabi/arm-flx-linux-gnueabi/sysroot/usr' 'V=0' 'headers_install'
+
+   make ARCH=arm INSTALL_HDR_PATH=/build/toolchain-2.0/arch/arm-flx-linux-gnueabi/arm-flx-linux-gnueabi/sysroot/usr V=0 headers_install
+
+Note: they are already in the sysroot tarball.
+      => we don't need the kernel anymore !
+
+--------------------
+  - to be tried :
+       - gcc 4.4.6 + glibc 2.14.1 + glibc-ports 2.14.1 + kernel 3.0.8 => breaks nginx
+       - gcc 4.3.6 + glibc 2.12.1 + glibc-ports 2.12.1 + kernel 2.6.35.14 => breaks nginx
+       - gcc 4.3.6 + glibc 2.8/9 + glibc-ports 2.8/9 + binutils 2.21 + kernel 2.6.35.14 => breaks nginx
+       - gcc 4.2.4 + glibc 2.7 + glibc-ports 2.7 + kernel 2.6.35.14 + binutils 2.19.1a => fails on glibc
+
+       - gcc 4.3.6 + glibc 2.9 + glibc-ports 2.9 + binutils 2.19.1a + kernel 3.0 without forced unwinding => works !
+
+--------------------
+
+Big bug: glibc needs to be informed that the target is using EABI. For this, the target
+platform must have "gnueabi" in its name. The solution simply is to set FLXTARGOS to
+"flx-linux-gnueabi" instead of just "flx-linux".
+
+--------------------
+
+uClibc :
+  - the kernel include path must be usr/include from the sysroot, not the real
+    kernel !
+  - make install does not create the target directory and fails on a rule
+    which checks for $prefix.../lib.
+    => mkdir -p /build/toolchain-2.0/arch/arm-flx-uclibc-gnueabi/lib first
+  - make install rebuilds everything each time ! Maybe running it alone is enough.
+
+building dmidecode with uclibc fails :
+/build/toolchain-2.0/arch/arm-flx-uclibc-gnueabi/usr/lib/libc_pic.a(sigrestorer.os):(.ARM.exidx+0x0): undefined reference to `__aeabi_unwind_cpp_pr1'
+
+=> need to add -lgcc_eh 
+=> solved by the change below :
+
+Note that this does not work for other tools (eg: zlib). The best solution appears to merge
+libgcc_eh.a's contents into libgcc.a :
+
+   cd /build/toolchain-2.0/platform/arm-gcc44-gl214-eabi/lib/gcc/arm-flx-linux-gnueabi/4.4.6
+   mkdir tmp && cd tmp && ar xv ../libgcc_eh.a && ar rv ../libgcc.a *.o && cd .. && rm -rf tmp
+
+Do not remove gcc_eh! binutils needs it! It should contain the following
+objects : emutls.o libunwind.o pr-support.o unwind-arm.o unwind-c.o.
+
+
+------------------
+
+Move uclibc root to arch/arm-flx-linux-gnueabi/arm-flx-linux-gnueabi/uclibc-root/
+so that it is next to debug-root and sys-root and is easier to find from uclibc.
+
+------------------
+
+Nginx definitely fails on ARM/EABI with many many crashes. It also wrongly detects a
+big endian system. It is said that versions above 0.8.30 do support ARM thanks to
+atomicops fixes. But cross-compile is not the default there and is a real pain to
+get to work.
+
+--------------
+Version naming scheme : binaries must hold the version number otherwise
+we need to rely on PATH !
+
+-----------------------------
+
+Issue : libgcc_s must be dynamic : if libgcc_s.a points to libgcc.a, then some progs
+don't build due to undefined reference to __aeabi_unwind_cpp_pr0.
+=> rebuild only libgcc_s.a by merging libgcc.a and libgcc_eh.a :
+
+   cd /build/toolchain-2.0/platform/arm-gcc43-gl29-bu219-eabi/lib/gcc/arm*gnueabi/4.3.6
+   mkdir tmp && cd tmp && ar xv ../libgcc_eh.a && ar xv ../libgcc.a && ar rv ../libgcc_s.a *.o && cd .. && rm -rf tmp
+
+=> still works this way.
+
+----------------
+
+Note: nginx grows by 8kB by statically linking with libgcc_s.a. Libgcc_s.so is 175 kB.
+=> maybe worth to add the dynamic lib.
+
+
+validated:
+	- gcc 4.3.6
+	- glibc 2.9
+	- glibc-ports 2.9
+	- binutils 2.19.1a
+	- kernel 2.6.35 or 3.0
+	- uclibc-0.9.32
+	- no forced unwinding
+
+--------------------------
+
+The bug is that armv5t must be used instead of armv5te, so that ldrd/strd
+instructions are not emitted. It is possible that this is a gcc bug in the
+register choice, but it may be an issue with the CPU. Still, the feroceon
+is supposed to be armv5te.
+
+armv5te:
+    192c:       e0623003        rsb     r3, r2, r3
+    1930:       e5813010        str     r3, [r1, #16]
+    1934:       e594303c        ldr     r3, [r4, #60]
+    1938:       e3530000        cmp     r3, #0  ; 0x0
+    193c:       15941198        ldrne   r1, [r4, #408]
+    1940:       11c325d0        ldrdne  r2, [r3, #80]
+    1944:       11c121f8        strdne  r2, [r1, #24]
+    1948:       e1a00006        mov     r0, r6
+    194c:       e1a01005        mov     r1, r5
+    1950:       e1a0e00f        mov     lr, pc
+
+armv5t:
+    1934:       e0623003        rsb     r3, r2, r3
+    1938:       e5813010        str     r3, [r1, #16]
+    193c:       e595303c        ldr     r3, [r5, #60]
+    1940:       e3530000        cmp     r3, #0  ; 0x0
+    1944:       15952198        ldrne   r2, [r5, #408]
+    1948:       12833050        addne   r3, r3, #80     ; 0x50
+    194c:       18930018        ldmne   r3, {r3, r4}
+    1950:       15823018        strne   r3, [r2, #24]
+    1954:       1582401c        strne   r4, [r2, #28]
+    1958:       e1a00007        mov     r0, r7
+    195c:       e1a01006        mov     r1, r6
+    1960:       e1a0e00f        mov     lr, pc
+
+

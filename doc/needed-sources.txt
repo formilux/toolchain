@@ -1,0 +1,59 @@
+locally needed :
+
+cpp
+gcc
+libstdc++-devel
+gcc-c++
+bison
+flex
+makeinfo (texinfo)
+autoconf >= 2.60
+automake >= 1.10
+libtool >= 1.5.26
+
+needed in src :
+
+binutils-2.19.1a.tar.bz2
+crosstool-ng-1.13.0.tar.bz2
+expat-2.0.1.tar.gz
+gcc-3.4.6.tar.bz2
+gcc-4.3.6.tar.bz2
+gdb-6.8a.tar.bz2
+glibc-2.3.6.tar.bz2
+glibc-2.9.tar.bz2
+glibc-linuxthreads-2.3.6.tar.bz2
+glibc-ports-2.9.tar.bz2
+gmp-4.3.2.tar.bz2
+linux-2.6.27.46.tar.bz2
+linux-2.6.27.59.tar.bz2
+linux-3.0.4.tar.bz2
+linux-3.0.tar.bz2
+mpfr-2.4.2.tar.bz2
+ncurses-5.9.tar.gz
+sstrip.c
+strace-4.5.20.tar.bz2
+uClibc-0.9.28.3.tar.bz2
+uClibc-0.9.30.3.tar.bz2
+uClibc-0.9.32.tar.bz2
+
+------------- failures -----------------
+1) glibc-2.3.6-linuxthreads not correctly unzipped :
+
+[ALL  ]    make[3]: Entering directory `/dev/shm/2/flx/src/glibc-2.3.6/debug'
+[ALL  ]    /dev/shm/2/flx/tools/bin/install -c -m 644 execinfo.h /x/i386-gcc34_libc23-linux-gnu/i386-gcc34_libc23-linux-gnu/sys-root/usr/include/execinfo.h
+[ALL  ]    make[3]: Leaving directory `/dev/shm/2/flx/src/glibc-2.3.6/debug'
+[ALL  ]    /usr/bin/make  -C linuxthreads_db install-headers
+[ALL  ]    make: Entering an unknown directory
+[ALL  ]    make: *** linuxthreads_db: No such file or directory.  Stop.
+[ALL  ]    make: Leaving an unknown directory
+[ERROR]    make[2]: *** [linuxthreads_db/install-headers] Error 2
+[ALL  ]    make[2]: Leaving directory `/dev/shm/2/flx/src/glibc-2.3.6'
+[ERROR]    make[1]: *** [install-headers] Error 2
+[ALL  ]    make[1]: Leaving directory `/dev/shm/2/flx/i386-gcc34_libc23-linux-gnu/build/build-libc-start-files'
+[INFO ]  Saving state to restart at step 'cc_core_pass_2'...
+
+
+2) tic running in a busy loop
+   => killall tic
+
+
