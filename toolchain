@@ -929,7 +929,7 @@ build_uclibc() {
 
 	# install uclibc wrapper
 	mkdir -p "$TC_DST/tools/bin" || die
-	cp "$TC_DIR/addons/uclibc" "$TC_DST/tools/bin/" || die
+	cp "$TC_DIR/add-ons/uclibc" "$TC_DST/tools/bin/" || die
 }
 
 
@@ -984,7 +984,7 @@ build_uclibc() {
 
 	# install uclibc wrapper
 	mkdir -p "$TC_DST/tools/bin" || die
-	cp "$TC_DIR/addons/uclibc" "$TC_DST/tools/bin/" || die
+	cp "$TC_DIR/add-ons/uclibc" "$TC_DST/tools/bin/" || die
 }
 
 
@@ -1185,7 +1185,7 @@ build_uclibc() {
 
 	# install uclibc wrapper
 	mkdir -p "$TC_DST/tools/bin" || die
-	cp "$TC_DIR/addons/uclibc" "$TC_DST/tools/bin/" || die
+	cp "$TC_DIR/add-ons/uclibc" "$TC_DST/tools/bin/" || die
 }
 
 
