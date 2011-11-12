@@ -131,20 +131,20 @@ ct_ng_patch() {
 	local p="$PWD"
 
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
-	if [ -d "$TC_DIR/patches/ct-ng-build/$CT_VERSION/." ]; then
-		for i in "$TC_DIR/patches/ct-ng-build/$CT_VERSION/"*; do
+	if [ -d "$TC_DIR/patches/ct-ng/fixes/$CT_VERSION/." ]; then
+		for i in "$TC_DIR/patches/ct-ng/fixes/$CT_VERSION/"*; do
 			echo "Applying patch $i"
 			patch -p1 < "$i"|| die
 		done
 	fi
 
-	if [ -s "$TC_DIR/patches/ct-ng-build/to-remove" ]; then
-		for i in $(cat "$TC_DIR/patches/ct-ng-build/to-remove"); do
+	if [ -s "$TC_DIR/patches/ct-ng/to-remove" ]; then
+		for i in $(cat "$TC_DIR/patches/ct-ng/to-remove"); do
 			rm -vf patches/$i || die
 		done
 	fi
 
-	cp -rL "$TC_DIR/patches/ct-ng-patches/." patches/
+	cp -rL "$TC_DIR/patches/ct-ng/patches/." patches/
 
 	cd "$p"
 }
