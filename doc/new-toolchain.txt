@@ -211,4 +211,168 @@ armv5t:
     195c:       e1a01006        mov     r1, r6
     1960:       e1a0e00f        mov     lr, pc
 
+--------------------
+gcc 4.3 and 4.4 happily reorder asm() blocks :
+
+example 1 :
+	unsigned int y;
+	__attribute__((noinline)) unsigned int test(unsigned int x)
+	{
+		unsigned int ret;
+		y = x;
+
+		asm ("ldr %0, [%1]\n\t"
+		    : "=r" (ret)
+		    : "r" (&y)
+		    );
+
+		return ret;
+	}
+
+example 2 :
+	unsigned int y;
+	__attribute__((noinline)) unsigned int test(unsigned int x)
+	{
+		unsigned int ret;
+		y = x;
+
+		asm volatile("ldr %0, [%1]\n\t"
+		    : "=r" (ret)
+		    : "r" (&y)
+		    );
+
+		return ret;
+	}
+
+In example 1, the code is wrong, the asm is emitted before assigning x to y :
+
+000083e0 <test>:
+    83e0:       e59f300c        ldr     r3, [pc, #12]   ; 83f4 <test+0x14>
+    83e4:       e5932000        ldr     r2, [r3]
+    83e8:       e5830000        str     r0, [r3]
+    83ec:       e1a00002        mov     r0, r2
+    83f0:       e12fff1e        bx      lr
+    83f4:       00010678        .word   0x00010678
+
+in example 2, it's OK :
+
+000083e0 <test>:
+    83e0:       e59f3008        ldr     r3, [pc, #8]    ; 83f0 <test+0x10>
+    83e4:       e5830000        str     r0, [r3]
+    83e8:       e5930000        ldr     r0, [r3]
+    83ec:       e12fff1e        bx      lr
+    83f0:       00010674        .word   0x00010674
+
+----------------------
+gcc 4.3.6 and 4.4.6 bug on long long :
+
+x is never assigned to y below, so the result returns random stack
+contents instead of lo(x)+hi(x) :
+
+	__attribute__((noinline)) unsigned int testll(unsigned long long x)
+	{
+		unsigned int ret;
+		unsigned long long y = x;
+
+		asm volatile("ldr r3, [%1,#4]\n\t"
+		    "ldr r2, [%1]\n\t"
+		    "add %0, r2, r3\n\t"
+		    : "=r" (ret)
+		    : "r" (&y)
+		    : "r2", "r3"
+		    );
+
+		return ret;
+	}
+
+	000083c4 <testll>:
+	    83c4:       e24dd008        sub     sp, sp, #8      ; 0x8
+	    83c8:       e1a0000d        mov     r0, sp
+	    83cc:       e5903004        ldr     r3, [r0, #4]
+	    83d0:       e5902000        ldr     r2, [r0]
+	    83d4:       e0820003        add     r0, r2, r3
+	    83d8:       e28dd008        add     sp, sp, #8      ; 0x8
+	    83dc:       e12fff1e        bx      lr
+
+by declaring y volatile, it's OK and the code works :
+
+	__attribute__((noinline)) unsigned int testll(unsigned long long x)
+	{
+		unsigned int ret;
+		volatile unsigned long long y = x;
+
+		asm volatile("ldr r3, [%1,#4]\n\t"
+		    "ldr r2, [%1]\n\t"
+		    "add %0, r2, r3\n\t"
+		    : "=r" (ret)
+		    : "r" (&y)
+		    : "r2", "r3"
+		    );
+
+		return ret;
+	}
+
+
+	000083c4 <testll>:
+	    83c4:       e24dd008        sub     sp, sp, #8      ; 0x8
+	    83c8:       e28dc008        add     ip, sp, #8      ; 0x8
+	    83cc:       e16c00f8        strd    r0, [ip, #-8]!
+	    83d0:       e59c3004        ldr     r3, [ip, #4]
+	    83d4:       e59c2000        ldr     r2, [ip]
+	    83d8:       e0820003        add     r0, r2, r3
+	    83dc:       e28dd008        add     sp, sp, #8      ; 0x8
+	    83e0:       e12fff1e        bx      lr
+
+--------------------------------------
+
+gcc bug most obvious with nginx :
+
+ngx_http_write_filter_module.c:153 does :
+
+        size += ngx_buf_size(cl->buf);
+
+when compiled in debug mode, it's visible that size is sometimes composed of
+the lower 32 bits of the size and crap in the higher 32 bits. Building with
+-O2/-Os/-O0 or armv5t instead of 5te makes the problem vanish.
+
+2011/10/26 23:53:38 [debug] 3817#0: *1 http write filter: size:287
+2011/10/26 23:53:38 [debug] 3817#0: *1 http write filter: l:1 f:0 s:3397319131423
+
+   3397319131423 = 0x3170000011f = 287 + (0x317 << 32)
+
+
+153:	ngx_log_debug3(NGX_LOG_DEBUG_HTTP, c->log, 0,
+		       "http write filter: size:%O", size);
+
+        size += ngx_buf_size(cl->buf);
+
+        if (cl->buf->flush || cl->buf->recycled) {
+            flush = 1;
+        }
+
+        if (cl->buf->last_buf) {
+            last = 1;
+        }
+    }
+
+    *ll = NULL;
+
+    ngx_log_debug3(NGX_LOG_DEBUG_HTTP, c->log, 0,
+                   "http write filter: l:%d f:%d s:%O", last, flush, size);
+
+==> size was added the bad value during the += operation.
+
+#define ngx_buf_size(b)                                                      \
+    (ngx_buf_in_memory(b) ? (off_t) (b->last - b->pos):                      \
+                            (b->file_last - b->file_pos))
+
+struct ngx_buf_s {
+    u_char          *pos;
+    u_char          *last;
+    off_t            file_pos;
+    off_t            file_last;
+    ...
+}
+
+
 
