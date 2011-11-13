@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # crosstool-NG 1.13.0 Configuration
-# Mon Nov  7 14:23:44 2011
+# Sun Nov 13 09:07:49 2011
 #
 CT_CONFIGURE_has_xzutils=y
 CT_CONFIGURE_has_cvs=y
@@ -29,7 +29,7 @@ CT_DEBUG_CT_SAVE_STEPS_GZIP=y
 CT_LOCAL_TARBALLS_DIR="/w/wip/toolchain-2.0/src"
 CT_SAVE_TARBALLS=y
 CT_WORK_DIR="/build/temp/flx"
-CT_PREFIX_DIR="/w/dev/arm-gcc43_libc29-linux-gnueabi"
+CT_PREFIX_DIR="/w/dev/tc2/arm-gcc43_glibc29-linux-gnueabi"
 CT_INSTALL_DIR="${CT_PREFIX_DIR}"
 CT_RM_RF_PREFIX_DIR=y
 CT_REMOVE_DOCS=y
@@ -171,7 +171,7 @@ CT_TOOLCHAIN_BUGURL=""
 #
 # Tuple completion and aliasing
 #
-CT_TARGET_VENDOR="gcc43_libc29"
+CT_TARGET_VENDOR="gcc43_glibc29"
 CT_TARGET_ALIAS_SED_EXPR=""
 CT_TARGET_ALIAS=""
 
@@ -363,6 +363,7 @@ CT_LIBC_glibc=y
 CT_LIBC_eglibc_AVAILABLE=y
 CT_LIBC_glibc_AVAILABLE=y
 CT_LIBC_GLIBC_TARBALL=y
+# CT_LIBC_GLIBC_V_2_14_1 is not set
 # CT_LIBC_GLIBC_V_2_14 is not set
 # CT_LIBC_GLIBC_V_2_13 is not set
 # CT_LIBC_GLIBC_V_2_12_2 is not set
@@ -377,6 +378,7 @@ CT_LIBC_GLIBC_V_2_9=y
 # CT_LIBC_GLIBC_V_2_6 is not set
 # CT_LIBC_GLIBC_V_2_5_1 is not set
 # CT_LIBC_GLIBC_V_2_5 is not set
+# CT_LIBC_GLIBC_V_2_3_6 is not set
 CT_LIBC_mingw_AVAILABLE=y
 CT_LIBC_newlib_AVAILABLE=y
 CT_LIBC_none_AVAILABLE=y

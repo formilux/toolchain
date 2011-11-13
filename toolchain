@@ -28,8 +28,7 @@ UCLIBC_PREFERRED_VERSION="${UCLIBC_PREFERRED_VERSION-}"
 
 # Warning: using an improper crosstool-ng version can result in losing some
 # settings.
-#CT_VERSION="${CT_VERSION-1.7.2}"
-CT_VERSION="${CT_VERSION-1.13.0}"
+CT_DEFAULT_VERSION="${CT_VERSION-1.7.2}"
 
 #SQUASHFS_VERSION="${SQUASHFS_VERSION-2.2-r2}"
 #
@@ -113,23 +112,43 @@ get_config_var() {
 	test "$REPLY" = y
 }
 
+# retrieves the crosstool-NG version which was used to produce config file $1,
+# and returns it into CT_VERSION. This works for at least ct-ng 1.7.0 to 1.13.0.
+# If no version is found, we default to version $CT_DEFAULT_VERSION. If it is
+# not set, then abort.
+set_ctng_version() {
+	[ "$#" = 1 ] || die 1 "get_ctng_config_version: need exactly one config file name"
+	[ -f "$1" ] || die 1 "get_ctng_config_version: cannot retrieve config version from $1 (no such file)"
+	CT_VERSION=$(sed -ne 's/^# crosstool-NG version: \([^ ]*\)$/\1/p' \
+	                 -ne 's/^# crosstool-NG \([^ ]*\) Configuration/\1/p' "$1" 2>/dev/null)
+    	CT_VERSION=${CT_VERSION:-$CT_DEFAULT_VERSION}
+	[ -n "$CT_VERSION" ] || die 1 "No version found in config file $1, please force it using CT_DEFAULT_VERSION"
+}
 
 ########## functions used to build and install ct-ng ###########
 
+# note that CT_VERSION *must* be set prior to calling these functions
 ct_ng_extract() {
 	local p="$PWD"
 
+	[ -n "$CT_VERSION" ] || die 1 "CT_VERSION not set, must match desired crosstool-ng version"
 	mkdir -p "$BUILD" && cd "$BUILD" || die
 	rm -rf "crosstool-ng-$CT_VERSION" || die
 	get_src_path_safe "crosstool-ng-$CT_VERSION"
 	echo "Extracting $REPLY ..."
 	tar xf "$REPLY" || die
+	touch "crosstool-ng-$CT_VERSION/.ct_ng_extract"
 	cd "$p"
 }
 
 ct_ng_patch() {
 	local p="$PWD"
 
+	[ -n "$CT_VERSION" ] || die 1 "CT_VERSION not set, must match desired crosstool-ng version"
+	if [ ! -e "$BUILD/crosstool-ng-$CT_VERSION/.ct_ng_patch" ]; then
+		echo "crosstool-ng-$CT_VERSION not extracted yet, doing it now..."
+		ct_ng_extract
+	fi
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
 	if [ -d "$TC_DIR/patches/ct-ng/fixes/$CT_VERSION/." ]; then
 		for i in "$TC_DIR/patches/ct-ng/fixes/$CT_VERSION/"*; do
@@ -145,6 +164,7 @@ ct_ng_patch() {
 	fi
 
 	cp -rL "$TC_DIR/patches/ct-ng/patches/." patches/
+	touch .ct_ng_patch
 
 	cd "$p"
 }
@@ -163,27 +183,41 @@ ct_ng_build() {
 	    *) die 1 "bash version $bashver is too old, 3.1 minimum is required by crosstool-ng. Re-run this script from a more recent version" ;;
 	esac
 
+	[ -n "$CT_VERSION" ] || die 1 "CT_VERSION not set, must match desired crosstool-ng version"
+	if [ ! -e "$BUILD/crosstool-ng-$CT_VERSION/.ct_ng_patch" ]; then
+		echo "crosstool-ng-$CT_VERSION not patched yet, doing it now..."
+		ct_ng_patch
+	fi
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
-	./configure --prefix="$BUILD/ct-ng" ${BASH:+--with-bash="$BASH"} || die
+	./configure --prefix="$BUILD/ct-ng-$CT_VERSION" ${BASH:+--with-bash="$BASH"} || die
 	make ${V+V="$V"} || die
+	touch .ct_ng_build
 	cd "$p"
 }
 
 ct_ng_install() {
 	local p="$PWD"
 
-	rm -rf "$BUILD/ct-ng"
-	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
+	[ -n "$CT_VERSION" ] || die 1 "CT_VERSION not set, must match desired crosstool-ng version"
+	rm -rf "$BUILD/ct-ng-$CT_VERSION"
+	if [ ! -e "$BUILD/crosstool-ng-$CT_VERSION/.ct_ng_build" ]; then
+		echo "crosstool-ng-$CT_VERSION not built yet, doing it now..."
+		ct_ng_build
+	fi
+	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly built"
 	make ${V+V="$V"} install || die
+	touch .ct_ng_install
+	echo "## crosstool-NG-$CT_VERSION was successfully installed in $BUILD/ct-ng-$CT_VERSION".
 	cd ..
 	rm -rf "crosstool-ng-$CT_VERSION"
 	cd "$p"
 }
 
 ct_ng_clean() {
-    echo "Removing ct-ng from temp directory $BUILD..."
-    rm -rf "$BUILD/ct-ng"
-    echo "done."
+	[ -n "$CT_VERSION" ] || die 1 "CT_VERSION not set, must match desired crosstool-ng version"
+	echo "Removing ct-ng from temp directory $BUILD..."
+	rm -rf "$BUILD/ct-ng-$CT_VERSION"
+	echo "done."
 }
 
 
@@ -241,7 +275,7 @@ tc_set_names() {
 
 	# x86: 32b: CT_ARCH_ARCH="", "i586" | 64b: CT_ARCH_ARCH=""
 	if [ -z "$VENDOR" ]; then
-		VENDOR="gcc${CC_BRANCH%.*}${CC_BRANCH#*.}_libc${LIBC_BRANCH%.*}${LIBC_BRANCH#*.}"
+		VENDOR="gcc${CC_BRANCH%.*}${CC_BRANCH#*.}_glibc${LIBC_BRANCH%.*}${LIBC_BRANCH#*.}"
 	fi
 	PREF="$ARCH-$VENDOR-linux-gnu${ABI}"
 }
@@ -497,20 +531,25 @@ tc_refresh() {
 	local p="$PWD"
 	local in_conf config oldpref
 
-	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
-
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 
 	tc_cond_init "$@"
 	# now we know that the destination config files exist.
 
-	rm -rf "$BUILD/tc" || die "failed to remove directory '$BUILD/tc' (permission issue ?)."
-	mkdir -p "$BUILD/tc" || die
-
 	for in_conf in "$@"; do
 		tc_set_names "$in_conf"
+		rm -rf "$BUILD/tc-$PREF" || die "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
+		mkdir -p "$BUILD/tc-$PREF" || die
+
 		config="$TC_CFG/config-$PREF"
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
+
+		set_ctng_version "$config"
+		if [ ! -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ]; then
+			echo "ct-ng-$CT_VERSION not installed yet, doing it now..."
+			ct_ng_install
+			[ -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ] || die 1 "ct-ng-$CT_VERSION install failed, you may want to try 'ct-all' by hand"
+		fi
 
 		tc_check_configs "$config"
 		uc_check_configs "$config"
@@ -520,24 +559,24 @@ tc_refresh() {
 
 		# fixme: we should copy from an intermediary directory to let the user
 		# edit those files.
-		cp "$config" "$BUILD/tc/.config" || die 1
-		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc/.config"
-		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc/.config"
-		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc/.config"
-		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc/.config"
-		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc/.config"
-		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc/.config"
-		#sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"${LIBC_VERSION}\"#" "$BUILD/tc/.config"
+		cp "$config" "$BUILD/tc-$PREF/.config" || die 1
+		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc-$PREF/.config"
+		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc-$PREF/.config"
+		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc-$PREF/.config"
+		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
+		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc-$PREF/.config"
+		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc-$PREF/.config"
+		#sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"${LIBC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 
-		cd "$BUILD/tc" || die
-		"$BUILD/ct-ng/bin/ct-ng" oldconfig || die 1
+		cd "$BUILD/tc-$PREF" || die
+		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" oldconfig || die 1
 		cd "$p"
 
 		oldpref="$PREF"
-		tc_set_names "$BUILD/tc/.config"
+		tc_set_names "$BUILD/tc-$PREF/.config"
 		if [ "$PREF" == "$oldpref" ]; then
 			echo -n "Updating $config ..."
-			cp "$BUILD/tc/.config" "$config" || die 1
+			cp "$BUILD/tc-$PREF/.config" "$config" || die 1
 			echo " done."
 		else
 			echo "WARNING! some settings have changed which caused the target to change from"
@@ -558,10 +597,10 @@ tc_refresh() {
 				die 1
 			fi
 		fi
+		echo "Removing build directory $BUILD/tc-$oldpref ..."
+		rm -rf "$BUILD/tc-$oldpref"
+		cd "$p"
 	done
-	echo "Removing build directory $BUILD/tc ..."
-	rm -rf "$BUILD/tc"
-	cd "$p"
 }
 
 # run a "ct-ng menuconfig" on all destination config files. Note that the input
@@ -572,20 +611,25 @@ tc_config() {
 	local p="$PWD"
 	local in_conf config oldpref
 
-	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
-
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 
 	tc_cond_init "$@"
 	# now we know that the destination config files exist.
 
-	rm -rf "$BUILD/tc" || die "failed to remove directory '$BUILD/tc' (permission issue ?)."
-	mkdir -p "$BUILD/tc" || die
-
 	for in_conf in "$@"; do
 		tc_set_names "$in_conf"
+		rm -rf "$BUILD/tc-$PREF" || die "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
+		mkdir -p "$BUILD/tc-$PREF" || die
+
 		config="$TC_CFG/config-$PREF"
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
+
+		set_ctng_version "$config"
+		if [ ! -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ]; then
+			echo "ct-ng-$CT_VERSION not installed yet, doing it now..."
+			ct_ng_install
+			[ -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ] || die 1 "ct-ng-$CT_VERSION install failed, you may want to try 'ct-all' by hand."
+		fi
 
 		tc_check_configs "$config"
 		uc_check_configs "$config"
@@ -595,24 +639,24 @@ tc_config() {
 
 		# fixme: we should copy from an intermediary directory to let the user
 		# edit those files.
-		cp "$config" "$BUILD/tc/.config" || die 1
-		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc/.config"
-		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc/.config"
-		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc/.config"
-		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc/.config"
-		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc/.config"
-		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc/.config"
-		#sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"${LIBC_VERSION}\"#" "$BUILD/tc/.config"
+		cp "$config" "$BUILD/tc-$PREF/.config" || die 1
+		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc-$PREF/.config"
+		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc-$PREF/.config"
+		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc-$PREF/.config"
+		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
+		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc-$PREF/.config"
+		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc-$PREF/.config"
+		#sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"${LIBC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 
-		cd "$BUILD/tc" || die
-		"$BUILD/ct-ng/bin/ct-ng" menuconfig || die 1
+		cd "$BUILD/tc-$PREF" || die
+		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" menuconfig || die 1
 		cd "$p"
 
 		oldpref="$PREF"
-		tc_set_names "$BUILD/tc/.config"
+		tc_set_names "$BUILD/tc-$PREF/.config"
 		if [ "$PREF" == "$oldpref" ]; then
 			echo -n "Updating $config ..."
-			cp "$BUILD/tc/.config" "$config" || die 1
+			cp "$BUILD/tc-$PREF/.config" "$config" || die 1
 			echo " done."
 		else
 			echo "WARNING! some settings have changed which caused the target to change from"
@@ -633,9 +677,9 @@ tc_config() {
 				die 1
 			fi
 		fi
+		echo "Removing build directory $BUILD/tc-$oldpref ..."
+		rm -rf "$BUILD/tc-$oldpref"
 	done
-	echo "Removing build directory $BUILD/tc ..."
-	rm -rf "$BUILD/tc"
 	cd "$p"
 }
 
@@ -643,8 +687,6 @@ tc_config() {
 tc_build() {
 	local p="$PWD"
 	local in_conf config cfg_list
-
-	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
 
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
@@ -656,6 +698,13 @@ tc_build() {
 		config="$TC_CFG/config-$PREF"
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
 		cfg_list[${#cfg_list[@]}]="$config"
+
+		set_ctng_version "$config"
+		if [ ! -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ]; then
+			echo "ct-ng-$CT_VERSION not installed yet, doing it now..."
+			ct_ng_install
+			[ -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ] || die 1 "ct-ng-$CT_VERSION install failed, you may want to try 'ct-all' by hand."
+		fi
 	done
 
 	yes "" | tc_refresh "${cfg_list[@]}" || die 1 "config inconsistency detected, please run tc-refresh or tc-config first !"
@@ -664,12 +713,13 @@ tc_build() {
 	for config in "${cfg_list[@]}"; do
 		echo "Building toolchain for configuration file $config ..."
 		# show config and retrieve mandatory information
+		set_ctng_version "$config"
 		cfg_info "$config"
 
-		rm -rf "$BUILD/tc" || die "failed to remove directory '$BUILD/tc' (permission issue ?)."
-
-		mkdir -p "$BUILD/tc" || die
-		cd "$BUILD/tc" || die
+		tc_set_names "$config"
+		rm -rf "$BUILD/tc-$PREF" || die "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
+		mkdir -p "$BUILD/tc-$PREF" || die
+		cd "$BUILD/tc-$PREF" || die
 		#echo "Copying source files from $TC_SRC ..."
 		#mkdir src && cp "$TC_SRC"/* src/ || die
 		#echo "Copying and processing config file from $TC_DIR/config ..."
@@ -687,39 +737,62 @@ tc_build() {
 		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" .config
 		#sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"${LIBC_VERSION}\"#" .config
 
-		"$BUILD/ct-ng/bin/ct-ng" oldconfig
+		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" oldconfig
 
 		# fix an obscure bug which happened in crosstool-NG
-		sed -i -e "s#\. .*/\.config#. $PWD/.config#" "$BUILD/ct-ng/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
+		sed -i -e "s#\. .*/\.config#. $PWD/.config#" "$BUILD/ct-ng-$CT_VERSION/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
 
 		# Build but only pass "V=2" if any verbosity is required, otherwise
 		# libgmp will break in the libtool crap with V=0/V=1 due to the ECHO
 		# variable being redefined as ":".
-		"$BUILD/ct-ng/bin/ct-ng" build ${V+V="2"} || die
+		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build ${V+V="2"} || die
 		echo; echo "# ct-ng build complete for toolchain $PREF.";echo
 
-		echo "Removing build directory $BUILD/tc ..."
-		rm -rf "$BUILD/tc"
+		echo "Removing build directory $BUILD/tc-$PREF ..."
+		rm -rf "$BUILD/tc-$PREF"
 	done
 	cd "$p"
 }
 
-# restart build of a specific toolchain after an error
+# restart build of a specific toolchain after an error. It needs a config file
+# name, build directory name or a toolchain name to find the directory to restart
+# from.
 tc_restart() {
 	local p="$PWD"
 
-	[ -x "$BUILD/ct-ng/bin/ct-ng" ] || die 1 "ct-ng is not installed, you may want to run 'ct-all' first."
+	[ -n "$1" ] || die 1 "must specify a config file, build directory or toolchain prefix name"
 
-	[ -n "$RESTART" ] || die 1 "Must set the restart step in the RESTART variable when doing tc-restart. List the steps using $BUILD/ct-ng/bin/ct-ng list-steps"
+	if [ -d "$1/." ]; then
+		echo "## Trying to restart build from directory $1 ..."
+		[ -s "$1/.config" ] || die 1 "cannot restart, no build currently in progress (no .config file)"
+		tc_set_names "$1/.config"
+	elif [ -d "$BUILD/tc-$1/." ]; then
+		echo "## Trying to restart build from directory $BUILD/tc-$1 ..."
+		[ -s "$BUILD/tc-$1/.config" ] || die 1 "cannot restart, no build currently in progress (no .config file)"
+		tc_set_names "$BUILD/tc-$1/.config"
+	elif [ -s "$1" ]; then
+		echo "## Trying to restart build from config file $1 ..."
+		tc_set_names "$1"
+	fi
 
-	cd "$BUILD/tc" || die
-	tc_set_names .config
+	echo "## Using toolchain directory $BUILD/tc-$PREF ..."
+	[ -s "$BUILD/tc-$PREF/.config" ] || die 1 "cannot restart, no build currently in progress"
 
-	"$BUILD/ct-ng/bin/ct-ng" build ${V+V="$V"} RESTART="$RESTART" || die
+	set_ctng_version "$BUILD/tc-$PREF/.config"
+	if [ ! -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ]; then
+		echo "ct-ng-$CT_VERSION not installed yet, doing it now..."
+		ct_ng_install
+		[ -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ] || die 1 "ct-ng-$CT_VERSION install failed, you may want to try 'ct-all' by hand."
+	fi
+
+	[ -n "$RESTART" ] || die 1 "Must set the restart step in the RESTART variable when doing tc-restart. List the steps using $BUILD/ct-ng-$CT_VERSION/bin/ct-ng list-steps"
+
+	cd "$BUILD/tc-$PREF" || die
+	"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build ${V+V="$V"} RESTART="$RESTART" || die
 	echo; echo "# ct-ng build complete for toolchain $PREF."; echo
 
-	echo "Removing build directory $BUILD/tc ..."
-	rm -rf "$BUILD/tc"
+	echo "Removing build directory $BUILD/tc-$PREF ..."
+	rm -rf "$BUILD/tc-$PREF"
 	cd "$p"
 }
 
