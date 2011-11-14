@@ -333,7 +333,7 @@ ngx_http_write_filter_module.c:153 does :
 
 when compiled in debug mode, it's visible that size is sometimes composed of
 the lower 32 bits of the size and crap in the higher 32 bits. Building with
--O2/-Os/-O0 or armv5t instead of 5te makes the problem vanish.
+armv5t instead of 5te makes the problem vanish.
 
 2011/10/26 23:53:38 [debug] 3817#0: *1 http write filter: size:287
 2011/10/26 23:53:38 [debug] 3817#0: *1 http write filter: l:1 f:0 s:3397319131423
@@ -375,4 +375,59 @@ struct ngx_buf_s {
 }
 
 
+----------  2 different bugs ------------------
+
+1) garbage at the end of pages => due to compression : "gzip on", regardless
+   of nginx build options => maybe in zlib ?
+   => indeed, zlib contains some strd and ldrd !
+
+2) crashes etc... => only in -march=armv5te
+   The difference occurs with objs/src/http/ngx_http_upstream.o
+
+   A few places make use of strd and ldrd. ngx_http_upstream_connect()
+   is reponsible for the trouble around line 1090 :
+
+#ifndef BUG
+   memset(&u->writer.limit, 0, sizeof(u->writer.limit));   // works!
+#else
+   u->writer.limit = 0;                                    // BUG !
+#endif
+
+The code is almost not different :
+
+                            BUG                                    WORKING
+
+diff1: similar (just swapped)
+    4454:  e1a03004  mov     r3, r4            |  4454:  e3a02000  mov     r2, #0  ; 0x0
+    4458:  e3a02000  mov     r2, #0  ; 0x0     |  4458:  e1a03004  mov     r3, r4
+    445c:  e5a32078  str     r2, [r3, #120]!      445c:  e5a32078  str     r2, [r3, #120]!
+    4460:  e584307c  str     r3, [r4, #124]       4460:  e584307c  str     r3, [r4, #124]
+    4464:  e5846080  str     r6, [r4, #128]       4464:  e5846080  str     r6, [r4, #128]
+
+diff2: on the right, the zero is stored at r3+=136 then r3+4
+    4468:  e3a02000  mov     r2, #0  ; 0x0     |  4468:  e1a03004  mov     r3, r4
+    446c:  e3a03000  mov     r3, #0  ; 0x0     |  446c:  e5a32088  str     r2, [r3, #136]!
+    4470:  e1c428f8  strd    r2, [r4, #136]    |  4470:  e5832004  str     r2, [r3, #4]
+    4474:  e5d431b8  ldrb    r3, [r4, #440]       4474:  e5d431b8  ldrb    r3, [r4, #440]
+
+==> problem: strd performed on an unaligned address, so the lower word is
+    overwritten :
+
+    offset + 0 : ptr
+    offset + 4 : data[0..31]
+    offset + 8 : data[32..63]
+
+When strd[offset+4] is performed, the effective address used is [(offset+4) & -8].
+We need the kernel to perform a fixup for us :
+   echo 1 > /proc/cpu/alignment    (warn only)
+   echo 2 > /proc/cpu/alignment    (silent fixup)
+   echo 3 > /proc/cpu/alignment    (fixup + warn)
+
+#define UM_WARN         (1 << 0)
+#define UM_FIXUP        (1 << 1)
+#define UM_SIGNAL       (1 << 2)
+
+=> and the gzip issue is gone too !
+
+=> apply the ai_usermode patch to set it to 3 by default.
 
