@@ -499,7 +499,11 @@ tc_cond_init() {
 			echo "Copying config file $config to $TC_CFG/config-$PREF ..."
 			cp "$config" "$TC_CFG/config-$PREF" || die 1
 		elif ! cmp -s "$config" "$TC_CFG/config-$PREF"; then
-			echo "Note: $TC_CFG/config-$PREF differs from $config."
+			if [ "$config" -nt "$TC_CFG/config-$PREF" ]; then
+				die 1 "$config was changed since last update of $TC_CFG/config-$PREF, please fix by hand"
+			else
+				echo "#### Note: $TC_CFG/config-$PREF differs from $config, don't forget to update last one if everything works."
+			fi
 		fi
 
 		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" ]; then
