@@ -74,7 +74,7 @@ usage() {
 	echo "    tc-restart   restart a failed build from step \$RESTART"
 	echo "    tc-finish    finish toolchain installation (perms, static libgcc, ...)"
 	echo "    tc-sysroot   build the toolchains sysroot archives"
-	echo "  * tc-all       tc-cond-init, tc-build, tc-finish, tc-sysroot"
+	echo "  * tc-all       tc-cond-init, tc-refresh, tc-build, tc-finish, tc-sysroot"
 	echo "    uc-build     build uclibc for toolchains based on destination config files"
 	test -z "$1"
 	exit $?
@@ -567,6 +567,8 @@ tc_refresh() {
 		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc-$PREF/.config"
+		sed -i -e "s#\(CT_WORK_DIR=\).*#\1\"${BUILD}\"#" .config
+
 		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc-$PREF/.config"
@@ -647,6 +649,8 @@ tc_config() {
 		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc-$PREF/.config"
+		sed -i -e "s#\(CT_WORK_DIR=\).*#\1\"${BUILD}\"#" .config
+
 		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc-$PREF/.config"
@@ -1076,7 +1080,7 @@ valid_actions=",help,show,all,ct-extract,ct-patch,ct-build,ct-install,ct-all,ct-
 # actions to be executed in sequence
 all_actions=( ct-extract ct-patch ct-build ct-install ct-clean )
 ct_all_actions=( ct-extract ct-patch ct-build ct-install )
-tc_all_actions=( tc-cond-init tc-build tc-finish tc-sysroot )
+tc_all_actions=( tc-cond-init tc-refresh tc-build tc-finish tc-sysroot )
 run_actions=( )
 cmd_actions="$1"
 shift
