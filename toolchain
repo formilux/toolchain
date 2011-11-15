@@ -76,6 +76,11 @@ usage() {
 	echo "    tc-sysroot   build the toolchains sysroot archives"
 	echo "  * tc-all       tc-cond-init, tc-refresh, tc-build, tc-finish, tc-sysroot"
 	echo "    uc-build     build uclibc for toolchains based on destination config files"
+	echo
+	echo "Environment variables :"
+	echo "   RESTART  = crosstool-ng step to restart from with tc-restart"
+	echo "   PARALLEL = number of parallel jobs to run for tc-build and tc-restart"
+	echo
 	test -z "$1"
 	exit $?
 }
@@ -753,7 +758,7 @@ tc_build() {
 		# Build but only pass "V=2" if any verbosity is required, otherwise
 		# libgmp will break in the libtool crap with V=0/V=1 due to the ECHO
 		# variable being redefined as ":".
-		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build ${V+V="2"} || die
+		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build${PARALLEL:+.$PARALLEL} ${V+V="2"} || die
 		echo; echo "# ct-ng build complete for toolchain $PREF.";echo
 
 		echo "Removing build directory $BUILD/tc-$PREF ..."
@@ -796,7 +801,7 @@ tc_restart() {
 	[ -n "$RESTART" ] || die 1 "Must set the restart step in the RESTART variable when doing tc-restart. List the steps using $BUILD/ct-ng-$CT_VERSION/bin/ct-ng list-steps"
 
 	cd "$BUILD/tc-$PREF" || die
-	"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build ${V+V="$V"} RESTART="$RESTART" || die
+	"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build${PARALLEL:+.$PARALLEL} ${V+V="$V"} RESTART="$RESTART" || die
 	echo; echo "# ct-ng build complete for toolchain $PREF."; echo
 
 	echo "Removing build directory $BUILD/tc-$PREF ..."
