@@ -1,0 +1,26 @@
+--- ../ct-ng-1.13.0/lib/ct-ng-1.13.0/scripts/build/debug/300-gdb.sh.orig	2011-11-15 18:55:38.177218761 +0100
++++ ../ct-ng-1.13.0/lib/ct-ng-1.13.0/scripts/build/debug/300-gdb.sh	2011-11-15 18:59:19.619218761 +0100
+@@ -219,8 +219,8 @@
+             CT_DoExecLog ALL make ${JOBSFLAGS} -C include
+             CT_DoExecLog ALL make ${JOBSFLAGS} -C progs "tic${tic_ext}"
+ 
+-            CT_DoExecLog ALL install -d -m 0755 "${CT_PREFIX_DIR}/buildtools"
+-            CT_DoExecLog ALL install -m 0755 "progs/tic${tic_ext}" "${CT_PREFIX_DIR}/buildtools"
++            CT_DoExecLog ALL install -d -m 0755 "${CT_BUILDTOOLS_PREFIX_DIR}"
++            CT_DoExecLog ALL install -m 0755 "progs/tic${tic_ext}" "${CT_BUILDTOOLS_PREFIX_DIR}"
+ 
+             mkdir -p "${CT_BUILD_DIR}/build-ncurses"
+             cd "${CT_BUILD_DIR}/build-ncurses"
+@@ -241,10 +241,10 @@
+ 
+             CT_DoExecLog ALL make ${JOBSFLAGS}
+ 
+-            CT_DoExecLog ALL make install
++            CT_DoExecLog ALL make install TIC_PATH="${CT_BUILDTOOLS_PREFIX_DIR}/tic${tic_ext}"
+ 
+             # We no longer need the temporary tic. Remove it
+-            CT_DoExecLog DEBUG rm -fv "${CT_PREFIX_DIR}/buildtools/tic${tic_ext}"
++            CT_DoExecLog DEBUG rm -fv "${CT_BUILDTOOLS_PREFIX_DIR}/tic${tic_ext}"
+ 
+             native_extra_config+=("--with-curses")
+             # There's no better way to tell gdb where to find -lcurses... :-(
