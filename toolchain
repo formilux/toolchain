@@ -935,10 +935,12 @@ uc_build() {
 
 		cd "uClibc-$UCLIBC_VERSION" || die
 
-		for i in $UCLIBC_PATCHES; do
-			echo "Applying patch $i"
-			patch -p1 < "$TC_DIR/patches/$i" || die
-		done
+		if [ -d "$TC_DIR/patches/uclibc/$UCLIBC_VERSION/." ]; then
+			for i in "$TC_DIR/patches/uclibc/$UCLIBC_VERSION/"*; do
+				echo "Applying patch $i"
+				patch -p1 < "$i"|| die
+			done
+		fi
 
 		make distclean
 		cp "$UCLIBC_FILE" .config
