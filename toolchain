@@ -572,7 +572,7 @@ tc_refresh() {
 		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc-$PREF/.config"
-		sed -i -e "s#\(CT_WORK_DIR=\).*#\1\"${BUILD}\"#" .config
+		sed -i -e "s#\(CT_WORK_DIR=\).*#\1\"${BUILD}\"#" "$BUILD/tc-$PREF/.config"
 
 		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc-$PREF/.config"
@@ -654,7 +654,7 @@ tc_config() {
 		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc-$PREF/.config"
-		sed -i -e "s#\(CT_WORK_DIR=\).*#\1\"${BUILD}\"#" .config
+		sed -i -e "s#\(CT_WORK_DIR=\).*#\1\"${BUILD}\"#" "$BUILD/tc-$PREF/.config"
 
 		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 		#sed -i -e "s#\(CT_BINUTILS_VERSION=\).*#\1\"${BINUTILS_VERSION}\"#" "$BUILD/tc-$PREF/.config"
