@@ -1,5 +1,5 @@
---- ../ct-ng-1.13.0/lib/ct-ng-1.13.0/scripts/build/debug/300-gdb.sh.orig	2011-11-15 18:55:38.177218761 +0100
-+++ ../ct-ng-1.13.0/lib/ct-ng-1.13.0/scripts/build/debug/300-gdb.sh	2011-11-15 18:59:19.619218761 +0100
+--- ./scripts/build/debug/300-gdb.sh.orig	2011-11-15 18:55:38.177218761 +0100
++++ ./scripts/build/debug/300-gdb.sh	2011-11-15 18:59:19.619218761 +0100
 @@ -219,8 +219,8 @@
              CT_DoExecLog ALL make ${JOBSFLAGS} -C include
              CT_DoExecLog ALL make ${JOBSFLAGS} -C progs "tic${tic_ext}"
