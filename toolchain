@@ -864,6 +864,14 @@ tc_finish() {
 			"$TC_DST/$PREF/bin/$PREF-ranlib" ../libgcc_s.a || die
 			cd .. && rm -rf tmp || die
 		fi
+
+		# If we have libstdc++.so, it likely depends on libgcc_s.so, so we'll rename it
+		# too so that we only keep libstdc++.a
+
+		if [ -e "$TC_DST/$PREF/$PREF"/sys-root/lib/libstdc++.so ]; then
+			echo "Disabling shared libstdc++ for toolchain $PREF (libstdc++.so) ..."
+			mv "$TC_DST/$PREF/$PREF"/sys-root/lib/{,.unused.}libstdc++.so || die
+		fi
 	done
 	cd "$p"
 }
