@@ -1,0 +1,10 @@
+--- ./scripts/build/cc/gcc.sh.bad	2011-11-07 18:26:01 +0100
++++ ./scripts/build/cc/gcc.sh	2011-11-07 18:47:55 +0100
+@@ -66,6 +66,7 @@
+         y,*,*)  do_cc_core mode=static;;
+         ,y,*)   ;;
+         ,,nptl) do_cc_core mode=static;;
++        ,,linuxthreads) do_cc_core mode=static;;
+         *)      ;;
+     esac
+ }
