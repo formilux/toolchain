@@ -374,6 +374,15 @@ uc_find_best_match() {
 			set_uclibc_version "$UCLIBC_FILE"
 			return 0
 		fi
+		UCLIBC_FILE="$(echo ${dir}/uclibc-${UCLIBC_PREFERRED_VERSION}-*-${ARCH}${ABI})"
+		if [ -n "$UCLIBC_FILE" -a -n "${UCLIBC_FILE##*\**}" ]; then
+			if [ -z "${UCLIBC_FILE##* *}" ]; then
+			# No exact uclibc match for config file $file and multiple candidates found : $UCLIBC_FILE
+				return 1
+			fi
+			set_uclibc_version "$UCLIBC_FILE"
+			return 0
+		fi
 	fi
 
 	UCLIBC_FILE="$(echo ${dir}/uclibc-*-${ARCH}${ABI})"
