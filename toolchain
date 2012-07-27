@@ -59,6 +59,7 @@ usage() {
 	echo
 	echo "    help         display this help page and exit"
 	echo "    show         show expanded list of following actions (eg: show,all) and exit"
+	echo "    env          show environment variables and current settings"
 	echo "  * all          prepare crosstool-ng and tools, and build all toolchains"
 	echo "    ct-extract   extract crosstool-ng"
 	echo "    ct-patch     patch crosstool-ng"
@@ -87,6 +88,26 @@ usage() {
 	echo
 	test -z "$1"
 	exit $?
+}
+
+show_env() {
+	echo "------------------------- Directories and permissions -------------------------"
+	echo "Current directory                    (PWD) : ${PWD}"
+	echo "Toolchain directory               (TC_DIR) : ${TC_DIR}"
+	echo "Source files and tarballs         (TC_SRC) : ${TC_SRC}"
+	echo "Temporary directory base          (TC_TMP) : ${TC_TMP}"
+	echo "  Build directory >= 2GB           (BUILD) : ${BUILD}"
+	echo "Installation directory            (TC_DST) : ${TC_DST}"
+	echo "  Final location for config files (TC_CFG) : ${TC_CFG}"
+	echo "Target user ID                    (TC_USR) : ${TC_USR:-<default>}"
+	echo "Target group ID                   (TC_GRP) : ${TC_GRP:-<default>}"
+	echo
+	echo "------------------------------ Tools and versions -----------------------------"
+	echo "Crosstool-NG default version           (CT_VERSION) : ${CT_DEFAULT_VERSION}"
+	echo "uClibc preferred version (UCLIBC_PREFERRED_VERSION) : ${UCLIBC_PREFERRED_VERSION:-<auto>}"
+	echo "Path to the make utility                     (MAKE) : ${MAKE}"
+	echo "Parallel builds                          (PARALLEL) : ${PARALLEL:-<unset>}"
+	echo "Verbosity level [none,1,2]                      (V) : ${V}"
 }
 
 # check for availability of a source file matching "$1" with a variety of
@@ -1094,7 +1115,7 @@ build_uclibc() {
 ############################# MAIN ############################
 
 # comma-delimited list of known actions, must start and end with a comma.
-valid_actions=",help,show,all,ct-extract,ct-patch,ct-build,ct-install,ct-all,ct-clean,tc-check,uc-check,cfg-info,src-check,tc-init,tc-cond-init,tc-refresh,tc-config,tc-build,tc-restart,tc-finish,tc-sysroot,uc-build,"
+valid_actions=",env,help,show,all,ct-extract,ct-patch,ct-build,ct-install,ct-all,ct-clean,tc-check,uc-check,cfg-info,src-check,tc-init,tc-cond-init,tc-refresh,tc-config,tc-build,tc-restart,tc-finish,tc-sysroot,uc-build,"
 
 # actions to be executed in sequence
 all_actions=( ct-extract ct-patch ct-build ct-install ct-clean )
@@ -1143,6 +1164,7 @@ while [ ${#run_actions[@]} -gt 0 ]; do
 
 	case "$action" in
 		help)       usage ;;
+		env)        show_env ;;
 		show)       echo "Expanded list of actions : ${run_actions[@]}"; echo; exit 0 ;;
 		ct-extract)   ct_ng_extract ;;
 		ct-patch)     ct_ng_patch   ;;
