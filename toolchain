@@ -263,6 +263,7 @@ tc_set_names() {
 	get_config_var "CT_CC_VERSION"       "$1" ; CC_VERSION="$REPLY"
 	get_config_var "CT_LIBC_VERSION"     "$1" ; LIBC_VERSION="$REPLY"
 	get_config_var "CT_ARCH"             "$1" ; FAMILY="$REPLY"
+	get_config_var "CT_ARCH_OVERRIDE"    "$1" ; ALIAS="$REPLY"
 	get_config_var "CT_ARCH_64"          "$1" ; ARCHIS64="$REPLY"
 	get_config_var "CT_BINUTILS_VERSION" "$1" ; BINUTILS_VERSION="$REPLY"
 	get_config_var "CT_KERNEL_VERSION"   "$1" ; KERNEL_VERSION="$REPLY"
@@ -307,7 +308,8 @@ tc_set_names() {
 	if [ -z "$VENDOR" ]; then
 		VENDOR="gcc${CC_BRANCH%.*}${CC_BRANCH#*.}_glibc${LIBC_BRANCH%.*}${LIBC_BRANCH#*.}"
 	fi
-	PREF="$ARCH-$VENDOR-linux-gnu${ABI}"
+	ALIAS="${ALIAS:-${ARCH}}"
+	PREF="${ALIAS}-$VENDOR-linux-gnu${ABI}"
 }
 
 # displays information on the currently loaded ct-ng settings
@@ -320,6 +322,7 @@ show_ct_settings() {
 	echo "  [ mandatory ]  LIBC_VERSION=$LIBC_VERSION"
 	echo "  [ mandatory ]  BINUTILS_VERSION=$BINUTILS_VERSION"
 	echo "  [ mandatory ]  KERNEL_VERSION=$KERNEL_VERSION"
+	echo "  [ optional  ]  ALIAS=$ALIAS"
 	echo "  [ optional  ]  VENDOR=$VENDOR"
 	echo "  [ optional  ]  ARCHIS64=$ARCHIS64"
 	echo "  [ optional  ]  ABI=$ABI"
@@ -369,12 +372,12 @@ uc_find_best_match() {
 	[ -n "${file##*/*}" ] && dir="." || dir="${file%/*}"
 
 	if [ -n "$UCLIBC_PREFERRED_VERSION" ]; then
-		UCLIBC_FILE="${dir}/uclibc-${UCLIBC_PREFERRED_VERSION}-${ARCH}${ABI}"
+		UCLIBC_FILE="${dir}/uclibc-${UCLIBC_PREFERRED_VERSION}-${ALIAS}${ABI}"
 		if [ -e "$UCLIBC_FILE" ]; then
 			set_uclibc_version "$UCLIBC_FILE"
 			return 0
 		fi
-		UCLIBC_FILE="$(echo ${dir}/uclibc-${UCLIBC_PREFERRED_VERSION}-*-${ARCH}${ABI})"
+		UCLIBC_FILE="$(echo ${dir}/uclibc-${UCLIBC_PREFERRED_VERSION}-*-${ALIAS}${ABI})"
 		if [ -n "$UCLIBC_FILE" -a -n "${UCLIBC_FILE##*\**}" ]; then
 			if [ -z "${UCLIBC_FILE##* *}" ]; then
 			# No exact uclibc match for config file $file and multiple candidates found : $UCLIBC_FILE
@@ -385,7 +388,7 @@ uc_find_best_match() {
 		fi
 	fi
 
-	UCLIBC_FILE="$(echo ${dir}/uclibc-*-${ARCH}${ABI})"
+	UCLIBC_FILE="$(echo ${dir}/uclibc-*-${ALIAS}${ABI})"
 	if [ -n "$UCLIBC_FILE" -a -n "${UCLIBC_FILE##*\**}" ]; then
 		if [ -z "${UCLIBC_FILE##* *}" ]; then
 			# No exact uclibc match for config file $file and multiple candidates found : $UCLIBC_FILE
@@ -409,7 +412,7 @@ uc_check_configs() {
 	for file in "$@"; do
 		if ! uc_find_best_match "$file"; then
 			if [ -z "$UCLIBC_FILE" ]; then
-				die 1 "No uclibc match found for config file $file (want 'uclibc-<something>-${ARCH}${ABI}')."
+				die 1 "No uclibc match found for config file $file (want 'uclibc-<something>-${ALIAS}${ABI}')."
 			else
 				die 1 "Multiple candidates found for config file $file : $UCLIBC_FILE. You may consider setting the preferred one with UCLIBC_PREFERRED_VERSION."
 			fi
@@ -499,11 +502,11 @@ tc_init() {
 			die 1 "Error: $TC_CFG/config-$PREF already exists and differs from $config. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
 		fi
 
-		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" ]; then
-			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} ..."
-			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" || die 1
-		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}"; then
-			die 1 "Error: $TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} already exists and differs from $UCLIBC_FILE. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
+		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" ]; then
+			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} ..."
+			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" || die 1
+		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}"; then
+			die 1 "Error: $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} already exists and differs from $UCLIBC_FILE. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
 		fi
 
 		# Now check that there is no conflict in the destination directory.
@@ -545,11 +548,11 @@ tc_cond_init() {
 			fi
 		fi
 
-		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" ]; then
-			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} ..."
-			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}" || die 1
-		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI}"; then
-			echo "Note: $TC_CFG/uclibc-${UCLIBC_VERSION}-${ARCH}${ABI} differs from $UCLIBC_FILE."
+		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" ]; then
+			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} ..."
+			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" || die 1
+		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}"; then
+			echo "Note: $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} differs from $UCLIBC_FILE."
 		fi
 
 		# Now check that there is no conflict in the destination directory.
