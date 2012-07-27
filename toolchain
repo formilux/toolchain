@@ -266,7 +266,7 @@ tc_set_names() {
 	get_config_var "CT_ARCH_64"          "$1" ; ARCHIS64="$REPLY"
 	get_config_var "CT_BINUTILS_VERSION" "$1" ; BINUTILS_VERSION="$REPLY"
 	get_config_var "CT_KERNEL_VERSION"   "$1" ; KERNEL_VERSION="$REPLY"
-	get_config_var "CT_VENDOR"           "$1" ; VENDOR="$REPLY"
+	get_config_var "CT_TARGET_VENDOR"    "$1" ; VENDOR="$REPLY"
 	get_config_var "CT_ARCH_.*_EABI"     "$1" && ABI="eabi"
 
 	CC_BRANCH="${CC_VERSION#*.*.}" ; CC_BRANCH="${CC_VERSION%.$CC_BRANCH}"
