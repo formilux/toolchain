@@ -30,6 +30,10 @@ UCLIBC_PREFERRED_VERSION="${UCLIBC_PREFERRED_VERSION-}"
 # settings.
 CT_DEFAULT_VERSION="${CT_VERSION-1.7.2}"
 
+# Path to the "make" utility. Some tools only build with older versions
+# (<= 3.81), and other ones only build with >= 3.82 (eg: uClibc-0.9.33.2).
+MAKE="${MAKE-make}"
+
 #SQUASHFS_VERSION="${SQUASHFS_VERSION-2.2-r2}"
 #
 ## patches to apply on top of uclibc
@@ -195,7 +199,7 @@ ct_ng_build() {
 	fi
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
 	./configure --prefix="$BUILD/ct-ng-$CT_VERSION" ${BASH:+--with-bash="$BASH"} || die
-	make ${V+V="$V"} || die
+	${MAKE} ${V+V="$V"} || die
 	touch .ct_ng_build
 	cd "$p"
 }
@@ -210,7 +214,7 @@ ct_ng_install() {
 		ct_ng_build
 	fi
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly built"
-	make ${V+V="$V"} install || die
+	${MAKE} ${V+V="$V"} install || die
 	touch .ct_ng_install
 	echo "## crosstool-NG-$CT_VERSION was successfully installed in $BUILD/ct-ng-$CT_VERSION".
 	cd ..
@@ -950,9 +954,9 @@ uc_build() {
 			done
 		fi
 
-		make distclean
+		${MAKE} distclean
 		cp "$UCLIBC_FILE" .config
-		make ${V+V="$V"} oldconfig < /dev/null || die
+		${MAKE} ${V+V="$V"} oldconfig < /dev/null || die
 		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"${TC_DST}/${PREF}/${PREF}/sys-root/usr\"#"          .config
 		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"${TC_DST}/${PREF}/${PREF}/sys-root/usr/include\"#" .config
 		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"${TC_DST}/${PREF}/${PREF}/uclibc-root\"#"          .config
@@ -963,10 +967,10 @@ uc_build() {
 		# fails if the target dir "lib" does not exist.
 		if [ -z "${UCLIBC_VERSION##0.9.2*}" ]; then
 			# make all is still needed in 0.9.2x
-			make ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" || die
+			${MAKE} ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" || die
 		fi
 		mkdir -p "${TC_DST}/${PREF}/${PREF}/uclibc-root/lib" || die
-		make ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" install || die
+		${MAKE} ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" install || die
 		cd ..
 		rm -rf "uClibc-$UCLIBC_VERSION"
 	done
@@ -998,9 +1002,9 @@ build_uclibc() {
 
 		prepare_kernel_for_arch
 
-		make distclean
+		${MAKE} distclean
 		cp "$TC_DIR/config/CONFIG_UCLIBC_$i" .config
-		make ${V+V="$V"} oldconfig < /dev/null || die
+		${MAKE} ${V+V="$V"} oldconfig < /dev/null || die
 		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
 		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
 		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
@@ -1009,14 +1013,14 @@ build_uclibc() {
 		if [ "$PROMPT" = "1" ] ; then
 			echo "You should now review the configuration. Press [enter] to proceed."
 			read n
-			make menuconfig || die
+			${MAKE} menuconfig || die
 
 			echo "Ready to build. Press [enter] to proceed."
 			read n
 		fi
 
-		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
-		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
+		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
+		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
 
 	done
 	clean_kernel
@@ -1053,9 +1057,9 @@ build_uclibc() {
 
 		prepare_kernel_for_arch
 
-		make distclean
+		${MAKE} distclean
 		cp "$TC_DIR/config/CONFIG_UCLIBC_$i" .config
-		make ${V+V="$V"} oldconfig < /dev/null || die
+		${MAKE} ${V+V="$V"} oldconfig < /dev/null || die
 		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
 		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
 		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
@@ -1064,14 +1068,14 @@ build_uclibc() {
 		if [ "$PROMPT" = "1" ] ; then
 			echo "You should now review the configuration. Press [enter] to proceed."
 			read n
-			make menuconfig || die
+			${MAKE} menuconfig || die
 
 			echo "Ready to build. Press [enter] to proceed."
 			read n
 		fi
 
-		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
-		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
+		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
+		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
 
 	done
 	clean_kernel
@@ -1254,9 +1258,9 @@ build_uclibc() {
 
 		prepare_kernel_for_arch
 
-		make distclean
+		${MAKE} distclean
 		cp "$TC_DIR/config/CONFIG_UCLIBC_$i" .config
-		make ${V+V="$V"} oldconfig < /dev/null || die
+		${MAKE} ${V+V="$V"} oldconfig < /dev/null || die
 		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
 		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
 		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
@@ -1265,14 +1269,14 @@ build_uclibc() {
 		if [ "$PROMPT" = "1" ] ; then
 			echo "You should now review the configuration. Press [enter] to proceed."
 			read n
-			make menuconfig || die
+			${MAKE} menuconfig || die
 
 			echo "Ready to build. Press [enter] to proceed."
 			read n
 		fi
 
-		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
-		make ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
+		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
+		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
 
 	done
 	clean_kernel
@@ -1290,7 +1294,7 @@ build_squashfs() {
 	echo "Extracting squashfs from $TC_SRC ..."
 	tar zxf "$TC_SRC/squashfs$SQUASHFS_VERSION.tar.gz"
 	cd "squashfs$SQUASHFS_VERSION/squashfs-tools" || die
-	make || die
+	${MAKE} || die
 	mkdir -p "$TC_DST/tools/bin" || die
 	mv mksquashfs "$TC_DST/tools/bin/" || die
 	cd ../..
