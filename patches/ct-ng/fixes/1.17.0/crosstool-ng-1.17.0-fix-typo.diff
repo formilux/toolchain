@@ -1,0 +1,11 @@
+--- ./scripts/functions.orig	2013-01-20 21:14:01.242868827 +0100
++++ ./scripts/functions	2013-01-20 21:14:06.742779039 +0100
+@@ -71,7 +71,7 @@
+                                 printf "\nRe-trying last command.\n\n"
+                                 break
+                             fi
+-                            ;;&
++                            ;;
+                         3)  break;;
+                         *)  printf "\nPlease exit with one of these values:\n"
+                             printf "    1  fixed, continue with next build command\n"

@@ -1,0 +1,172 @@
+diff -urN ./config/target.in ./config/target.in
+--- ./config/target.in.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./config/target.in	2012-07-27 12:02:08.682588639 +0200
+@@ -5,6 +5,17 @@
+ config ARCH
+     string
+ 
++config ARCH_OVERRIDE
++    string
++    prompt "Arch name to use in the resulting tuple instead of ${CT_ARCH}"
++    help
++      Some architectures have multiple variants and being able to specify
++      the variant instead of the arch is quite convenient. This is commonly
++      seen for instance when "armv5tel-" is used as a prefix instead of the
++      more generic "arm-", or with "alphaev6-" instead of "alpha-".
++
++      If you're not sure about what this is, leave it blank.
++
+ # Pre-declare target optimisation variables
+ config ARCH_SUPPORTS_BOTH_MMU
+ config ARCH_SUPPORTS_BOTH_ENDIAN
+diff -urN ./scripts/build/arch/alpha.sh ./scripts/build/arch/alpha.sh
+--- ./scripts/build/arch/alpha.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/alpha.sh	2012-07-27 11:58:57.190090149 +0200
+@@ -2,5 +2,5 @@
+ 
+ CT_DoArchTupleValues () {
+     # The architecture part of the tuple:
+-    CT_TARGET_ARCH="${CT_ARCH}${CT_ARCH_ALPHA_VARIANT}"
++    CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-${CT_ARCH}${CT_ARCH_ALPHA_VARIANT}}"
+ }
+diff -urN ./scripts/build/arch/arm.sh ./scripts/build/arch/arm.sh
+--- ./scripts/build/arch/arm.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/arm.sh	2012-07-27 11:58:50.607102794 +0200
+@@ -2,7 +2,7 @@
+ 
+ CT_DoArchTupleValues() {
+     # The architecture part of the tuple:
+-    CT_TARGET_ARCH="${CT_ARCH}${target_endian_eb}"
++    CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-${CT_ARCH}${target_endian_eb}}"
+ 
+     # The system part of the tuple:
+     case "${CT_LIBC},${CT_ARCH_ARM_EABI}" in
+diff -urN ./scripts/build/arch/avr32.sh ./scripts/build/arch/avr32.sh
+--- ./scripts/build/arch/avr32.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/avr32.sh	2012-07-27 11:58:04.299089005 +0200
+@@ -2,7 +2,7 @@
+ 
+ CT_DoArchTupleValues() {
+     # The architecture part of the tuple:
+-    CT_TARGET_ARCH="${CT_ARCH}"
++    CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-${CT_ARCH}}"
+ 
+     # gcc ./configure flags
+     CT_ARCH_WITH_ARCH=
+diff -urN ./scripts/build/arch/blackfin.sh ./scripts/build/arch/blackfin.sh
+--- ./scripts/build/arch/blackfin.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/blackfin.sh	2012-07-27 11:58:12.670588818 +0200
+@@ -2,7 +2,7 @@
+ 
+ CT_DoArchTupleValues() {
+     # The architecture part of the tuple:
+-    CT_TARGET_ARCH="bfin"
++    CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-bfin}"
+ 
+     # gcc ./configure flags
+     CT_ARCH_WITH_ARCH=
+diff -urN ./scripts/build/arch/mips.sh ./scripts/build/arch/mips.sh
+--- ./scripts/build/arch/mips.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/mips.sh	2012-07-27 11:58:40.919091367 +0200
+@@ -3,10 +3,10 @@
+ CT_DoArchTupleValues() {
+     # The architecture part of the tuple, override only for 64-bit
+     if [ "${CT_ARCH_64}" = "y" ]; then
+-        CT_TARGET_ARCH="mips64${target_endian_el}"
++        CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-mips64${target_endian_el}}"
+     else
+         # The architecture part of the tuple:
+-        CT_TARGET_ARCH="${CT_ARCH}${target_endian_el}"
++        CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-${CT_ARCH}${target_endian_el}}"
+     fi
+ 
+     # Override CFLAGS for endianness:
+diff -urN ./scripts/build/arch/powerpc.sh ./scripts/build/arch/powerpc.sh
+--- ./scripts/build/arch/powerpc.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/powerpc.sh	2012-07-27 11:59:15.611087634 +0200
+@@ -3,7 +3,7 @@
+ CT_DoArchTupleValues () {
+     # The architecture part of the tuple, override only for 64-bit
+     if [ "${CT_ARCH_64}" = "y" ]; then
+-        CT_TARGET_ARCH="powerpc64"
++        CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-powerpc64}"
+     fi
+ 
+     # Only override values when ABI is not the default
+diff -urN ./scripts/build/arch/s390.sh ./scripts/build/arch/s390.sh
+--- ./scripts/build/arch/s390.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/s390.sh	2012-07-27 11:59:22.603588053 +0200
+@@ -3,6 +3,6 @@
+ CT_DoArchTupleValues() {
+     # That's the only thing to override
+     if [ "${CT_ARCH_64}" = "y" ]; then
+-        CT_TARGET_ARCH="s390x"
++        CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-s390x}"
+     fi
+ }
+diff -urN ./scripts/build/arch/sh.sh ./scripts/build/arch/sh.sh
+--- ./scripts/build/arch/sh.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/sh.sh	2012-07-27 11:59:32.815087642 +0200
+@@ -2,7 +2,7 @@
+ 
+ CT_DoArchTupleValues () {
+     # The architecture part of the tuple:
+-    CT_TARGET_ARCH="${CT_ARCH_SH_VARIANT}${target_endian_eb}"
++    CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-${CT_ARCH_SH_VARIANT}${target_endian_eb}}"
+ 
+     # gcc ./configure flags
+     CT_ARCH_WITH_ARCH=
+diff -urN ./scripts/build/arch/sparc.sh ./scripts/build/arch/sparc.sh
+--- ./scripts/build/arch/sparc.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/sparc.sh	2012-07-27 11:59:39.655111756 +0200
+@@ -2,7 +2,7 @@
+ CT_DoArchTupleValues() {
+     # That's the only thing to override
+     if [ "${CT_ARCH_64}" = "y" ]; then
+-        CT_TARGET_ARCH="${CT_ARCH}64"
++        CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-${CT_ARCH}64}"
+     fi
+ 
+ }
+diff -urN ./scripts/build/arch/x86.sh ./scripts/build/arch/x86.sh
+--- ./scripts/build/arch/x86.sh.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/build/arch/x86.sh	2012-07-27 12:00:52.942587401 +0200
+@@ -6,18 +6,18 @@
+ 
+     # Override the architecture part of the tuple:
+     if [ "${CT_ARCH_64}" = "y" ]; then
+-        CT_TARGET_ARCH=x86_64
++        CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-x86_64}"
+     else
+         arch="${CT_ARCH_ARCH}"
+         [ -z "${arch}" ] && arch="${CT_ARCH_TUNE}"
+         case "${arch}" in
+-            "")                           CT_TARGET_ARCH=i386;;
+-            i386|i486|i586|i686)          CT_TARGET_ARCH="${arch}";;
+-            winchip*)                     CT_TARGET_ARCH=i486;;
+-            pentium|pentium-mmx|c3*)      CT_TARGET_ARCH=i586;;
+-            pentiumpro|pentium*|athlon*)  CT_TARGET_ARCH=i686;;
+-            prescott)                     CT_TARGET_ARCH=i686;;
+-            *)                            CT_TARGET_ARCH=i586;;
++            "")                           CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-i386}";;
++            i386|i486|i586|i686)          CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-${arch}}";;
++            winchip*)                     CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-i486}";;
++            pentium|pentium-mmx|c3*)      CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-i586}";;
++            pentiumpro|pentium*|athlon*)  CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-i686}";;
++            prescott)                     CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-i686}";;
++            *)                            CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-i586}";;
+         esac
+     fi
+ }
+diff -urN ./scripts/functions ./scripts/functions
+--- ./scripts/functions.orig	2012-07-17 22:39:55.000000000 +0200
++++ ./scripts/functions	2012-07-27 11:57:19.903088370 +0200
+@@ -982,7 +982,7 @@
+     esac
+ 
+     # Build the default architecture tuple part
+-    CT_TARGET_ARCH="${CT_ARCH}"
++    CT_TARGET_ARCH="${CT_ARCH_OVERRIDE:-${CT_ARCH}}"
+ 
+     # Set defaults for the system part of the tuple. Can be overriden
+     # by architecture-specific values.
