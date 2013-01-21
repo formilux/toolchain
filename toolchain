@@ -940,7 +940,6 @@ tc_sysroot() {
 	cd "$p"
 }
 
-# A FINIR
 uc_build() {
 	local p="$PWD"
 	local in_conf config cfg_list
@@ -1007,118 +1006,12 @@ uc_build() {
 		rm -rf "uClibc-$UCLIBC_VERSION"
 	done
 
-	cd "$p"
-}
-
-build_uclibc() {
-	KERNEL_SOURCE="$TC_DST/linux-$UCLIBC_KERNEL_VERSION"
-	KERNEL_HEADERS="$KERNEL_SOURCE/include"
-	RUNTIME_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/"
-	DEVEL_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/usr/"
-
-	cd "$BUILD" || die
-	echo "Extracting uClibc from $TC_SRC ..."
-	tar jxf "$TC_SRC/uClibc-$UCLIBC_VERSION".tar.bz2
-	cd "uClibc-$UCLIBC_VERSION" || die
-
-	for i in $UCLIBC_PATCHES; do
-		echo "Applying patch $i"
-		patch -p1 < "$TC_DIR/patches/$i" || die
-	done
-
-    	for i in $ARCH_LIST; do
-		ARCH="$i"
-		PREF=$(echo ${TC_DST}/$i-gcc34_glibc23-linux-gnu*)
-		PREF=${PREF##*/}
-		echo "Found toolchain under $PREF"
-
-		prepare_kernel_for_arch
-
-		${MAKE} distclean
-		cp "$TC_DIR/config/CONFIG_UCLIBC_$i" .config
-		${MAKE} ${V+V="$V"} oldconfig < /dev/null || die
-		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
-		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
-		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
-		sed -i -e "s#\(DEVEL_PREFIX=\).*#\1\"$DEVEL_PREFIX\"#"     .config
-
-		if [ "$PROMPT" = "1" ] ; then
-			echo "You should now review the configuration. Press [enter] to proceed."
-			read n
-			${MAKE} menuconfig || die
-
-			echo "Ready to build. Press [enter] to proceed."
-			read n
-		fi
-
-		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
-		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
-
-	done
-	clean_kernel
-	cd ..
-	rm -rf "uClibc-$UCLIBC_VERSION"
+	cd "$p" || die
 
 	# install uclibc wrapper
 	mkdir -p "$TC_DST/tools/bin" || die
 	cp "$TC_DIR/add-ons/uclibc" "$TC_DST/tools/bin/" || die
 }
-
-
-build_uclibc() {
-	KERNEL_SOURCE="$TC_DST/linux-$UCLIBC_KERNEL_VERSION"
-	KERNEL_HEADERS="$KERNEL_SOURCE/include"
-	RUNTIME_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/"
-	DEVEL_PREFIX="$TC_DST/\${TARGET_ARCH}-linux-uclibc/usr/"
-
-	cd "$BUILD" || die
-	echo "Extracting uClibc from $TC_SRC ..."
-	tar jxf "$TC_SRC/uClibc-$UCLIBC_VERSION".tar.bz2
-	cd "uClibc-$UCLIBC_VERSION" || die
-
-	for i in $UCLIBC_PATCHES; do
-		echo "Applying patch $i"
-		patch -p1 < "$TC_DIR/patches/$i" || die
-	done
-
-    	for i in $ARCH_LIST; do
-		ARCH="$i"
-		PREF=$(echo ${TC_DST}/$i-gcc34_glibc23-linux-gnu*)
-		PREF=${PREF##*/}
-		echo "Found toolchain under $PREF"
-
-		prepare_kernel_for_arch
-
-		${MAKE} distclean
-		cp "$TC_DIR/config/CONFIG_UCLIBC_$i" .config
-		${MAKE} ${V+V="$V"} oldconfig < /dev/null || die
-		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"$KERNEL_SOURCE\"#"   .config
-		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"$KERNEL_HEADERS\"#" .config
-		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"$RUNTIME_PREFIX\"#" .config
-		sed -i -e "s#\(DEVEL_PREFIX=\).*#\1\"$DEVEL_PREFIX\"#"     .config
-
-		if [ "$PROMPT" = "1" ] ; then
-			echo "You should now review the configuration. Press [enter] to proceed."
-			read n
-			${MAKE} menuconfig || die
-
-			echo "Ready to build. Press [enter] to proceed."
-			read n
-		fi
-
-		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" || die
-		${MAKE} ${V+V="$V"} CROSS="$TC_DST/$PREF/bin/$PREF-" install || die
-
-	done
-	clean_kernel
-	cd ..
-	rm -rf "uClibc-$UCLIBC_VERSION"
-
-	# install uclibc wrapper
-	mkdir -p "$TC_DST/tools/bin" || die
-	cp "$TC_DIR/add-ons/uclibc" "$TC_DST/tools/bin/" || die
-}
-
 
 
 
