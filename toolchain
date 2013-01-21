@@ -34,8 +34,8 @@ CT_DEFAULT_VERSION="${CT_VERSION-1.7.2}"
 # (<= 3.81), and other ones only build with >= 3.82 (eg: uClibc-0.9.33.2).
 MAKE="${MAKE-make}"
 
-#SQUASHFS_VERSION="${SQUASHFS_VERSION-2.2-r2}"
-#
+SQUASHFS_VERSION="${SQUASHFS_VERSION-3.4}"
+
 ## patches to apply on top of uclibc
 #UCLIBC_PATCHES="uclibc-arm-no-asm-page.diff uclibc-armv5te.diff"
 
@@ -81,6 +81,7 @@ usage() {
 	echo "    tc-sysroot   build the toolchains sysroot archives"
 	echo "  * tc-all       tc-cond-init, tc-refresh, tc-build, tc-finish, tc-sysroot"
 	echo "    uc-build     build uclibc for toolchains based on destination config files"
+	echo "    sq-build     build and install mksquashfs"
 	echo
 	echo "Environment variables :"
 	echo "   RESTART  = crosstool-ng step to restart from with tc-restart"
@@ -1013,16 +1014,35 @@ uc_build() {
 	cp "$TC_DIR/add-ons/uclibc" "$TC_DST/tools/bin/" || die
 }
 
+sq_build() {
+	local p="$PWD"
+
+	mkdir -p "$BUILD" && cd "$BUILD" || die
+	rm -rf "squashfs$SQUASHFS_VERSION" || die
+	get_src_path_safe "squashfs$SQUASHFS_VERSION.tar.gz"
+	echo "Extracting $REPLY ..."
+	tar xf "$REPLY" || die
+
+	cd "squashfs$SQUASHFS_VERSION/squashfs-tools" || die
+	${MAKE} || die
+	mkdir -p "$TC_DST/tools/bin" || die
+	mv mksquashfs "$TC_DST/tools/bin/" || die
+
+	# cleanup
+	cd "$p" || die
+	rm -rf "$BUILD/squashfs$SQUASHFS_VERSION"
+}
+
 
 
 
 ############################# MAIN ############################
 
 # comma-delimited list of known actions, must start and end with a comma.
-valid_actions=",env,help,show,all,ct-extract,ct-patch,ct-build,ct-install,ct-all,ct-clean,tc-check,uc-check,cfg-info,src-check,tc-init,tc-cond-init,tc-refresh,tc-config,tc-build,tc-restart,tc-finish,tc-sysroot,uc-build,"
+valid_actions=",env,help,show,all,ct-extract,ct-patch,ct-build,ct-install,ct-all,ct-clean,tc-check,uc-check,cfg-info,src-check,tc-init,tc-cond-init,tc-refresh,tc-config,tc-build,tc-restart,tc-finish,tc-sysroot,uc-build,sq-build,"
 
 # actions to be executed in sequence
-all_actions=( ct-extract ct-patch ct-build ct-install ct-clean )
+all_actions=( ct-extract ct-patch ct-build ct-install tc-cond-init tc-refresh tc-build tc-finish tc-sysroot ct-clean uc-build sq-build )
 ct_all_actions=( ct-extract ct-patch ct-build ct-install )
 tc_all_actions=( tc-cond-init tc-refresh tc-build tc-finish tc-sysroot )
 run_actions=( )
@@ -1092,7 +1112,7 @@ while [ ${#run_actions[@]} -gt 0 ]; do
 		tc-sysroot)   tc_sysroot "$@" ;;
 
 		uc-build)     uc_build "$@" ;;
-
+		sq-build)     sq_build ;;
 	esac
 done
 
