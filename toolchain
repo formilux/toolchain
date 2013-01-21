@@ -66,7 +66,7 @@ usage() {
 	echo "    ct-build     build crosstool-ng"
 	echo "    ct-install   install crosstool-ng"
 	echo "  * ct-all       all previous ct-* steps"
-	echo "    ct-clean     install crosstool-ng"
+	echo "    ct-clean     remove crosstool-ng"
 	echo "    tc-check     check toolchain configs"
 	echo "    uc-check     check for presence of associated uclibc configs"
 	echo "    cfg-info     report important information gathered from config files"
@@ -790,8 +790,7 @@ tc_build() {
 		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" oldconfig
 
 		# fix an obscure bug which happened in crosstool-NG
-		sed -i -e "s#\. .*/\.config#. $PWD/.config#" "$BUILD/ct-ng-$CT_VERSION/lib/ct-ng-$CT_VERSION/scripts/crosstool-NG.sh"
-
+		sed -i -e "s#^\. .*/\.config#. $PWD/.config#" ${BUILD}/ct-ng-${CT_VERSION}/lib/ct-ng[-.]${CT_VERSION}/scripts/crosstool-NG.sh
 		# Build but only pass "V=2" if any verbosity is required, otherwise
 		# libgmp will break in the libtool crap with V=0/V=1 due to the ECHO
 		# variable being redefined as ":".
