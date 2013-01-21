@@ -163,13 +163,13 @@ ct_ng_extract() {
 	local p="$PWD"
 
 	[ -n "$CT_VERSION" ] || die 1 "CT_VERSION not set, must match desired crosstool-ng version"
-	mkdir -p "$BUILD" && cd "$BUILD" || die
-	rm -rf "crosstool-ng-$CT_VERSION" || die
+	mkdir -p "$BUILD" && cd "$BUILD" || die $?
+	rm -rf "crosstool-ng-$CT_VERSION" || die $?
 	get_src_path_safe "crosstool-ng-$CT_VERSION"
 	echo "Extracting $REPLY ..."
-	tar xf "$REPLY" || die
+	tar xf "$REPLY" || die $?
 	touch "crosstool-ng-$CT_VERSION/.ct_ng_extract"
-	cd "$p"
+	cd "$p" || die $?
 }
 
 ct_ng_patch() {
@@ -184,20 +184,20 @@ ct_ng_patch() {
 	if [ -d "$TC_DIR/patches/ct-ng/fixes/$CT_VERSION/." ]; then
 		for i in "$TC_DIR/patches/ct-ng/fixes/$CT_VERSION/"*; do
 			echo "Applying patch $i"
-			patch -p1 < "$i"|| die
+			patch -p1 < "$i"|| die $?
 		done
 	fi
 
 	if [ -s "$TC_DIR/patches/ct-ng/to-remove" ]; then
 		for i in $(cat "$TC_DIR/patches/ct-ng/to-remove"); do
-			rm -vf patches/$i || die
+			rm -vf patches/$i || die $?
 		done
 	fi
 
-	cp -rL "$TC_DIR/patches/ct-ng/patches/." patches/
+	cp -rL "$TC_DIR/patches/ct-ng/patches/." patches/ || die $?
 	touch .ct_ng_patch
 
-	cd "$p"
+	cd "$p" || die $?
 }
 
 ct_ng_build() {
@@ -220,10 +220,10 @@ ct_ng_build() {
 		ct_ng_patch
 	fi
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
-	./configure --prefix="$BUILD/ct-ng-$CT_VERSION" ${BASH:+--with-bash="$BASH"} || die
-	${MAKE} ${V+V="$V"} || die
+	./configure --prefix="$BUILD/ct-ng-$CT_VERSION" ${BASH:+--with-bash="$BASH"} || die $?
+	${MAKE} ${V+V="$V"} || die $?
 	touch .ct_ng_build
-	cd "$p"
+	cd "$p" || die $?
 }
 
 ct_ng_install() {
@@ -236,12 +236,12 @@ ct_ng_install() {
 		ct_ng_build
 	fi
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly built"
-	${MAKE} ${V+V="$V"} install || die
+	${MAKE} ${V+V="$V"} install || die $?
 	touch .ct_ng_install
 	echo "## crosstool-NG-$CT_VERSION was successfully installed in $BUILD/ct-ng-$CT_VERSION".
 	cd ..
 	rm -rf "crosstool-ng-$CT_VERSION"
-	cd "$p"
+	cd "$p" || die $?
 }
 
 ct_ng_clean() {
@@ -492,20 +492,20 @@ tc_init() {
 	tc_check_configs "$@"
 	uc_check_configs "$@"
 
-	mkdir -p "$TC_CFG" || die
+	mkdir -p "$TC_CFG" || die $?
 	for config in "$@"; do
 		uc_find_best_match "$config"
 
 		if [ ! -s "$TC_CFG/config-$PREF" ]; then
 			echo "Copying config file $config to $TC_CFG/config-$PREF ..."
-			cp "$config" "$TC_CFG/config-$PREF" || die 1
+			cp "$config" "$TC_CFG/config-$PREF" || die $?
 		elif ! cmp -s "$config" "$TC_CFG/config-$PREF"; then
 			die 1 "Error: $TC_CFG/config-$PREF already exists and differs from $config. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
 		fi
 
 		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" ]; then
 			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} ..."
-			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" || die 1
+			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" || die $?
 		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}"; then
 			die 1 "Error: $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} already exists and differs from $UCLIBC_FILE. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
 		fi
@@ -534,13 +534,13 @@ tc_cond_init() {
 	tc_check_configs "$@"
 	uc_check_configs "$@"
 
-	mkdir -p "$TC_CFG" || die
+	mkdir -p "$TC_CFG" || die $?
 	for config in "$@"; do
 		uc_find_best_match "$config"
 
 		if [ ! -s "$TC_CFG/config-$PREF" ]; then
 			echo "Copying config file $config to $TC_CFG/config-$PREF ..."
-			cp "$config" "$TC_CFG/config-$PREF" || die 1
+			cp "$config" "$TC_CFG/config-$PREF" || die $?
 		elif ! cmp -s "$config" "$TC_CFG/config-$PREF"; then
 			if [ "$config" -nt "$TC_CFG/config-$PREF" ]; then
 				die 1 "$config was changed since last update of $TC_CFG/config-$PREF, please fix by hand"
@@ -551,7 +551,7 @@ tc_cond_init() {
 
 		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" ]; then
 			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} ..."
-			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" || die 1
+			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" || die $?
 		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}"; then
 			echo "Note: $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} differs from $UCLIBC_FILE."
 		fi
@@ -585,8 +585,8 @@ tc_refresh() {
 
 	for in_conf in "$@"; do
 		tc_set_names "$in_conf"
-		rm -rf "$BUILD/tc-$PREF" || die "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
-		mkdir -p "$BUILD/tc-$PREF" || die
+		rm -rf "$BUILD/tc-$PREF" || die $? "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
+		mkdir -p "$BUILD/tc-$PREF" || die $?
 
 		config="$TC_CFG/config-$PREF"
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
@@ -606,7 +606,7 @@ tc_refresh() {
 
 		# fixme: we should copy from an intermediary directory to let the user
 		# edit those files.
-		cp "$config" "$BUILD/tc-$PREF/.config" || die 1
+		cp "$config" "$BUILD/tc-$PREF/.config" || die $?
 		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc-$PREF/.config"
@@ -617,15 +617,15 @@ tc_refresh() {
 		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 		#sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"${LIBC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 
-		cd "$BUILD/tc-$PREF" || die
-		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" oldconfig || die 1
+		cd "$BUILD/tc-$PREF" || die $?
+		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" oldconfig || die $?
 		cd "$p"
 
 		oldpref="$PREF"
 		tc_set_names "$BUILD/tc-$PREF/.config"
 		if [ "$PREF" == "$oldpref" ]; then
 			echo -n "Updating $config ..."
-			cp "$BUILD/tc-$PREF/.config" "$config" || die 1
+			cp "$BUILD/tc-$PREF/.config" "$config" || die $?
 			echo " done."
 		else
 			echo "WARNING! some settings have changed which caused the target to change from"
@@ -667,8 +667,8 @@ tc_config() {
 
 	for in_conf in "$@"; do
 		tc_set_names "$in_conf"
-		rm -rf "$BUILD/tc-$PREF" || die "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
-		mkdir -p "$BUILD/tc-$PREF" || die
+		rm -rf "$BUILD/tc-$PREF" || die $? "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
+		mkdir -p "$BUILD/tc-$PREF" || die $?
 
 		config="$TC_CFG/config-$PREF"
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
@@ -688,7 +688,7 @@ tc_config() {
 
 		# fixme: we should copy from an intermediary directory to let the user
 		# edit those files.
-		cp "$config" "$BUILD/tc-$PREF/.config" || die 1
+		cp "$config" "$BUILD/tc-$PREF/.config" || die $?
 		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" "$BUILD/tc-$PREF/.config"
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" "$BUILD/tc-$PREF/.config"
@@ -699,15 +699,15 @@ tc_config() {
 		#sed -i -e "s#\(CT_KERNEL_VERSION=\).*#\1\"${KERNEL_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 		#sed -i -e "s#\(CT_LIBC_VERSION=\).*#\1\"${LIBC_VERSION}\"#" "$BUILD/tc-$PREF/.config"
 
-		cd "$BUILD/tc-$PREF" || die
-		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" menuconfig || die 1
-		cd "$p"
+		cd "$BUILD/tc-$PREF" || die $?
+		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" menuconfig || die $?
+		cd "$p" || die $?
 
 		oldpref="$PREF"
 		tc_set_names "$BUILD/tc-$PREF/.config"
 		if [ "$PREF" == "$oldpref" ]; then
 			echo -n "Updating $config ..."
-			cp "$BUILD/tc-$PREF/.config" "$config" || die 1
+			cp "$BUILD/tc-$PREF/.config" "$config" || die $?
 			echo " done."
 		else
 			echo "WARNING! some settings have changed which caused the target to change from"
@@ -768,16 +768,16 @@ tc_build() {
 		cfg_info "$config"
 
 		tc_set_names "$config"
-		rm -rf "$BUILD/tc-$PREF" || die "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
-		mkdir -p "$BUILD/tc-$PREF" || die
-		cd "$BUILD/tc-$PREF" || die
+		rm -rf "$BUILD/tc-$PREF" || die $? "failed to remove directory '$BUILD/tc-$PREF' (permission issue ?)."
+		mkdir -p "$BUILD/tc-$PREF" || die $?
+		cd "$BUILD/tc-$PREF" || die $?
 		#echo "Copying source files from $TC_SRC ..."
 		#mkdir src && cp "$TC_SRC"/* src/ || die
 		#echo "Copying and processing config file from $TC_DIR/config ..."
 
 		# fixme: we should copy from an intermediary directory to let the user
 		# edit those files.
-		cp "$config" .config
+		cp "$config" .config || die $?
 		sed -i -e "s#\(CT_LOCAL_TARBALLS_DIR=\).*#\1\"${TC_SRC}\"#" .config
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" .config
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" .config
@@ -795,13 +795,13 @@ tc_build() {
 		# Build but only pass "V=2" if any verbosity is required, otherwise
 		# libgmp will break in the libtool crap with V=0/V=1 due to the ECHO
 		# variable being redefined as ":".
-		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build${PARALLEL:+.$PARALLEL} ${V+V="2"} || die
+		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build${PARALLEL:+.$PARALLEL} ${V+V="2"} || die $?
 		echo; echo "# ct-ng build complete for toolchain $PREF.";echo
 
 		echo "Removing build directory $BUILD/tc-$PREF ..."
-		rm -rf "$BUILD/tc-$PREF"
+		rm -rf "$BUILD/tc-$PREF" || die $?
 	done
-	cd "$p"
+	cd "$p" || die $?
 }
 
 # restart build of a specific toolchain after an error. It needs a config file
@@ -837,13 +837,13 @@ tc_restart() {
 
 	[ -n "$RESTART" ] || die 1 "Must set the restart step in the RESTART variable when doing tc-restart. List the steps using $BUILD/ct-ng-$CT_VERSION/bin/ct-ng list-steps"
 
-	cd "$BUILD/tc-$PREF" || die
-	"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build${PARALLEL:+.$PARALLEL} ${V+V="$V"} RESTART="$RESTART" || die
+	cd "$BUILD/tc-$PREF" || die $?
+	"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build${PARALLEL:+.$PARALLEL} ${V+V="$V"} RESTART="$RESTART" || die $?
 	echo; echo "# ct-ng build complete for toolchain $PREF."; echo
 
 	echo "Removing build directory $BUILD/tc-$PREF ..."
-	rm -rf "$BUILD/tc-$PREF"
-	cd "$p"
+	rm -rf "$BUILD/tc-$PREF" || die $?
+	cd "$p" || $?
 }
 
 # build all toolchains for configs passed in arguments. It can work both with
@@ -870,12 +870,12 @@ tc_finish() {
 		[ -d "$TC_DST/$PREF/." ] || die 1 "no directory named $TC_DST/$PREF ! Crosstool-ng might have ignored our prefix !"
 
 		# Fix permissions
-		chmod -R u+rw,og-w,og+rX "$TC_DST/$PREF" || die
+		chmod -R u+rw,og-w,og+rX "$TC_DST/$PREF" || die $?
 		if [ -n "$TC_USR" ]; then
-			sudo chown -R "$TC_USR" "$TC_DST/$PREF" || die
+			sudo chown -R "$TC_USR" "$TC_DST/$PREF" || die $?
 		fi
 		if [ -n "$TC_GRP" ]; then
-			sudo chgrp -R "$TC_GRP" "$TC_DST/$PREF" || die
+			sudo chgrp -R "$TC_GRP" "$TC_DST/$PREF" || die $?
 		fi
 
 		# We want a static libgcc_s. On some platforms and with certain version of GCC,
@@ -885,21 +885,21 @@ tc_finish() {
 
 		echo "Making static libgcc for toolchain $PREF (libgcc_s.a) ..."
 		if [ -e "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so ]; then
-			rename "libgcc_s" ".unused.libgcc_s" "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so* || die
+			rename "libgcc_s" ".unused.libgcc_s" "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so* || die $?
 		fi
 
 		if [ ! -s "$TC_DST/$PREF/lib/gcc/$PREF/$CC_VERSION"/libgcc_s.a ]; then
-			cd "$TC_DST/$PREF/lib/gcc/$PREF/$CC_VERSION"/ || die
-			mkdir tmp && cd tmp || die
+			cd "$TC_DST/$PREF/lib/gcc/$PREF/$CC_VERSION"/ || die $?
+			mkdir tmp && cd tmp || die $?
 			if [ -e ../libgcc.a ]; then
-				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc.a || die
+				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc.a || die $?
 			fi
 			if [ -e ../libgcc_eh.a ]; then
-				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc_eh.a || die
+				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc_eh.a || die $?
 			fi
-			"$TC_DST/$PREF/bin/$PREF-ar" r ../libgcc_s.a *.o || die
-			"$TC_DST/$PREF/bin/$PREF-ranlib" ../libgcc_s.a || die
-			cd .. && rm -rf tmp || die
+			"$TC_DST/$PREF/bin/$PREF-ar" r ../libgcc_s.a *.o || die $?
+			"$TC_DST/$PREF/bin/$PREF-ranlib" ../libgcc_s.a || die $?
+			cd .. && rm -rf tmp || die $?
 		fi
 
 		# If we have libstdc++.so, it likely depends on libgcc_s.so, so we'll rename it
@@ -907,10 +907,10 @@ tc_finish() {
 
 		if [ -e "$TC_DST/$PREF/$PREF"/sys-root/lib/libstdc++.so ]; then
 			echo "Disabling shared libstdc++ for toolchain $PREF (libstdc++.so) ..."
-			mv "$TC_DST/$PREF/$PREF"/sys-root/lib/{,.unused.}libstdc++.so || die
+			mv "$TC_DST/$PREF/$PREF"/sys-root/lib/{,.unused.}libstdc++.so || die $?
 		fi
 	done
-	cd "$p"
+	cd "$p" || $?
 }
 
 # package the sysroots for the specified toolchains
@@ -935,8 +935,8 @@ tc_sysroot() {
 		echo "Archiving sysroot in toolchain $PREF ..."
 		[ -d "$TC_DST/$PREF/." ] || die 1 "no directory named $TC_DST/$PREF ! Crosstool-ng might have ignored our prefix !"
 
-		cd "$TC_DST/$PREF/$PREF" || die
-		tar cf - sys-root | gzip -nc9 > "sys-root.tar.gz" 
+		cd "$TC_DST/$PREF/$PREF" || die $?
+		tar cf - sys-root | gzip -nc9 > "sys-root.tar.gz" || die $?
 	done
 	cd "$p"
 }
@@ -963,32 +963,32 @@ uc_build() {
 
 	src_check "${cfg_list[@]}"
 
-	mkdir -p "$BUILD" && cd "$BUILD" || die
+	mkdir -p "$BUILD" && cd "$BUILD" || die $?
 
 	# note: at this point, the source file necessarily exists
 	for config in "${cfg_list[@]}"; do
 		[ -n "$V" ] && echo "Building uClibc for config file $config ..."
 		tc_set_names "$config"
-		uc_find_best_match "$config" || die
+		uc_find_best_match "$config" || die $?
 
-		cd "$BUILD" || die
-		rm -rf "uClibc-$UCLIBC_VERSION" || die
+		cd "$BUILD" || die $?
+		rm -rf "uClibc-$UCLIBC_VERSION" || die $?
 		get_src_path_safe "uClibc-$UCLIBC_VERSION"
 		echo "Extracting $REPLY ..."
-		tar xf "$REPLY" || die
+		tar xf "$REPLY" || die $?
 
-		cd "uClibc-$UCLIBC_VERSION" || die
+		cd "uClibc-$UCLIBC_VERSION" || die $?
 
 		if [ -d "$TC_DIR/patches/uclibc/$UCLIBC_VERSION/." ]; then
 			for i in "$TC_DIR/patches/uclibc/$UCLIBC_VERSION/"*; do
 				echo "Applying patch $i"
-				patch -p1 < "$i"|| die
+				patch -p1 < "$i"|| die $?
 			done
 		fi
 
 		${MAKE} distclean
-		cp "$UCLIBC_FILE" .config
-		${MAKE} ${V+V="$V"} oldconfig < /dev/null || die
+		cp "$UCLIBC_FILE" .config || $?
+		${MAKE} ${V+V="$V"} oldconfig < /dev/null || die $?
 		sed -i -e "s#\(KERNEL_SOURCE=\).*#\1\"${TC_DST}/${PREF}/${PREF}/sys-root/usr\"#"          .config
 		sed -i -e "s#\(KERNEL_HEADERS=\).*#\1\"${TC_DST}/${PREF}/${PREF}/sys-root/usr/include\"#" .config
 		sed -i -e "s#\(RUNTIME_PREFIX=\).*#\1\"${TC_DST}/${PREF}/${PREF}/uclibc-root\"#"          .config
@@ -999,38 +999,38 @@ uc_build() {
 		# fails if the target dir "lib" does not exist.
 		if [ -z "${UCLIBC_VERSION##0.9.2*}" ]; then
 			# make all is still needed in 0.9.2x
-			${MAKE} ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" || die
+			${MAKE} ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" || die $?
 		fi
-		mkdir -p "${TC_DST}/${PREF}/${PREF}/uclibc-root/lib" || die
-		${MAKE} ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" install || die
+		mkdir -p "${TC_DST}/${PREF}/${PREF}/uclibc-root/lib" || die $?
+		${MAKE} ${V+V="$V"} CROSS="${TC_DST}/${PREF}/bin/${PREF}-" install || die $?
 		cd ..
-		rm -rf "uClibc-$UCLIBC_VERSION"
+		rm -rf "uClibc-$UCLIBC_VERSION" || die $?
 	done
 
-	cd "$p" || die
+	cd "$p" || die $?
 
 	# install uclibc wrapper
-	mkdir -p "$TC_DST/tools/bin" || die
-	cp "$TC_DIR/add-ons/uclibc" "$TC_DST/tools/bin/" || die
+	mkdir -p "$TC_DST/tools/bin" || die $?
+	cp "$TC_DIR/add-ons/uclibc" "$TC_DST/tools/bin/" || die $?
 }
 
 sq_build() {
 	local p="$PWD"
 
-	mkdir -p "$BUILD" && cd "$BUILD" || die
-	rm -rf "squashfs$SQUASHFS_VERSION" || die
+	mkdir -p "$BUILD" && cd "$BUILD" || die $?
+	rm -rf "squashfs$SQUASHFS_VERSION" || die $?
 	get_src_path_safe "squashfs$SQUASHFS_VERSION.tar.gz"
 	echo "Extracting $REPLY ..."
-	tar xf "$REPLY" || die
+	tar xf "$REPLY" || die $?
 
-	cd "squashfs$SQUASHFS_VERSION/squashfs-tools" || die
-	${MAKE} || die
-	mkdir -p "$TC_DST/tools/bin" || die
-	mv mksquashfs "$TC_DST/tools/bin/" || die
+	cd "squashfs$SQUASHFS_VERSION/squashfs-tools" || die $?
+	${MAKE} || die $?
+	mkdir -p "$TC_DST/tools/bin" || die $?
+	mv mksquashfs "$TC_DST/tools/bin/" || die $?
 
 	# cleanup
-	cd "$p" || die
-	rm -rf "$BUILD/squashfs$SQUASHFS_VERSION"
+	cd "$p" || die $?
+	rm -rf "$BUILD/squashfs$SQUASHFS_VERSION" || die $?
 }
 
 
