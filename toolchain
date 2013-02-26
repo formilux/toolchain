@@ -258,13 +258,14 @@ ct_ng_clean() {
 # BINUTILS_VERSION, VENDOR, ABI and PREF from a ct-ng config file whose name is
 # in $1.
 tc_set_names() {
-	local b64
+	local b64 ARCHSFX
 
 	ABI=""
 	get_config_var "CT_CC_VERSION"       "$1" ; CC_VERSION="$REPLY"
 	get_config_var "CT_LIBC_VERSION"     "$1" ; LIBC_VERSION="$REPLY"
 	get_config_var "CT_ARCH"             "$1" ; FAMILY="$REPLY"
 	get_config_var "CT_ARCH_OVERRIDE"    "$1" ; ALIAS="$REPLY"
+	get_config_var "CT_ARCH_SUFFIX"      "$1" ; ARCHSFX="$REPLY"
 	get_config_var "CT_ARCH_64"          "$1" ; ARCHIS64="$REPLY"
 	get_config_var "CT_BINUTILS_VERSION" "$1" ; BINUTILS_VERSION="$REPLY"
 	get_config_var "CT_KERNEL_VERSION"   "$1" ; KERNEL_VERSION="$REPLY"
@@ -309,7 +310,7 @@ tc_set_names() {
 	if [ -z "$VENDOR" ]; then
 		VENDOR="gcc${CC_BRANCH%.*}${CC_BRANCH#*.}_glibc${LIBC_BRANCH%.*}${LIBC_BRANCH#*.}"
 	fi
-	ALIAS="${ALIAS:-${ARCH}}"
+	ALIAS="${ALIAS:-${ARCH}${ARCHSFX}}"
 	PREF="${ALIAS}-$VENDOR-linux-gnu${ABI}"
 }
 
