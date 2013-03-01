@@ -852,6 +852,7 @@ tc_restart() {
 tc_finish() {
 	local p="$PWD"
 	local in_conf config cfg_list
+	local gcc_dir
 
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
@@ -889,8 +890,13 @@ tc_finish() {
 			rename "libgcc_s" ".unused.libgcc_s" "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so* || die $?
 		fi
 
-		if [ ! -s "$TC_DST/$PREF/lib/gcc/$PREF/$CC_VERSION"/libgcc_s.a ]; then
-			cd "$TC_DST/$PREF/lib/gcc/$PREF/$CC_VERSION"/ || die $?
+		# when the compiler is from a second source (eg: linaro), CC_VERSION
+		# does not necessarily reflect the directory name (eg: 4.7.3).
+		gcc_dir=$(echo ${TC_DST}/${PREF}/lib/gcc/${PREF}/[1-9]*)
+		[ -n "$gcc_dir" ] || die $? "No gcc version found in ${TC_DST}/${PREF}/lib/gcc/${PREF}/"
+
+		if [ ! -s "$gcc_dir"/libgcc_s.a ]; then
+			cd "$gcc_dir"/ || die $?
 			mkdir tmp && cd tmp || die $?
 			if [ -e ../libgcc.a ]; then
 				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc.a || die $?
