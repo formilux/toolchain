@@ -1,0 +1,511 @@
+diff -ruN gcc-4.7.2.orig/gcc/config/arm/arm.c gcc-4.7.2/gcc/config/arm/arm.c
+--- gcc-4.7.2.orig/gcc/config/arm/arm.c	2013-01-27 20:37:50.594889746 -0800
++++ gcc-4.7.2/gcc/config/arm/arm.c	2013-01-27 20:32:54.958908327 -0800
+@@ -24958,6 +24958,7 @@
+     case cortexa8:
+     case cortexa9:
+     case fa726te:
++    case marvell_pj4:
+       return 2;
+ 
+     default:
+diff -ruN gcc-4.7.2.orig/gcc/config/arm/arm-cores.def gcc-4.7.2/gcc/config/arm/arm-cores.def
+--- gcc-4.7.2.orig/gcc/config/arm/arm-cores.def	2013-01-27 20:37:50.594889746 -0800
++++ gcc-4.7.2/gcc/config/arm/arm-cores.def	2013-01-27 20:36:40.428894156 -0800
+@@ -137,4 +137,5 @@
+ ARM_CORE("cortex-m3",	  cortexm3,	7M,				 FL_LDSCHED, cortex)
+ ARM_CORE("cortex-m1",	  cortexm1,	6M,				 FL_LDSCHED, cortex)
+ ARM_CORE("cortex-m0",	  cortexm0,	6M,				 FL_LDSCHED, cortex)
++ARM_CORE("marvell-pj4",	  marvell_pj4,	7A,				 FL_LDSCHED, 9e)
+ 
+diff -ruN gcc-4.7.2.orig/gcc/config/arm/arm.md gcc-4.7.2/gcc/config/arm/arm.md
+--- gcc-4.7.2.orig/gcc/config/arm/arm.md	2013-01-27 20:37:50.596889746 -0800
++++ gcc-4.7.2/gcc/config/arm/arm.md	2013-01-27 20:35:24.334898938 -0800
+@@ -522,7 +522,7 @@
+ 
+ (define_attr "generic_sched" "yes,no"
+   (const (if_then_else
+-          (ior (eq_attr "tune" "fa526,fa626,fa606te,fa626te,fmp626,fa726te,arm926ejs,arm1020e,arm1026ejs,arm1136js,arm1136jfs,cortexa5,cortexa8,cortexa9,cortexa15,cortexm4")
++          (ior (eq_attr "tune" "fa526,fa626,fa606te,fa626te,fmp626,fa726te,arm926ejs,arm1020e,arm1026ejs,arm1136js,arm1136jfs,cortexa5,cortexa8,cortexa9,cortexa15,cortexm4,marvell_pj4")
+ 	       (eq_attr "tune_cortexr4" "yes"))
+           (const_string "no")
+           (const_string "yes"))))
+@@ -530,7 +530,7 @@
+ (define_attr "generic_vfp" "yes,no"
+   (const (if_then_else
+ 	  (and (eq_attr "fpu" "vfp")
+-	       (eq_attr "tune" "!arm1020e,arm1022e,cortexa5,cortexa8,cortexa9,cortexm4")
++	       (eq_attr "tune" "!arm1020e,arm1022e,cortexa5,cortexa8,cortexa9,cortexm4,marvell_pj4")
+ 	       (eq_attr "tune_cortexr4" "no"))
+ 	  (const_string "yes")
+ 	  (const_string "no"))))
+@@ -555,6 +555,7 @@
+ (include "cortex-m4.md")
+ (include "cortex-m4-fpu.md")
+ (include "vfp11.md")
++(include "marvell-pj4.md")
+ 
+ 
+ ;;---------------------------------------------------------------------------
+diff -ruN gcc-4.7.2.orig/gcc/config/arm/arm-tables.opt gcc-4.7.2/gcc/config/arm/arm-tables.opt
+--- gcc-4.7.2.orig/gcc/config/arm/arm-tables.opt	2012-09-20 00:23:55.000000000 -0700
++++ gcc-4.7.2/gcc/config/arm/arm-tables.opt	2013-01-27 20:32:54.953908327 -0800
+@@ -270,6 +270,9 @@
+ EnumValue
+ Enum(processor_type) String(cortex-m0) Value(cortexm0)
+ 
++EnumValue
++Enum(processor_type) String(marvell-pj4) Value(marvell_pj4)
++
+ Enum
+ Name(arm_arch) Type(int)
+ Known ARM architectures (for use with the -march= option):
+diff -ruN gcc-4.7.2.orig/gcc/config/arm/arm-tune.md gcc-4.7.2/gcc/config/arm/arm-tune.md
+--- gcc-4.7.2.orig/gcc/config/arm/arm-tune.md	2012-09-20 00:23:55.000000000 -0700
++++ gcc-4.7.2/gcc/config/arm/arm-tune.md	2013-01-27 20:35:52.724897154 -0800
+@@ -1,5 +1,5 @@
+ ;; -*- buffer-read-only: t -*-
+ ;; Generated automatically by gentune.sh from arm-cores.def
+ (define_attr "tune"
+-	"arm2,arm250,arm3,arm6,arm60,arm600,arm610,arm620,arm7,arm7d,arm7di,arm70,arm700,arm700i,arm710,arm720,arm710c,arm7100,arm7500,arm7500fe,arm7m,arm7dm,arm7dmi,arm8,arm810,strongarm,strongarm110,strongarm1100,strongarm1110,fa526,fa626,arm7tdmi,arm7tdmis,arm710t,arm720t,arm740t,arm9,arm9tdmi,arm920,arm920t,arm922t,arm940t,ep9312,arm10tdmi,arm1020t,arm9e,arm946es,arm966es,arm968es,arm10e,arm1020e,arm1022e,xscale,iwmmxt,iwmmxt2,fa606te,fa626te,fmp626,fa726te,arm926ejs,arm1026ejs,arm1136js,arm1136jfs,arm1176jzs,arm1176jzfs,mpcorenovfp,mpcore,arm1156t2s,arm1156t2fs,genericv7a,cortexa5,cortexa7,cortexa8,cortexa9,cortexa15,cortexr4,cortexr4f,cortexr5,cortexm4,cortexm3,cortexm1,cortexm0"
++	"arm2,arm250,arm3,arm6,arm60,arm600,arm610,arm620,arm7,arm7d,arm7di,arm70,arm700,arm700i,arm710,arm720,arm710c,arm7100,arm7500,arm7500fe,arm7m,arm7dm,arm7dmi,arm8,arm810,strongarm,strongarm110,strongarm1100,strongarm1110,fa526,fa626,arm7tdmi,arm7tdmis,arm710t,arm720t,arm740t,arm9,arm9tdmi,arm920,arm920t,arm922t,arm940t,ep9312,arm10tdmi,arm1020t,arm9e,arm946es,arm966es,arm968es,arm10e,arm1020e,arm1022e,xscale,iwmmxt,iwmmxt2,fa606te,fa626te,fmp626,fa726te,arm926ejs,arm1026ejs,arm1136js,arm1136jfs,arm1176jzs,arm1176jzfs,mpcorenovfp,mpcore,arm1156t2s,arm1156t2fs,genericv7a,cortexa5,cortexa7,cortexa8,cortexa9,cortexa15,cortexr4,cortexr4f,cortexr5,cortexm4,cortexm3,cortexm1,cortexm0,marvell_pj4"
+ 	(const (symbol_ref "((enum attr_tune) arm_tune)")))
+diff -ruN gcc-4.7.2.orig/gcc/config/arm/bpabi.h gcc-4.7.2/gcc/config/arm/bpabi.h
+--- gcc-4.7.2.orig/gcc/config/arm/bpabi.h	2011-11-09 08:23:15.000000000 -0800
++++ gcc-4.7.2/gcc/config/arm/bpabi.h	2013-01-27 20:34:23.629902754 -0800
+@@ -59,6 +59,7 @@
+   " %{mbig-endian:%{march=armv7-a|mcpu=cortex-a5	\
+    |mcpu=cortex-a7					\
+    |mcpu=cortex-a8|mcpu=cortex-a9|mcpu=cortex-a15	\
++   |mcpu=marvell-pj4					\
+    |mcpu=generic-armv7-a				\
+    |march=armv7-m|mcpu=cortex-m3			\
+    |march=armv7e-m|mcpu=cortex-m4			\
+diff -ruN gcc-4.7.2.orig/gcc/config/arm/marvell-pj4.md gcc-4.7.2/gcc/config/arm/marvell-pj4.md
+--- gcc-4.7.2.orig/gcc/config/arm/marvell-pj4.md	1969-12-31 16:00:00.000000000 -0800
++++ gcc-4.7.2/gcc/config/arm/marvell-pj4.md	2013-01-27 20:41:40.019875327 -0800
+@@ -0,0 +1,205 @@
++;; Marvell ARM Processor Pipeline Description
++;; Copyright (C) 2010-2013 Free Software Foundation, Inc.
++;; Contributed by Marvell.
++
++;; This file is part of GCC.
++
++;; GCC is free software; you can redistribute it and/or modify it
++;; under the terms of the GNU General Public License as published
++;; by the Free Software Foundation; either version 3, or (at your
++;; option) any later version.
++
++;; GCC is distributed in the hope that it will be useful, but WITHOUT
++;; ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++;; or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
++;; License for more details.
++
++;; You should have received a copy of the GNU General Public License
++;; along with GCC; see the file COPYING3.  If not see
++;; <http://www.gnu.org/licenses/>.
++
++;; Pipeline description for the Marvell PJ4, aka "Flareon".
++(define_automaton "pj4")
++
++;; Issue resources
++(define_cpu_unit    "pj4_is1,pj4_is2"        "pj4")
++(define_reservation "pj4_is"             "(pj4_is1|pj4_is2)")
++(define_reservation "pj4_isb"            "(pj4_is1+pj4_is2)")
++
++;; Functional units
++(define_cpu_unit "pj4_alu1,pj4_alu2,pj4_mul,pj4_div" "pj4")
++
++;; Completion ports
++(define_cpu_unit "pj4_w1,pj4_w2"             "pj4")
++
++;; Complete/Retire control
++(define_cpu_unit    "pj4_c1,pj4_c2"          "pj4")
++(define_reservation "pj4_cp"             "(pj4_c1|pj4_c2)")
++(define_reservation "pj4_cpb"            "(pj4_c1+pj4_c2)")
++
++;; Integer arithmetic instructions
++
++(define_insn_reservation "pj4_alu_e1" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu")
++       (not (eq_attr "conds" "set"))
++       (eq_attr "insn" "mov,mvn"))
++                               "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu_e1_conds" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu")
++       (eq_attr "conds" "set")
++       (eq_attr "insn" "mov,mvn"))
++                               "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu")
++       (not (eq_attr "conds" "set"))
++       (not (eq_attr "insn" "mov,mvn")))
++                               "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu_conds" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu")
++       (eq_attr "conds" "set")
++       (not (eq_attr "insn" "mov,mvn")))
++                               "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_shift" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu_shift,alu_shift_reg")
++       (not (eq_attr "conds" "set"))
++       (eq_attr "shift" "1"))  "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_shift_conds" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu_shift,alu_shift_reg")
++       (eq_attr "conds" "set")
++       (eq_attr "shift" "1"))  "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu_shift" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (not (eq_attr "conds" "set"))
++       (eq_attr "type" "alu_shift,alu_shift_reg"))
++                               "pj4_is,(pj4_alu1,nothing,pj4_w1+pj4_cp)|(pj4_alu2,nothing,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu_shift_conds" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "conds" "set")
++       (eq_attr "type" "alu_shift,alu_shift_reg"))
++                               "pj4_is,(pj4_alu1,nothing,pj4_w1+pj4_cp)|(pj4_alu2,nothing,pj4_w2+pj4_cp)")
++
++(define_bypass 2 "pj4_alu_shift,pj4_shift"
++                 "pj4_ir_mul,pj4_ir_div,pj4_core_to_vfp")
++
++(define_insn_reservation "pj4_ir_mul" 3
++  (and (eq_attr "tune" "marvell_pj4") (eq_attr "type" "mult")) "pj4_is,pj4_mul,nothing*2,pj4_cp")
++
++(define_insn_reservation "pj4_ir_div" 20
++  (and (eq_attr "tune" "marvell_pj4") (eq_attr "insn" "udiv,sdiv")) "pj4_is,pj4_div*19,pj4_cp")
++
++;; Branches and calls.
++
++(define_insn_reservation "pj4_branches" 0
++  (and (eq_attr "tune" "marvell_pj4") (eq_attr "type" "branch")) "pj4_is")
++
++(define_insn_reservation "pj4_calls" 32
++  (and (eq_attr "tune" "marvell_pj4") (eq_attr "type" "call")) "pj4_is")
++
++;; Load/store instructions
++
++(define_insn_reservation "pj4_ldr"  3
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "load_byte,load1"))
++                       "pj4_is,pj4_alu1,nothing*2,pj4_cp")
++
++(define_insn_reservation "pj4_ldrd" 3
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "load2"))
++                       "pj4_is,pj4_alu1,nothing*2,pj4_cpb")
++
++(define_insn_reservation "pj4_str"  1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "store1"))
++                       "pj4_is,pj4_alu1,nothing*2,pj4_cp")
++
++(define_insn_reservation "pj4_strd" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "store2"))
++                       "pj4_is,pj4_alu1,nothing*2,pj4_cpb")
++
++(define_insn_reservation "pj4_ldm" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "load3,load4")) "pj4_isb,pj4_isb+pj4_alu1,pj4_alu1,nothing,pj4_cp,pj4_cp")
++
++(define_insn_reservation "pj4_stm" 2
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "store3,store4")) "pj4_isb,pj4_isb+pj4_alu1,pj4_alu1,nothing,pj4_cp,pj4_cp")
++
++;; Loads forward at WR-stage to ALU pipes
++(define_bypass 2 "pj4_ldr,pj4_ldrd" "pj4_alu")
++(define_bypass 2 "pj4_ldr,pj4_ldrd" "pj4_alu_shift" "arm_no_early_alu_shift_dep")
++
++(define_bypass 4 "pj4_ldr,pj4_ldrd" "pj4_ir_mul,pj4_ir_div,pj4_core_to_vfp")
++(define_bypass 5 "pj4_ldm" "pj4_ir_mul,pj4_ir_div,pj4_core_to_vfp")
++
++;; Loads to stores can back-to-back forward
++(define_bypass 1 "pj4_ldr,pj4_ldrd" "pj4_str,pj4_strd" "arm_no_early_store_addr_dep")
++
++;; PJ4 VFP floating point unit
++(define_automaton "pj4_vfp")
++
++(define_cpu_unit "vissue" "pj4_vfp")
++(define_cpu_unit "vadd"   "pj4_vfp")
++(define_cpu_unit "vmul"   "pj4_vfp")
++(define_cpu_unit "vdiv"   "pj4_vfp")
++(define_cpu_unit "vfast"  "pj4_vfp")
++
++(define_insn_reservation "pj4_vfp_add"  5
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fadds,faddd")) "pj4_is,nothing*2,vissue,vadd,nothing*3")
++
++(define_insn_reservation "pj4_vfp_mul"  6
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fmuls,fmuld")) "pj4_is,nothing*2,vissue,vmul,nothing*4")
++
++(define_insn_reservation "pj4_vfp_divs" 20
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fdivs"))       "pj4_is,nothing*2,vissue,vdiv*18,nothing")
++
++(define_insn_reservation "pj4_vfp_divd" 34
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fdivd"))       "pj4_is,nothing*2,vissue,vdiv*32,nothing")
++
++(define_insn_reservation "pj4_vfp_mac"  9
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fmacs,fmacd"))
++                       "pj4_is,nothing*2,vissue,vmul,nothing*3,vadd,nothing*3")
++
++(define_bypass 5 "pj4_vfp_mac" "pj4_vfp_mac" "arm_no_early_mul_dep")
++
++(define_insn_reservation "pj4_vfp_cpy"  4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fcpys,ffariths,ffarithd,fconsts,fconstd,\
++                        fcmps,fcmpd,f_cvt"))  "pj4_is,nothing*2,vissue,vfast,nothing*2")
++
++;; Enlarge latency, and wish that more nondependent insns are
++;; scheduled immediately after VFP load.
++(define_insn_reservation "pj4_vfp_load" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "f_loads,f_loadd"))    "pj4_isb,pj4_alu1,nothing,vissue,pj4_cp")
++
++(define_insn_reservation "pj4_vfp_store" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "f_stores,f_stored"))  "pj4_isb,pj4_alu1,nothing,vissue,pj4_cp")
++
++(define_insn_reservation "pj4_vfp_to_core" 7
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "f_2_r,f_flag"))       "pj4_isb,nothing,nothing,vissue,vfast,nothing*2")
++
++(define_insn_reservation "pj4_core_to_vfp" 2
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "r_2_f"))              "pj4_isb,pj4_alu1,pj4_w1,vissue,pj4_cp")
++
+diff -ruN gcc-4.7.2.orig/gcc/doc/invoke.texi gcc-4.7.2/gcc/doc/invoke.texi
+--- gcc-4.7.2.orig/gcc/doc/invoke.texi	2013-01-27 20:37:30.108891034 -0800
++++ gcc-4.7.2/gcc/doc/invoke.texi	2013-01-27 20:33:32.738905952 -0800
+@@ -10703,6 +10703,7 @@
+ @samp{cortex-m4}, @samp{cortex-m3},
+ @samp{cortex-m1},
+ @samp{cortex-m0},
++@samp{marvell-pj4}
+ @samp{xscale}, @samp{iwmmxt}, @samp{iwmmxt2}, @samp{ep9312},
+ @samp{fa526}, @samp{fa626},
+ @samp{fa606te}, @samp{fa626te}, @samp{fmp626}, @samp{fa726te}.
+--- /dev/null	2008-08-30 23:18:45.000000000 +0200
++++ ./gcc/config/arm/marvell-pj4.md	2013-03-02 22:22:03.945945811 +0100
+@@ -0,0 +1,205 @@
++;; Marvell ARM Processor Pipeline Description
++;; Copyright (C) 2010-2013 Free Software Foundation, Inc.
++;; Contributed by Marvell.
++
++;; This file is part of GCC.
++
++;; GCC is free software; you can redistribute it and/or modify it
++;; under the terms of the GNU General Public License as published
++;; by the Free Software Foundation; either version 3, or (at your
++;; option) any later version.
++
++;; GCC is distributed in the hope that it will be useful, but WITHOUT
++;; ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++;; or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
++;; License for more details.
++
++;; You should have received a copy of the GNU General Public License
++;; along with GCC; see the file COPYING3.  If not see
++;; <http://www.gnu.org/licenses/>.
++
++;; Pipeline description for the Marvell PJ4, aka "Flareon".
++(define_automaton "pj4")
++
++;; Issue resources
++(define_cpu_unit    "pj4_is1,pj4_is2"        "pj4")
++(define_reservation "pj4_is"             "(pj4_is1|pj4_is2)")
++(define_reservation "pj4_isb"            "(pj4_is1+pj4_is2)")
++
++;; Functional units
++(define_cpu_unit "pj4_alu1,pj4_alu2,pj4_mul,pj4_div" "pj4")
++
++;; Completion ports
++(define_cpu_unit "pj4_w1,pj4_w2"             "pj4")
++
++;; Complete/Retire control
++(define_cpu_unit    "pj4_c1,pj4_c2"          "pj4")
++(define_reservation "pj4_cp"             "(pj4_c1|pj4_c2)")
++(define_reservation "pj4_cpb"            "(pj4_c1+pj4_c2)")
++
++;; Integer arithmetic instructions
++
++(define_insn_reservation "pj4_alu_e1" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu")
++       (not (eq_attr "conds" "set"))
++       (eq_attr "insn" "mov,mvn"))
++                               "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu_e1_conds" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu")
++       (eq_attr "conds" "set")
++       (eq_attr "insn" "mov,mvn"))
++                               "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu")
++       (not (eq_attr "conds" "set"))
++       (not (eq_attr "insn" "mov,mvn")))
++                               "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu_conds" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu")
++       (eq_attr "conds" "set")
++       (not (eq_attr "insn" "mov,mvn")))
++                               "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_shift" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu_shift,alu_shift_reg")
++       (not (eq_attr "conds" "set"))
++       (eq_attr "shift" "1"))  "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_shift_conds" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "alu_shift,alu_shift_reg")
++       (eq_attr "conds" "set")
++       (eq_attr "shift" "1"))  "pj4_is,(pj4_alu1,pj4_w1+pj4_cp)|(pj4_alu2,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu_shift" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (not (eq_attr "conds" "set"))
++       (eq_attr "type" "alu_shift,alu_shift_reg"))
++                               "pj4_is,(pj4_alu1,nothing,pj4_w1+pj4_cp)|(pj4_alu2,nothing,pj4_w2+pj4_cp)")
++
++(define_insn_reservation "pj4_alu_shift_conds" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "conds" "set")
++       (eq_attr "type" "alu_shift,alu_shift_reg"))
++                               "pj4_is,(pj4_alu1,nothing,pj4_w1+pj4_cp)|(pj4_alu2,nothing,pj4_w2+pj4_cp)")
++
++(define_bypass 2 "pj4_alu_shift,pj4_shift"
++                 "pj4_ir_mul,pj4_ir_div,pj4_core_to_vfp")
++
++(define_insn_reservation "pj4_ir_mul" 3
++  (and (eq_attr "tune" "marvell_pj4") (eq_attr "type" "mult")) "pj4_is,pj4_mul,nothing*2,pj4_cp")
++
++(define_insn_reservation "pj4_ir_div" 20
++  (and (eq_attr "tune" "marvell_pj4") (eq_attr "insn" "udiv,sdiv")) "pj4_is,pj4_div*19,pj4_cp")
++
++;; Branches and calls.
++
++(define_insn_reservation "pj4_branches" 0
++  (and (eq_attr "tune" "marvell_pj4") (eq_attr "type" "branch")) "pj4_is")
++
++(define_insn_reservation "pj4_calls" 32
++  (and (eq_attr "tune" "marvell_pj4") (eq_attr "type" "call")) "pj4_is")
++
++;; Load/store instructions
++
++(define_insn_reservation "pj4_ldr"  3
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "load_byte,load1"))
++                       "pj4_is,pj4_alu1,nothing*2,pj4_cp")
++
++(define_insn_reservation "pj4_ldrd" 3
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "load2"))
++                       "pj4_is,pj4_alu1,nothing*2,pj4_cpb")
++
++(define_insn_reservation "pj4_str"  1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "store1"))
++                       "pj4_is,pj4_alu1,nothing*2,pj4_cp")
++
++(define_insn_reservation "pj4_strd" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "store2"))
++                       "pj4_is,pj4_alu1,nothing*2,pj4_cpb")
++
++(define_insn_reservation "pj4_ldm" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "load3,load4")) "pj4_isb,pj4_isb+pj4_alu1,pj4_alu1,nothing,pj4_cp,pj4_cp")
++
++(define_insn_reservation "pj4_stm" 2
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "store3,store4")) "pj4_isb,pj4_isb+pj4_alu1,pj4_alu1,nothing,pj4_cp,pj4_cp")
++
++;; Loads forward at WR-stage to ALU pipes
++(define_bypass 2 "pj4_ldr,pj4_ldrd" "pj4_alu")
++(define_bypass 2 "pj4_ldr,pj4_ldrd" "pj4_alu_shift" "arm_no_early_alu_shift_dep")
++
++(define_bypass 4 "pj4_ldr,pj4_ldrd" "pj4_ir_mul,pj4_ir_div,pj4_core_to_vfp")
++(define_bypass 5 "pj4_ldm" "pj4_ir_mul,pj4_ir_div,pj4_core_to_vfp")
++
++;; Loads to stores can back-to-back forward
++(define_bypass 1 "pj4_ldr,pj4_ldrd" "pj4_str,pj4_strd" "arm_no_early_store_addr_dep")
++
++;; PJ4 VFP floating point unit
++(define_automaton "pj4_vfp")
++
++(define_cpu_unit "vissue" "pj4_vfp")
++(define_cpu_unit "vadd"   "pj4_vfp")
++(define_cpu_unit "vmul"   "pj4_vfp")
++(define_cpu_unit "vdiv"   "pj4_vfp")
++(define_cpu_unit "vfast"  "pj4_vfp")
++
++(define_insn_reservation "pj4_vfp_add"  5
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fadds,faddd")) "pj4_is,nothing*2,vissue,vadd,nothing*3")
++
++(define_insn_reservation "pj4_vfp_mul"  6
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fmuls,fmuld")) "pj4_is,nothing*2,vissue,vmul,nothing*4")
++
++(define_insn_reservation "pj4_vfp_divs" 20
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fdivs"))       "pj4_is,nothing*2,vissue,vdiv*18,nothing")
++
++(define_insn_reservation "pj4_vfp_divd" 34
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fdivd"))       "pj4_is,nothing*2,vissue,vdiv*32,nothing")
++
++(define_insn_reservation "pj4_vfp_mac"  9
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fmacs,fmacd"))
++                       "pj4_is,nothing*2,vissue,vmul,nothing*3,vadd,nothing*3")
++
++(define_bypass 5 "pj4_vfp_mac" "pj4_vfp_mac" "arm_no_early_mul_dep")
++
++(define_insn_reservation "pj4_vfp_cpy"  4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "fcpys,ffariths,ffarithd,fconsts,fconstd,\
++                        fcmps,fcmpd,f_cvt"))  "pj4_is,nothing*2,vissue,vfast,nothing*2")
++
++;; Enlarge latency, and wish that more nondependent insns are
++;; scheduled immediately after VFP load.
++(define_insn_reservation "pj4_vfp_load" 4
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "f_loads,f_loadd"))    "pj4_isb,pj4_alu1,nothing,vissue,pj4_cp")
++
++(define_insn_reservation "pj4_vfp_store" 1
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "f_stores,f_stored"))  "pj4_isb,pj4_alu1,nothing,vissue,pj4_cp")
++
++(define_insn_reservation "pj4_vfp_to_core" 7
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "f_2_r,f_flag"))       "pj4_isb,nothing,nothing,vissue,vfast,nothing*2")
++
++(define_insn_reservation "pj4_core_to_vfp" 2
++  (and (eq_attr "tune" "marvell_pj4")
++       (eq_attr "type" "r_2_f"))              "pj4_isb,pj4_alu1,pj4_w1,vissue,pj4_cp")
++

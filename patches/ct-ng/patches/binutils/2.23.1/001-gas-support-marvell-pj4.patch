@@ -1,0 +1,15 @@
+diff --git a/gas/config/tc-arm.c b/gas/config/tc-arm.c
+index 027bdc3..1fe30ee 100644
+--- a/gas/config/tc-arm.c
++++ b/gas/config/tc-arm.c
+@@ -23905,6 +23905,9 @@ static const struct arm_cpu_option_table arm_cpus[] =
+   ARM_CPU_OPT ("ep9312",	ARM_FEATURE (ARM_AEXT_V4T, ARM_CEXT_MAVERICK),
+ 						 FPU_ARCH_MAVERICK,
+ 								  "ARM920T"),
++  /* Marvell processors */
++  ARM_CPU_OPT ("marvell-pj4",  ARM_ARCH_V7A_MP_SEC, FPU_ARCH_VFP_V3D16, NULL),
++
+   { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE, NULL }
+ };
+ #undef ARM_CPU_OPT
+
