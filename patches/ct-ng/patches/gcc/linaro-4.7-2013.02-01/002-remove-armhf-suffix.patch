@@ -1,0 +1,16 @@
+Remove the undesired -armhf suffix in gcc.
+
+This one was clearly added by Linaro and is not compatible with
+deployed software.
+
+--- ./gcc/config/arm/linux-eabi.h.orig	2013-03-12 15:12:51.081692533 +0100
++++ ./gcc/config/arm/linux-eabi.h	2013-03-12 15:13:14.077052256 +0100
+@@ -70,7 +70,7 @@
+ 
+ #undef  GLIBC_DYNAMIC_LINKER
+ #define GLIBC_DYNAMIC_LINKER_SOFT_FLOAT "/lib/ld-linux.so.3"
+-#define GLIBC_DYNAMIC_LINKER_HARD_FLOAT "/lib/ld-linux-armhf.so.3"
++#define GLIBC_DYNAMIC_LINKER_HARD_FLOAT "/lib/ld-linux.so.3"
+ #define GLIBC_DYNAMIC_LINKER_DEFAULT GLIBC_DYNAMIC_LINKER_SOFT_FLOAT
+ 
+ #define GLIBC_DYNAMIC_LINKER \
