@@ -1,0 +1,18 @@
+Calling the getpid() function from within the INTERNAL_SYSCALL macro results in
+some registers being randomly corrupted by the function after they've been loaded
+by the macro. Here, we had r1 (mask size) corrupted by getpid() when building with
+gcc 4.7.[23] or linaro-gcc-4.7-2013*.
+
+--- ./sysdeps/unix/sysv/linux/sched_setaffinity.c.orig	2013-06-18 23:34:52.163483621 +0200
++++ ./sysdeps/unix/sysv/linux/sched_setaffinity.c	2013-06-18 23:35:13.660128735 +0200
+@@ -41,8 +41,9 @@
+ 
+       size_t psize = 128;
+       void *p = alloca (psize);
++      pid_t mypid = getpid();
+ 
+-      while (res = INTERNAL_SYSCALL (sched_getaffinity, err, 3, getpid (),
++      while (res = INTERNAL_SYSCALL (sched_getaffinity, err, 3, mypid,
+ 				     psize, p),
+ 	     INTERNAL_SYSCALL_ERROR_P (res, err)
+ 	     && INTERNAL_SYSCALL_ERRNO (res, err) == EINVAL)
