@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # crosstool-NG 1.18.0 Configuration
-# Sat Mar  2 22:53:17 2013
+# Wed Jun 19 00:42:19 2013
 #
 CT_CONFIGURE_has_xz=y
 CT_CONFIGURE_has_cvs=y
@@ -114,7 +114,7 @@ CT_ARCH_32=y
 CT_ARCH_BITNESS=32
 CT_ARCH_FLOAT_HW=y
 # CT_ARCH_FLOAT_SW is not set
-CT_TARGET_CFLAGS="-funroll-loops -funsafe-math-optimizations -fsingle-precision-constant -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels"
+CT_TARGET_CFLAGS="-funroll-loops -funsafe-math-optimizations -fsingle-precision-constant -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels -munaligned-access --param=early-inlining-insns=10"
 CT_TARGET_LDFLAGS=""
 # CT_ARCH_alpha is not set
 CT_ARCH_arm=y
@@ -310,6 +310,7 @@ CT_CC_CORE_PASSES_NEEDED=y
 CT_CC_gcc=y
 CT_CC_GCC_SHOW_LINARO=y
 CT_CC_V_linaro_4_7=y
+# CT_CC_V_4_7_3 is not set
 # CT_CC_V_4_7_2 is not set
 # CT_CC_V_4_7_1 is not set
 # CT_CC_V_4_7_0 is not set
