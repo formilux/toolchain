@@ -1,0 +1,20 @@
+--- ./config/cc/gcc.in.orig	2013-03-02 21:05:07.701171568 +0100
++++ ./config/cc/gcc.in	2013-03-02 21:05:45.196741312 +0100
+@@ -38,7 +38,7 @@
+ 
+ config CC_V_linaro_4_7
+     bool
+-    prompt "linaro-4.7-2013.05"
++    prompt "linaro-4.7-2013.06"
+     depends on CC_GCC_SHOW_LINARO
+     select CC_GCC_4_7
+ 
+@@ -381,7 +381,7 @@
+     string
+ # Don't remove next line
+ # CT_INSERT_VERSION_STRING_BELOW
+-    default "linaro-4.7-2013.05" if CC_V_linaro_4_7
++    default "linaro-4.7-2013.06" if CC_V_linaro_4_7
+     default "4.7.2" if CC_V_4_7_2
+     default "4.7.1" if CC_V_4_7_1
+     default "4.7.0" if CC_V_4_7_0
