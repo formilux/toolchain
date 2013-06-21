@@ -1,0 +1,11 @@
+--- ./gas/config/tc-arm.c.orig	2013-06-20 12:44:22.707443907 +0200
++++ ./gas/config/tc-arm.c	2013-06-20 12:46:40.772885284 +0200
+@@ -23922,6 +23922,8 @@
+ 								  "ARM920T"),
+   /* Marvell processors */
+   ARM_CPU_OPT ("marvell-pj4",  ARM_ARCH_V7A_MP_SEC, FPU_ARCH_VFP_V3D16, NULL),
++  ARM_CPU_OPT ("marvell-pj4b",  ARM_ARCH_V7A_IDIV_MP_SEC_VIRT, FPU_ARCH_VFP_V3D16, NULL),
++  ARM_CPU_OPT ("marvell-pj4bv2",  ARM_ARCH_V7A_IDIV_MP_SEC_VIRT, FPU_ARCH_VFP_V3D16, NULL),
+ 
+   { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE, NULL }
+ };

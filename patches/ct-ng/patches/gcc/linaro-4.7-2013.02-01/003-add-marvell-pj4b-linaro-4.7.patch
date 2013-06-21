@@ -1,0 +1,383 @@
+Unfinished !!!
+Use the cortex-a9 scheduler with idivt for pj4b and idiva+idivt for pj4b-v2.
+The cortex-a9 scheduler seems to provide faster code than the pj4 one.
+
+diff -urN gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm-cores.def gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm-cores.def
+--- gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm-cores.def	2013-06-20 08:24:01.693072184 +0200
++++ gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm-cores.def	2013-06-20 08:30:37.217060586 +0200
+@@ -138,4 +138,6 @@
+ ARM_CORE("cortex-m1",	  cortexm1,	6M,				 FL_LDSCHED, cortex)
+ ARM_CORE("cortex-m0",	  cortexm0,	6M,				 FL_LDSCHED, cortex)
+ ARM_CORE("marvell-pj4",	  marvell_pj4,	7A,				 FL_LDSCHED, 9e)
++ARM_CORE("marvell-pj4b",	  marvell_pj4b,	7A,				 FL_LDSCHED | FL_THUMB_DIV , cortex_a9)
++ARM_CORE("marvell-pj4bv2",	  marvell_pj4bv2,	7A,				 FL_LDSCHED | FL_ARM_DIV | FL_THUMB_DIV , cortex_a9)
+ 
+diff -urN gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm-tables.opt gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm-tables.opt
+--- gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm-tables.opt	2013-06-20 08:24:01.693072184 +0200
++++ gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm-tables.opt	2013-06-20 08:30:56.209059393 +0200
+@@ -273,6 +273,12 @@
+ EnumValue
+ Enum(processor_type) String(marvell-pj4) Value(marvell_pj4)
+ 
++EnumValue
++Enum(processor_type) String(marvell-pj4b) Value(marvell_pj4b)
++
++EnumValue
++Enum(processor_type) String(marvell-pj4bv2) Value(marvell_pj4bv2)
++
+ Enum
+ Name(arm_arch) Type(int)
+ Known ARM architectures (for use with the -march= option):
+diff -urN gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm-tune.md gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm-tune.md
+--- gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm-tune.md	2013-06-20 08:24:01.693072184 +0200
++++ gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm-tune.md	2013-06-20 08:31:24.137911745 +0200
+@@ -1,5 +1,5 @@
+ ;; -*- buffer-read-only: t -*-
+ ;; Generated automatically by gentune.sh from arm-cores.def
+ (define_attr "tune"
+-	"arm2,arm250,arm3,arm6,arm60,arm600,arm610,arm620,arm7,arm7d,arm7di,arm70,arm700,arm700i,arm710,arm720,arm710c,arm7100,arm7500,arm7500fe,arm7m,arm7dm,arm7dmi,arm8,arm810,strongarm,strongarm110,strongarm1100,strongarm1110,fa526,fa626,arm7tdmi,arm7tdmis,arm710t,arm720t,arm740t,arm9,arm9tdmi,arm920,arm920t,arm922t,arm940t,ep9312,arm10tdmi,arm1020t,arm9e,arm946es,arm966es,arm968es,arm10e,arm1020e,arm1022e,xscale,iwmmxt,iwmmxt2,fa606te,fa626te,fmp626,fa726te,arm926ejs,arm1026ejs,arm1136js,arm1136jfs,arm1176jzs,arm1176jzfs,mpcorenovfp,mpcore,arm1156t2s,arm1156t2fs,genericv7a,cortexa5,cortexa7,cortexa8,cortexa9,cortexa15,cortexr4,cortexr4f,cortexr5,cortexm4,cortexm3,cortexm1,cortexm0,marvell_pj4"
++	"arm2,arm250,arm3,arm6,arm60,arm600,arm610,arm620,arm7,arm7d,arm7di,arm70,arm700,arm700i,arm710,arm720,arm710c,arm7100,arm7500,arm7500fe,arm7m,arm7dm,arm7dmi,arm8,arm810,strongarm,strongarm110,strongarm1100,strongarm1110,fa526,fa626,arm7tdmi,arm7tdmis,arm710t,arm720t,arm740t,arm9,arm9tdmi,arm920,arm920t,arm922t,arm940t,ep9312,arm10tdmi,arm1020t,arm9e,arm946es,arm966es,arm968es,arm10e,arm1020e,arm1022e,xscale,iwmmxt,iwmmxt2,fa606te,fa626te,fmp626,fa726te,arm926ejs,arm1026ejs,arm1136js,arm1136jfs,arm1176jzs,arm1176jzfs,mpcorenovfp,mpcore,arm1156t2s,arm1156t2fs,genericv7a,cortexa5,cortexa7,cortexa8,cortexa9,cortexa15,cortexr4,cortexr4f,cortexr5,cortexm4,cortexm3,cortexm1,cortexm0,marvell_pj4,marvell_pj4b,marvell_pj4bv2"
+ 	(const (symbol_ref "((enum attr_tune) arm_tune)")))
+diff -urN gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm.c gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm.c
+--- gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm.c	2013-06-20 08:24:01.693072184 +0200
++++ gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm.c	2013-06-20 08:31:44.205987443 +0200
+@@ -25084,6 +25084,8 @@
+     case cortexa9:
+     case fa726te:
+     case marvell_pj4:
++    case marvell_pj4b:
++    case marvell_pj4bv2:
+       return 2;
+ 
+     default:
+diff -urN gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm.md gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm.md
+--- gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/arm.md	2013-06-20 08:24:01.693072184 +0200
++++ gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/arm.md	2013-06-20 08:32:45.628233084 +0200
+@@ -541,7 +541,7 @@
+ 
+ (define_attr "generic_sched" "yes,no"
+   (const (if_then_else
+-          (ior (eq_attr "tune" "fa526,fa626,fa606te,fa626te,fmp626,fa726te,arm926ejs,arm1020e,arm1026ejs,arm1136js,arm1136jfs,cortexa5,cortexa7,cortexa8,cortexa9,cortexa15,cortexm4,marvell_pj4")
++          (ior (eq_attr "tune" "fa526,fa626,fa606te,fa626te,fmp626,fa726te,arm926ejs,arm1020e,arm1026ejs,arm1136js,arm1136jfs,cortexa5,cortexa7,cortexa8,cortexa9,cortexa15,cortexm4,marvell_pj4,marvell_pj4b,marvell_pj4bv2")
+ 	       (eq_attr "tune_cortexr4" "yes"))
+           (const_string "no")
+           (const_string "yes"))))
+@@ -549,7 +549,7 @@
+ (define_attr "generic_vfp" "yes,no"
+   (const (if_then_else
+ 	  (and (eq_attr "fpu" "vfp")
+-	       (eq_attr "tune" "!arm1020e,arm1022e,cortexa5,cortexa7,cortexa8,cortexa9,cortexm4,marvell_pj4")
++	       (eq_attr "tune" "!arm1020e,arm1022e,cortexa5,cortexa7,cortexa8,cortexa9,cortexm4,marvell_pj4,marvell_pj4b,marvell_pj4bv2")
+ 	       (eq_attr "tune_cortexr4" "no"))
+ 	  (const_string "yes")
+ 	  (const_string "no"))))
+@@ -575,6 +575,7 @@
+ (include "cortex-m4-fpu.md")
+ (include "vfp11.md")
+ (include "marvell-pj4.md")
++(include "marvell-pj4b.md")
+ 
+ 
+ ;;---------------------------------------------------------------------------
+diff -urN gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/bpabi.h gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/bpabi.h
+--- gcc-linaro-4.7-2013.05.pj4/gcc/config/arm/bpabi.h	2013-06-20 08:24:01.693072184 +0200
++++ gcc-linaro-4.7-2013.05.pj4b/gcc/config/arm/bpabi.h	2013-06-20 08:33:25.632617014 +0200
+@@ -60,6 +60,8 @@
+    |mcpu=cortex-a7					\
+    |mcpu=cortex-a8|mcpu=cortex-a9|mcpu=cortex-a15	\
+    |mcpu=marvell-pj4					\
++   |mcpu=marvell-pj4b					\
++   |mcpu=marvell-pj4bv2				\
+    |mcpu=generic-armv7-a				\
+    |march=armv7-m|mcpu=cortex-m3			\
+    |march=armv7e-m|mcpu=cortex-m4			\
+diff -urN gcc-linaro-4.7-2013.05.pj4/gcc/doc/invoke.texi gcc-linaro-4.7-2013.05.pj4b/gcc/doc/invoke.texi
+--- gcc-linaro-4.7-2013.05.pj4/gcc/doc/invoke.texi	2013-06-20 08:24:01.693072184 +0200
++++ gcc-linaro-4.7-2013.05.pj4b/gcc/doc/invoke.texi	2013-06-20 08:33:35.661062803 +0200
+@@ -10828,6 +10828,8 @@
+ @samp{cortex-m1},
+ @samp{cortex-m0},
+ @samp{marvell-pj4}
++@samp{marvell-pj4b}
++@samp{marvell-pj4bv2}
+ @samp{xscale}, @samp{iwmmxt}, @samp{iwmmxt2}, @samp{ep9312},
+ @samp{fa526}, @samp{fa626},
+ @samp{fa606te}, @samp{fa626te}, @samp{fmp626}, @samp{fa726te}.
+--- /dev/null	2008-08-30 23:18:45.000000000 +0200
++++ ./gcc/config/arm/marvell-pj4b.md	2013-06-20 11:41:51.000000000 +0200
+@@ -0,0 +1,275 @@
++;; ARM Cortex-A9 pipeline description modified for marvell-pj4b
++;; Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
++;; Originally written by CodeSourcery for VFP.
++;; modified 2013 by w.tarreau
++;;
++;; Rewritten by Ramana Radhakrishnan <ramana.radhakrishnan@arm.com>
++;; Integer Pipeline description contributed by ARM Ltd.
++;; VFP Pipeline description rewritten and contributed by ARM Ltd.
++
++;; This file is part of GCC.
++;;
++;; GCC is free software; you can redistribute it and/or modify it
++;; under the terms of the GNU General Public License as published by
++;; the Free Software Foundation; either version 3, or (at your option)
++;; any later version.
++;;
++;; GCC is distributed in the hope that it will be useful, but
++;; WITHOUT ANY WARRANTY; without even the implied warranty of
++;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++;; General Public License for more details.
++;;
++;; You should have received a copy of the GNU General Public License
++;; along with GCC; see the file COPYING3.  If not see
++;; <http://www.gnu.org/licenses/>.
++
++(define_automaton "marvell_pj4b")
++
++;; The Cortex-A9 core is modelled as a dual issue pipeline that has
++;; the following components.
++;; 1. 1 Load Store Pipeline.
++;; 2. P0 / main pipeline for data processing instructions.
++;; 3. P1 / Dual pipeline for Data processing instructions.
++;; 4. MAC pipeline for multiply as well as multiply
++;;    and accumulate instructions.
++;; 5. 1 VFP and an optional Neon unit.
++;; The Load/Store, VFP and Neon issue pipeline are multiplexed.
++;; The P0 / main pipeline and M1 stage of the MAC pipeline are
++;;   multiplexed.
++;; The P1 / dual pipeline and M2 stage of the MAC pipeline are
++;;   multiplexed.
++;; There are only 4 integer register read ports and hence at any point of
++;; time we can't have issue down the E1 and the E2 ports unless
++;; of course there are bypass paths that get exercised.
++;; Both P0 and P1 have 2 stages E1 and E2.
++;; Data processing instructions issue to E1 or E2 depending on
++;; whether they have an early shift or not.
++
++(define_cpu_unit "pj4b_issue_vfp_neon, marvell_pj4b_ls" "marvell_pj4b")
++(define_cpu_unit "marvell_pj4b_p0_e1, marvell_pj4b_p0_e2" "marvell_pj4b")
++(define_cpu_unit "marvell_pj4b_p1_e1, marvell_pj4b_p1_e2" "marvell_pj4b")
++(define_cpu_unit "marvell_pj4b_p0_wb, marvell_pj4b_p1_wb" "marvell_pj4b")
++(define_cpu_unit "marvell_pj4b_mac_m1, marvell_pj4b_mac_m2" "marvell_pj4b")
++(define_cpu_unit "marvell_pj4b_branch, marvell_pj4b_issue_branch" "marvell_pj4b")
++
++(define_reservation "marvell_pj4b_p0_default" "marvell_pj4b_p0_e2, marvell_pj4b_p0_wb")
++(define_reservation "marvell_pj4b_p1_default" "marvell_pj4b_p1_e2, marvell_pj4b_p1_wb")
++(define_reservation "marvell_pj4b_p0_shift" "marvell_pj4b_p0_e1, marvell_pj4b_p0_default")
++(define_reservation "marvell_pj4b_p1_shift" "marvell_pj4b_p1_e1, marvell_pj4b_p1_default")
++
++(define_reservation "marvell_pj4b_multcycle1"
++  "marvell_pj4b_p0_e2 + marvell_pj4b_mac_m1 + marvell_pj4b_mac_m2 + \
++marvell_pj4b_p1_e2 + marvell_pj4b_p0_e1 + marvell_pj4b_p1_e1")
++
++(define_reservation "marvell_pj4b_mult16"
++  "marvell_pj4b_mac_m1, marvell_pj4b_mac_m2, marvell_pj4b_p0_wb")
++(define_reservation "marvell_pj4b_mac16"
++  "marvell_pj4b_multcycle1, marvell_pj4b_mac_m2, marvell_pj4b_p0_wb")
++(define_reservation "marvell_pj4b_mult"
++  "marvell_pj4b_mac_m1*2, marvell_pj4b_mac_m2, marvell_pj4b_p0_wb")
++(define_reservation "marvell_pj4b_mac"
++  "marvell_pj4b_multcycle1*2 ,marvell_pj4b_mac_m2, marvell_pj4b_p0_wb")
++(define_reservation "marvell_pj4b_mult_long"
++  "marvell_pj4b_mac_m1*3, marvell_pj4b_mac_m2, marvell_pj4b_p0_wb")
++
++;; Issue at the same time along the load store pipeline and
++;; the VFP / Neon pipeline is not possible.
++(exclusion_set "marvell_pj4b_ls" "pj4b_issue_vfp_neon")
++
++;; Default data processing instruction without any shift
++;; The only exception to this is the mov instruction
++;; which can go down E2 without any problem.
++(define_insn_reservation "marvell_pj4b_dp" 2
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++         (ior (and (eq_attr "type" "alu_reg,simple_alu_imm")
++                        (eq_attr "neon_type" "none"))
++	      (and (and (eq_attr "type" "alu_shift_reg, simple_alu_shift,alu_shift")
++			(eq_attr "insn" "mov"))
++                 (eq_attr "neon_type" "none"))))
++  "marvell_pj4b_p0_default|marvell_pj4b_p1_default")
++
++;; An instruction using the shifter will go down E1.
++(define_insn_reservation "marvell_pj4b_dp_shift" 3
++   (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++	(and (eq_attr "type" "alu_shift_reg, simple_alu_shift,alu_shift")
++	     (not (eq_attr "insn" "mov"))))
++   "marvell_pj4b_p0_shift | marvell_pj4b_p1_shift")
++
++;; Loads have a latency of 4 cycles.
++;; We don't model autoincrement instructions. These
++;; instructions use the load store pipeline and 1 of
++;; the E2 units to write back the result of the increment.
++
++(define_insn_reservation "marvell_pj4b_load1_2" 4
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "load1, load2, load_byte, f_loads, f_loadd"))
++  "marvell_pj4b_ls")
++
++;; Loads multiples and store multiples can't be issued for 2 cycles in a
++;; row. The description below assumes that addresses are 64 bit aligned.
++;; If not, there is an extra cycle latency which is not modelled.
++
++(define_insn_reservation "marvell_pj4b_load3_4" 5
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "load3, load4"))
++  "marvell_pj4b_ls, marvell_pj4b_ls")
++
++(define_insn_reservation "marvell_pj4b_store1_2" 0
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "store1, store2, f_stores, f_stored"))
++  "marvell_pj4b_ls")
++
++;; Almost all our store multiples use an auto-increment
++;; form. Don't issue back to back load and store multiples
++;; because the load store unit will stall.
++
++(define_insn_reservation "marvell_pj4b_store3_4" 0
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "store3, store4"))
++  "marvell_pj4b_ls+(marvell_pj4b_p0_default | marvell_pj4b_p1_default), marvell_pj4b_ls")
++
++;; We get 16*16 multiply / mac results in 3 cycles.
++(define_insn_reservation "marvell_pj4b_mult16" 3
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "insn" "smulxy"))
++       "marvell_pj4b_mult16")
++
++;; The 16*16 mac is slightly different that it
++;; reserves M1 and M2 in the same cycle.
++(define_insn_reservation "marvell_pj4b_mac16" 3
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "insn" "smlaxy"))
++  "marvell_pj4b_mac16")
++
++(define_insn_reservation "marvell_pj4b_multiply" 4
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "insn" "mul,smmul,smmulr"))
++       "marvell_pj4b_mult")
++
++(define_insn_reservation "marvell_pj4b_mac" 4
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "insn" "mla,smmla"))
++       "marvell_pj4b_mac")
++
++(define_insn_reservation "marvell_pj4b_multiply_long" 5
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "insn" "smull,umull,smulls,umulls,smlal,smlals,umlal,umlals"))
++       "marvell_pj4b_mult_long")
++
++;; An instruction with a result in E2 can be forwarded
++;; to E2 or E1 or M1 or the load store unit in the next cycle.
++
++(define_bypass 1 "marvell_pj4b_dp"
++                 "marvell_pj4b_dp_shift, marvell_pj4b_multiply,
++ marvell_pj4b_load1_2, marvell_pj4b_dp, marvell_pj4b_store1_2,
++ marvell_pj4b_mult16, marvell_pj4b_mac16, marvell_pj4b_mac, marvell_pj4b_store3_4, marvell_pj4b_load3_4, 
++ marvell_pj4b_multiply_long")
++
++(define_bypass 2 "marvell_pj4b_dp_shift"
++                 "marvell_pj4b_dp_shift, marvell_pj4b_multiply,
++ marvell_pj4b_load1_2, marvell_pj4b_dp, marvell_pj4b_store1_2,
++ marvell_pj4b_mult16, marvell_pj4b_mac16, marvell_pj4b_mac, marvell_pj4b_store3_4, marvell_pj4b_load3_4,
++ marvell_pj4b_multiply_long")
++
++;; An instruction in the load store pipeline can provide
++;; read access to a DP instruction in the P0 default pipeline
++;; before the writeback stage.
++
++(define_bypass 3 "marvell_pj4b_load1_2" "marvell_pj4b_dp, marvell_pj4b_load1_2,
++marvell_pj4b_store3_4, marvell_pj4b_store1_2")
++
++(define_bypass 4 "marvell_pj4b_load3_4" "marvell_pj4b_dp, marvell_pj4b_load1_2,
++marvell_pj4b_store3_4, marvell_pj4b_store1_2,  marvell_pj4b_load3_4")
++
++;; Calls and branches.
++
++;; Branch instructions
++
++(define_insn_reservation "marvell_pj4b_branch" 0
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "branch"))
++  "marvell_pj4b_branch")
++
++;; Call latencies are essentially 0 but make sure
++;; dual issue doesn't happen i.e the next instruction
++;; starts at the next cycle.
++(define_insn_reservation "marvell_pj4b_call"  0
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "call"))
++  "marvell_pj4b_issue_branch + marvell_pj4b_multcycle1 + marvell_pj4b_ls + pj4b_issue_vfp_neon")
++
++
++;; Pipelining for VFP instructions.
++;; Issue happens either along load store unit or the VFP / Neon unit.
++;; Pipeline   Instruction Classification.
++;; FPS - fcpys, ffariths, ffarithd,r_2_f,f_2_r
++;; FP_ADD   - fadds, faddd, fcmps (1)
++;; FPMUL   - fmul{s,d}, fmac{s,d}, ffma{s,d}
++;; FPDIV - fdiv{s,d}
++(define_cpu_unit "pj4bfps" "marvell_pj4b")
++(define_cpu_unit "pj4bfp_add1, pj4bfp_add2, pj4bfp_add3, pj4bfp_add4" "marvell_pj4b")
++(define_cpu_unit "pj4bfp_mul1, pj4bfp_mul2 , pj4bfp_mul3, pj4bfp_mul4" "marvell_pj4b")
++(define_cpu_unit "pj4bfp_ds1" "marvell_pj4b")
++
++
++;; fmrs, fmrrd, fmstat and fmrx - The data is available after 1 cycle.
++(define_insn_reservation "marvell_pj4b_fps" 2
++ (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++      (eq_attr "type" "fcpys, fconsts, fconstd, ffariths, ffarithd, r_2_f, f_2_r, f_flag"))
++ "pj4b_issue_vfp_neon + pj4bfps")
++
++(define_bypass 1
++  "marvell_pj4b_fps"
++  "marvell_pj4b_fadd, marvell_pj4b_fps, marvell_pj4b_fcmp, marvell_pj4b_dp, marvell_pj4b_dp_shift, marvell_pj4b_multiply, marvell_pj4b_multiply_long")
++
++;; Scheduling on the FP_ADD pipeline.
++(define_reservation "pj4bfp_add" "pj4b_issue_vfp_neon + pj4bfp_add1, pj4bfp_add2, pj4bfp_add3, pj4bfp_add4")
++
++(define_insn_reservation "marvell_pj4b_fadd" 4
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "fadds, faddd, f_cvt"))
++  "pj4bfp_add")
++
++(define_insn_reservation "marvell_pj4b_fcmp" 1
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++      (eq_attr "type" "fcmps, fcmpd"))
++ "pj4b_issue_vfp_neon + pj4bfp_add1")
++
++;; Scheduling for the Multiply and MAC instructions.
++(define_reservation "pj4bfmuls"
++  "pj4bfp_mul1 + pj4b_issue_vfp_neon, pj4bfp_mul2, pj4bfp_mul3, pj4bfp_mul4")
++
++(define_reservation "pj4bfmuld"
++  "pj4bfp_mul1 + pj4b_issue_vfp_neon, (pj4bfp_mul1 + pj4bfp_mul2), pj4bfp_mul2, pj4bfp_mul3, pj4bfp_mul4")
++
++(define_insn_reservation "marvell_pj4b_fmuls" 4
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "fmuls"))
++  "pj4bfmuls")
++
++(define_insn_reservation "marvell_pj4b_fmuld" 5
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "fmuld"))
++  "pj4bfmuld")
++
++(define_insn_reservation "marvell_pj4b_fmacs" 8
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "fmacs,ffmas"))
++  "pj4bfmuls, pj4bfp_add")
++
++(define_insn_reservation "marvell_pj4b_fmacd" 9
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "fmacd,ffmad"))
++  "pj4bfmuld, pj4bfp_add")
++
++;; Division pipeline description.
++(define_insn_reservation "marvell_pj4b_fdivs" 15
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "fdivs"))
++  "pj4bfp_ds1 + pj4b_issue_vfp_neon, nothing*14")
++
++(define_insn_reservation "marvell_pj4b_fdivd" 25
++  (and (eq_attr "tune" "marvell_pj4b,marvell_pj4bv2")
++       (eq_attr "type" "fdivd"))
++  "pj4bfp_ds1 + pj4b_issue_vfp_neon, nothing*24")
++
