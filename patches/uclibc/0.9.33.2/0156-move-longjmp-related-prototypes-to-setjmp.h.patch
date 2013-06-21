@@ -1,0 +1,317 @@
+From 8f86b8a1977128e2795737fed2577b377cc2b15e Mon Sep 17 00:00:00 2001
+From: "Peter S. Mazinger" <ps.m@gmx.net>
+Date: Sun, 13 Mar 2011 20:10:13 +0100
+Subject: move *longjmp related prototypes to setjmp.h
+
+Provide common prototypes for __longjmp, __libc_longjmp, __libc_siglongjmp
+_longjmp_unwind, __libc_unwind_longjmp in setjmp.h in preparation for use in LT new
+Add __longjmp to h8300 and i960
+Make common longjmp.c good for NPTL
+Guard _longjmp_unwind use in sh's longjmp.c for NPTL (I think sh could use the common one)
+Remove unneeded attribute_noreturn, prototype provides it already
+
+Signed-off-by: Peter S. Mazinger <ps.m@gmx.net>
+Signed-off-by: Bernhard Reutner-Fischer <rep.dot.nop@gmail.com>
+---
+ include/setjmp.h                                   | 10 +++++
+ libc/sysdeps/linux/common/longjmp.c                |  9 ----
+ libc/sysdeps/linux/h8300/__longjmp.S               |  2 +
+ libc/sysdeps/linux/i960/setjmp.S                   |  2 +
+ libc/sysdeps/linux/sh/longjmp.c                    | 49 ++++++++++++++++++++++
+ libpthread/linuxthreads.old/ptlongjmp.c            |  9 +---
+ .../linuxthreads/sysdeps/pthread/ptlongjmp.c       |  7 ----
+ libpthread/nptl/sysdeps/alpha/jmpbuf-unwind.h      |  3 --
+ libpthread/nptl/sysdeps/arm/jmpbuf-unwind.h        |  3 --
+ libpthread/nptl/sysdeps/i386/jmpbuf-unwind.h       |  4 --
+ libpthread/nptl/sysdeps/mips/jmpbuf-unwind.h       |  3 --
+ libpthread/nptl/sysdeps/powerpc/jmpbuf-unwind.h    |  3 --
+ libpthread/nptl/sysdeps/sh/jmpbuf-unwind.h         |  5 ---
+ .../nptl/sysdeps/sparc/sparc32/jmpbuf-unwind.h     |  4 --
+ .../nptl/sysdeps/sparc/sparc64/jmpbuf-unwind.h     |  3 --
+ .../nptl/sysdeps/unix/sysv/linux/jmp-unwind.c      |  1 -
+ libpthread/nptl/sysdeps/x86_64/jmpbuf-unwind.h     |  3 --
+ 17 files changed, 65 insertions(+), 55 deletions(-)
+ create mode 100644 libc/sysdeps/linux/sh/longjmp.c
+
+diff --git a/include/setjmp.h b/include/setjmp.h
+index fb9c078..c70f771 100644
+--- a/include/setjmp.h
++++ b/include/setjmp.h
+@@ -113,4 +113,14 @@ extern void siglongjmp (sigjmp_buf __env, int __val)
+ 
+ __END_DECLS
+ 
++#ifdef _LIBC
++extern void __longjmp(__jmp_buf __env, int __val) attribute_noreturn;
++libc_hidden_proto(__longjmp)
++extern __typeof(longjmp) __libc_longjmp attribute_noreturn;
++extern __typeof(siglongjmp) __libc_siglongjmp attribute_noreturn;
++extern void _longjmp_unwind(jmp_buf __env, int __val);
++/* We use the normal longjmp for unwinding */
++# define __libc_unwind_longjmp(buf, val) __libc_longjmp(buf, val)
++#endif
++
+ #endif /* setjmp.h  */
+diff --git a/libc/sysdeps/linux/common/longjmp.c b/libc/sysdeps/linux/common/longjmp.c
+index f3448bc..e9fee84 100644
+--- a/libc/sysdeps/linux/common/longjmp.c
++++ b/libc/sysdeps/linux/common/longjmp.c
+@@ -20,15 +20,6 @@
+ #include <setjmp.h>
+ #include <signal.h>
+ 
+-
+-extern void __longjmp (__jmp_buf __env, int __val) attribute_noreturn;
+-libc_hidden_proto(__longjmp)
+-
+-#ifdef __UCLIBC_HAS_THREADS_NATIVE__
+-extern void _longjmp_unwind (jmp_buf env, int val);
+-#endif
+-
+-extern __typeof(longjmp) __libc_longjmp attribute_noreturn;
+ /* Set the signal mask to the one specified in ENV, and jump
+    to the position specified in ENV, causing the setjmp
+    call there to return VAL, or 1 if VAL is 0.  */
+diff --git a/libc/sysdeps/linux/h8300/__longjmp.S b/libc/sysdeps/linux/h8300/__longjmp.S
+index 5cffa3e..eb433df 100644
+--- a/libc/sysdeps/linux/h8300/__longjmp.S
++++ b/libc/sysdeps/linux/h8300/__longjmp.S
+@@ -20,3 +20,5 @@ ___longjmp:
+ 	mov.l	@er0+,er3	; return PC
+ 	adds	#4,sp		; adjust return stack
+ 	jmp	@er3
++
++libc_hidden_def(__longjmp)
+diff --git a/libc/sysdeps/linux/i960/setjmp.S b/libc/sysdeps/linux/i960/setjmp.S
+index 2133ef5..2525f55 100644
+--- a/libc/sysdeps/linux/i960/setjmp.S
++++ b/libc/sysdeps/linux/i960/setjmp.S
+@@ -122,3 +122,5 @@ ___longjmp:
+ 	mov	1, g0		/* return 1 by default */
+ 0:
+ 	ret			/* return to caller of __sigsetjmp */
++
++libc_hidden_def(__longjmp)
+diff --git a/libc/sysdeps/linux/sh/longjmp.c b/libc/sysdeps/linux/sh/longjmp.c
+new file mode 100644
+index 0000000..e410f05
+--- /dev/null
++++ b/libc/sysdeps/linux/sh/longjmp.c
+@@ -0,0 +1,49 @@
++/* Copyright (C) 1991, 92, 94, 95, 97, 98, 2000 Free Software Foundation, Inc.
++   Copyright (C) 2001 Hewlett-Packard Australia
++
++ This program is free software; you can redistribute it and/or modify it under
++ the terms of the GNU Library General Public License as published by the Free
++ Software Foundation; either version 2 of the License, or (at your option) any
++ later version.
++
++ This program is distributed in the hope that it will be useful, but WITHOUT
++ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++ FOR A PARTICULAR PURPOSE. See the GNU Library General Public License for more
++ details.
++
++ You should have received a copy of the GNU Library General Public License
++ along with this program; if not, write to the Free Software Foundation, Inc.,
++ 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
++
++ Derived in part from the Linux-8086 C library, the GNU C Library, and several
++ other sundry sources.  Files within this library are copyright by their
++ respective copyright holders.
++*/
++
++#include <stddef.h>
++#include <setjmp.h>
++#include <signal.h>
++
++/* Set the signal mask to the one specified in ENV, and jump
++   to the position specified in ENV, causing the setjmp
++   call there to return VAL, or 1 if VAL is 0.  */
++void __libc_siglongjmp (sigjmp_buf env, int val)
++{
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++  /* Perform any cleanups needed by the frames being unwound.  */
++  _longjmp_unwind (env, val);
++#endif
++
++  if (env[0].__mask_was_saved)
++    /* Restore the saved signal mask.  */
++    (void) sigprocmask (SIG_SETMASK, &env[0].__saved_mask,
++			  (sigset_t *) NULL);
++
++  /* Call the machine-dependent function to restore machine state.  */
++  __longjmp ((char *) env[0].__jmpbuf, val ?: 1);
++}
++
++__asm__(".weak longjmp; longjmp = __libc_siglongjmp");
++__asm__(".weak _longjmp; _longjmp = __libc_siglongjmp");
++__asm__(".weak siglongjmp; siglongjmp = __libc_siglongjmp");
++strong_alias(__libc_siglongjmp, __libc_longjmp)
+diff --git a/libpthread/linuxthreads.old/ptlongjmp.c b/libpthread/linuxthreads.old/ptlongjmp.c
+index 5213a4d..c01b919 100644
+--- a/libpthread/linuxthreads.old/ptlongjmp.c
++++ b/libpthread/linuxthreads.old/ptlongjmp.c
+@@ -20,11 +20,6 @@
+ #include "internals.h"
+ #include <bits/stackinfo.h>
+ 
+-/* These functions are not declared anywhere since they shouldn't be
+-   used at another place but here.  */
+-extern __typeof(siglongjmp) __libc_siglongjmp attribute_noreturn;
+-extern __typeof(longjmp) __libc_longjmp attribute_noreturn;
+-
+ static void pthread_cleanup_upto(__jmp_buf target)
+ {
+   pthread_descr self = thread_self();
+@@ -58,13 +53,13 @@ static void pthread_cleanup_upto(__jmp_buf target)
+     THREAD_SETMEM(self, p_in_sighandler, NULL);
+ }
+ 
+-void attribute_noreturn siglongjmp(sigjmp_buf env, int val)
++void siglongjmp(sigjmp_buf env, int val)
+ {
+   pthread_cleanup_upto(env->__jmpbuf);
+   __libc_siglongjmp(env, val);
+ }
+ 
+-void attribute_noreturn longjmp(jmp_buf env, int val)
++void longjmp(jmp_buf env, int val)
+ {
+   pthread_cleanup_upto(env->__jmpbuf);
+   __libc_longjmp(env, val);
+diff --git a/libpthread/linuxthreads/sysdeps/pthread/ptlongjmp.c b/libpthread/linuxthreads/sysdeps/pthread/ptlongjmp.c
+index a2a56b8..ee55220 100644
+--- a/libpthread/linuxthreads/sysdeps/pthread/ptlongjmp.c
++++ b/libpthread/linuxthreads/sysdeps/pthread/ptlongjmp.c
+@@ -19,13 +19,6 @@
+ #include "pthread.h"
+ #include "internals.h"
+ 
+-/* These functions are not declared anywhere since they shouldn't be
+-   used at another place but here.  */
+-extern void __libc_siglongjmp (sigjmp_buf env, int val)
+-     __attribute__ ((noreturn));
+-extern void __libc_longjmp (sigjmp_buf env, int val)
+-     __attribute__ ((noreturn));
+-
+ #ifdef SHARED
+ void siglongjmp (sigjmp_buf env, int val)
+ {
+diff --git a/libpthread/nptl/sysdeps/alpha/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/alpha/jmpbuf-unwind.h
+index 5cef8b1..5ef2f61 100644
+--- a/libpthread/nptl/sysdeps/alpha/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/alpha/jmpbuf-unwind.h
+@@ -26,6 +26,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
+   ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_SP] - (_adj))
+-
+-/* We use the normal lobngjmp for unwinding.  */
+-#define __libc_unwind_longjmp(buf, val) __libc_longjmp (buf, val)
+diff --git a/libpthread/nptl/sysdeps/arm/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/arm/jmpbuf-unwind.h
+index 6e8f01d..6251c00 100644
+--- a/libpthread/nptl/sysdeps/arm/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/arm/jmpbuf-unwind.h
+@@ -31,6 +31,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
+   ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[__JMP_BUF_SP] - (_adj))
+-
+-/* We use the normal longjmp for unwinding.  */
+-#define __libc_unwind_longjmp(buf, val) longjmp (buf, val)
+diff --git a/libpthread/nptl/sysdeps/i386/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/i386/jmpbuf-unwind.h
+index b9528f3..5ef2f61 100644
+--- a/libpthread/nptl/sysdeps/i386/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/i386/jmpbuf-unwind.h
+@@ -26,7 +26,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
+   ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_SP] - (_adj))
+-
+-/* We use the normal lobngjmp for unwinding.  */
+-extern __typeof(longjmp) __libc_longjmp attribute_noreturn;
+-#define __libc_unwind_longjmp(buf, val) __libc_longjmp (buf, val)
+diff --git a/libpthread/nptl/sysdeps/mips/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/mips/jmpbuf-unwind.h
+index a9cfe43..788920a 100644
+--- a/libpthread/nptl/sysdeps/mips/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/mips/jmpbuf-unwind.h
+@@ -25,6 +25,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
+   ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[0].__sp - (_adj))
+-
+-/* We use the normal longjmp for unwinding.  */
+-#define __libc_unwind_longjmp(buf, val) longjmp (buf, val)
+diff --git a/libpthread/nptl/sysdeps/powerpc/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/powerpc/jmpbuf-unwind.h
+index 0b81716..59ae02c 100644
+--- a/libpthread/nptl/sysdeps/powerpc/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/powerpc/jmpbuf-unwind.h
+@@ -26,6 +26,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
+   ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_GPR1] - (_adj))
+-
+-/* We use the normal lobngjmp for unwinding.  */
+-#define __libc_unwind_longjmp(buf, val) __libc_longjmp (buf, val)
+diff --git a/libpthread/nptl/sysdeps/sh/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/sh/jmpbuf-unwind.h
+index 41c3c39..116d214 100644
+--- a/libpthread/nptl/sysdeps/sh/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/sh/jmpbuf-unwind.h
+@@ -26,8 +26,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(jmpbuf, address, adj) \
+   ((uintptr_t) (address) - (adj) < (uintptr_t) (jmpbuf)[0].__regs[7] - (adj))
+-
+-extern __typeof(longjmp) __libc_longjmp attribute_noreturn;
+-
+-/* We use the normal lobngjmp for unwinding.  */
+-#define __libc_unwind_longjmp(buf, val) __libc_longjmp (buf, val)
+diff --git a/libpthread/nptl/sysdeps/sparc/sparc32/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/sparc/sparc32/jmpbuf-unwind.h
+index 71a3582..5ef2f61 100644
+--- a/libpthread/nptl/sysdeps/sparc/sparc32/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/sparc/sparc32/jmpbuf-unwind.h
+@@ -26,7 +26,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
+   ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_SP] - (_adj))
+-
+-/* We use the normal longjmp for unwinding.  */
+-extern __typeof(longjmp) __libc_longjmp attribute_noreturn;
+-#define __libc_unwind_longjmp(buf, val) __libc_longjmp (buf, val)
+diff --git a/libpthread/nptl/sysdeps/sparc/sparc64/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/sparc/sparc64/jmpbuf-unwind.h
+index 5cef8b1..5ef2f61 100644
+--- a/libpthread/nptl/sysdeps/sparc/sparc64/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/sparc/sparc64/jmpbuf-unwind.h
+@@ -26,6 +26,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
+   ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_SP] - (_adj))
+-
+-/* We use the normal lobngjmp for unwinding.  */
+-#define __libc_unwind_longjmp(buf, val) __libc_longjmp (buf, val)
+diff --git a/libpthread/nptl/sysdeps/unix/sysv/linux/jmp-unwind.c b/libpthread/nptl/sysdeps/unix/sysv/linux/jmp-unwind.c
+index 642198b..f279551 100644
+--- a/libpthread/nptl/sysdeps/unix/sysv/linux/jmp-unwind.c
++++ b/libpthread/nptl/sysdeps/unix/sysv/linux/jmp-unwind.c
+@@ -25,7 +25,6 @@ extern void __pthread_cleanup_upto (__jmp_buf env, char *targetframe);
+ #pragma weak __pthread_cleanup_upto
+ 
+ 
+-void _longjmp_unwind (jmp_buf env, int val);
+ void
+ _longjmp_unwind (jmp_buf env, int val)
+ {
+diff --git a/libpthread/nptl/sysdeps/x86_64/jmpbuf-unwind.h b/libpthread/nptl/sysdeps/x86_64/jmpbuf-unwind.h
+index 345ed55..2c861c6 100644
+--- a/libpthread/nptl/sysdeps/x86_64/jmpbuf-unwind.h
++++ b/libpthread/nptl/sysdeps/x86_64/jmpbuf-unwind.h
+@@ -26,6 +26,3 @@
+ 
+ #define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
+   ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_RSP] - (_adj))
+-
+-/* We use the normal lobngjmp for unwinding.  */
+-#define __libc_unwind_longjmp(buf, val) __libc_longjmp (buf, val)
+-- 
+1.7.12.2.21.g234cd45.dirty
+

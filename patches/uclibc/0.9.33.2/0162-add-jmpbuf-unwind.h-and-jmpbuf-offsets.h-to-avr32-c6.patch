@@ -1,0 +1,279 @@
+From 13381d9c5bf997dfc1b1532ecea126e16d60d18b Mon Sep 17 00:00:00 2001
+From: "Peter S. Mazinger" <ps.m@gmx.net>
+Date: Sun, 13 Mar 2011 22:21:26 +0100
+Subject: add jmpbuf-unwind.h and jmpbuf-offsets.h to avr32,c6x and xtensa
+
+cleanup bits/setjmp.h and avr32's setjmp.S
+
+Signed-off-by: Peter S. Mazinger <ps.m@gmx.net>
+Signed-off-by: Bernhard Reutner-Fischer <rep.dot.nop@gmail.com>
+---
+ libc/sysdeps/linux/avr32/bits/setjmp.h     |  9 ---------
+ libc/sysdeps/linux/avr32/jmpbuf-offsets.h  |  9 +++++++++
+ libc/sysdeps/linux/avr32/jmpbuf-unwind.h   | 14 ++++++++++++++
+ libc/sysdeps/linux/avr32/setjmp.S          |  3 ---
+ libc/sysdeps/linux/c6x/bits/setjmp.h       | 15 +++++----------
+ libc/sysdeps/linux/c6x/jmpbuf-offsets.h    | 23 +++++++++++++++++++++++
+ libc/sysdeps/linux/c6x/jmpbuf-unwind.h     | 29 +++++++++++++++++++++++++++++
+ libc/sysdeps/linux/xtensa/bits/setjmp.h    | 11 -----------
+ libc/sysdeps/linux/xtensa/jmpbuf-offsets.h | 21 +++++++++++++++++++++
+ libc/sysdeps/linux/xtensa/jmpbuf-unwind.h  | 26 ++++++++++++++++++++++++++
+ 10 files changed, 127 insertions(+), 33 deletions(-)
+ create mode 100644 libc/sysdeps/linux/avr32/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/avr32/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/c6x/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/c6x/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/xtensa/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/xtensa/jmpbuf-unwind.h
+
+diff --git a/libc/sysdeps/linux/avr32/bits/setjmp.h b/libc/sysdeps/linux/avr32/bits/setjmp.h
+index 78348a3..3f8f14f 100644
+--- a/libc/sysdeps/linux/avr32/bits/setjmp.h
++++ b/libc/sysdeps/linux/avr32/bits/setjmp.h
+@@ -12,19 +12,10 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef _ASM
+ /*
+  * The jump buffer contains r0-r7, sr, sp and lr. Other registers are
+  * not saved.
+  */
+ typedef int __jmp_buf[11];
+-#endif
+-
+-#define __JMP_BUF_SP	4
+-
+-/* Test if longjmp to JMPBUF would unwind the frame containing a local
+-   variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *)(address) < (void *)(jmpbuf[__JMP_BUF_SP]))
+ 
+ #endif /* _BITS_SETJMP_H */
+diff --git a/libc/sysdeps/linux/avr32/jmpbuf-offsets.h b/libc/sysdeps/linux/avr32/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..70b8113
+--- /dev/null
++++ b/libc/sysdeps/linux/avr32/jmpbuf-offsets.h
+@@ -0,0 +1,9 @@
++/* Private macros for accessing __jmp_buf contents.  avr32 version.
++ * Copyright (C) 2004-2005 Atmel Corporation
++ *
++ * This file is subject to the terms and conditions of the GNU Lesser General
++ * Public License.  See the file "COPYING.LIB" in the main directory of this
++ * archive for more details.
++ */
++
++#define __JMP_BUF_SP	4
+diff --git a/libc/sysdeps/linux/avr32/jmpbuf-unwind.h b/libc/sysdeps/linux/avr32/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..5caa2ee
+--- /dev/null
++++ b/libc/sysdeps/linux/avr32/jmpbuf-unwind.h
+@@ -0,0 +1,14 @@
++/*
++ * Copyright (C) 2004-2005 Atmel Corporation
++ *
++ * This file is subject to the terms and conditions of the GNU Lesser General
++ * Public License.  See the file "COPYING.LIB" in the main directory of this
++ * archive for more details.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame containing a local
++   variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *)(address) < (void *)(jmpbuf[__JMP_BUF_SP]))
+diff --git a/libc/sysdeps/linux/avr32/setjmp.S b/libc/sysdeps/linux/avr32/setjmp.S
+index 7d0354b..f6e619b 100644
+--- a/libc/sysdeps/linux/avr32/setjmp.S
++++ b/libc/sysdeps/linux/avr32/setjmp.S
+@@ -5,9 +5,6 @@
+  * Public License.  See the file "COPYING.LIB" in the main directory of this
+  * archive for more details.
+  */
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+ 
+ 	.text
+ 
+diff --git a/libc/sysdeps/linux/c6x/bits/setjmp.h b/libc/sysdeps/linux/c6x/bits/setjmp.h
+index 259e23b..3f0a19f 100644
+--- a/libc/sysdeps/linux/c6x/bits/setjmp.h
++++ b/libc/sysdeps/linux/c6x/bits/setjmp.h
+@@ -19,7 +19,10 @@
+  *
+  */
+ 
+-#ifndef _SETJMP_H
++#ifndef _BITS_SETJMP_H
++#define _BITS_SETJMP_H 1
++
++#if !defined _SETJMP_H && !defined _PTHREAD_H
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+@@ -28,12 +31,4 @@ typedef struct {
+ 	unsigned long __pc;       /* the return address */
+ } __jmp_buf[1];
+ 
+-/* the stack pointer (B15) */
+-#define JP_SP 11 
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)->__regs[JP_SP])
+-
+-
++#endif
+diff --git a/libc/sysdeps/linux/c6x/jmpbuf-offsets.h b/libc/sysdeps/linux/c6x/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..be10f1e
+--- /dev/null
++++ b/libc/sysdeps/linux/c6x/jmpbuf-offsets.h
+@@ -0,0 +1,23 @@
++/* Private macros for accessing __jmp_buf contents.  c6x version.
++ * Port of uClibc for TMS320C6000 DSP architecture 
++ * Copyright (C) 2004 Texas Instruments Incorporated
++ * Author of TMS320C6000 port: Aurelien Jacquiot 
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU Library General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Library General Public License
++ * for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this program; if not, write to the Free Software Foundation,
++ * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
++ *
++ */
++
++/* the stack pointer (B15) */
++#define JP_SP 11 
+diff --git a/libc/sysdeps/linux/c6x/jmpbuf-unwind.h b/libc/sysdeps/linux/c6x/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..faa8095
+--- /dev/null
++++ b/libc/sysdeps/linux/c6x/jmpbuf-unwind.h
+@@ -0,0 +1,29 @@
++/*
++ * Port of uClibc for TMS320C6000 DSP architecture 
++ * Copyright (C) 2004 Texas Instruments Incorporated
++ * Author of TMS320C6000 port: Aurelien Jacquiot 
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU Library General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Library General Public License
++ * for more details.
++ *
++ * You should have received a copy of the GNU Library General Public License
++ * along with this program; if not, write to the Free Software Foundation,
++ * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
++ *
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)->__regs[JP_SP])
++
++
+diff --git a/libc/sysdeps/linux/xtensa/bits/setjmp.h b/libc/sysdeps/linux/xtensa/bits/setjmp.h
+index 1bc4896..5672943 100644
+--- a/libc/sysdeps/linux/xtensa/bits/setjmp.h
++++ b/libc/sysdeps/linux/xtensa/bits/setjmp.h
+@@ -30,17 +30,6 @@
+    subsequent alloca in proc moves $sp), and the return address within
+    proc.  Everything else is saved on the stack in the normal save areas.  */
+ 
+-#ifndef	_ASM
+ typedef int __jmp_buf[17];
+-#endif
+-
+-#define JB_SP	1
+-#define JB_PC	16
+-
+-/* Test if longjmp to JMPBUF would unwind the frame containing a local
+-   variable at ADDRESS.  */
+-
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[JB_SP])
+ 
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/xtensa/jmpbuf-offsets.h b/libc/sysdeps/linux/xtensa/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..b2876ef
+--- /dev/null
++++ b/libc/sysdeps/linux/xtensa/jmpbuf-offsets.h
+@@ -0,0 +1,21 @@
++/* Private macros for accessing __jmp_buf contents.  Xtensa version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#define JB_SP	1
++#define JB_PC	16
+diff --git a/libc/sysdeps/linux/xtensa/jmpbuf-unwind.h b/libc/sysdeps/linux/xtensa/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..160a70c
+--- /dev/null
++++ b/libc/sysdeps/linux/xtensa/jmpbuf-unwind.h
+@@ -0,0 +1,26 @@
++/* Copyright (C) 1997, 1998, 2007 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 51 Franklin Street - Fifth Floor,
++   Boston, MA 02110-1301, USA.  */
++
++/* Test if longjmp to JMPBUF would unwind the frame containing a local
++   variable at ADDRESS.  */
++
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[JB_SP])
+-- 
+1.7.12.2.21.g234cd45.dirty
+

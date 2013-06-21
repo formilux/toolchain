@@ -1,0 +1,176 @@
+From 591ffe08febbeeccf5373b29952f0f4db599a7e3 Mon Sep 17 00:00:00 2001
+From: "Peter S. Mazinger" <ps.m@gmx.net>
+Date: Sun, 13 Mar 2011 21:13:27 +0100
+Subject: jmpbuf-unwind.h: add NTPL related section
+
+Signed-off-by: Peter S. Mazinger <ps.m@gmx.net>
+Signed-off-by: Bernhard Reutner-Fischer <rep.dot.nop@gmail.com>
+---
+ libc/sysdeps/linux/alpha/jmpbuf-unwind.h   | 11 +++++++++++
+ libc/sysdeps/linux/arm/jmpbuf-unwind.h     | 17 +++++++++++++++++
+ libc/sysdeps/linux/i386/jmpbuf-unwind.h    | 11 +++++++++++
+ libc/sysdeps/linux/mips/jmpbuf-unwind.h    | 11 +++++++++++
+ libc/sysdeps/linux/powerpc/jmpbuf-unwind.h | 11 +++++++++++
+ libc/sysdeps/linux/sh/jmpbuf-unwind.h      | 11 +++++++++++
+ libc/sysdeps/linux/sparc/jmpbuf-unwind.h   |  8 ++++++++
+ libc/sysdeps/linux/x86_64/jmpbuf-unwind.h  | 11 +++++++++++
+ 8 files changed, 91 insertions(+)
+
+diff --git a/libc/sysdeps/linux/alpha/jmpbuf-unwind.h b/libc/sysdeps/linux/alpha/jmpbuf-unwind.h
+index 168df5b..80fe8b3 100644
+--- a/libc/sysdeps/linux/alpha/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/alpha/jmpbuf-unwind.h
+@@ -10,3 +10,14 @@
+    variable at ADDRESS.  */
+ #define _JMPBUF_UNWINDS(_jmpbuf, _address)				\
+      ((void *)(_address) < (void *)((_jmpbuf)[JB_SP]))
++
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++#include <stdint.h>
++#include <unwind.h>
++
++#define _JMPBUF_CFA_UNWINDS_ADJ(_jmpbuf, _context, _adj) \
++  _JMPBUF_UNWINDS_ADJ (_jmpbuf, (void *) _Unwind_GetCFA (_context), _adj)
++
++#define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
++  ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_SP] - (_adj))
++#endif
+diff --git a/libc/sysdeps/linux/arm/jmpbuf-unwind.h b/libc/sysdeps/linux/arm/jmpbuf-unwind.h
+index d83c681..d7b49e2 100644
+--- a/libc/sysdeps/linux/arm/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/arm/jmpbuf-unwind.h
+@@ -10,3 +10,20 @@
+    containing a local variable at ADDRESS.  */
+ #define _JMPBUF_UNWINDS(jmpbuf, address) \
+   ((void *) (address) < (void *) (jmpbuf[__JMP_BUF_SP]))
++
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++#include <stdint.h>
++#include <unwind.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#undef _JMPBUF_UNWINDS
++#define _JMPBUF_UNWINDS(jmpbuf, address, demangle) \
++  ((void *) (address) < (void *) demangle (jmpbuf[__JMP_BUF_SP]))
++
++#define _JMPBUF_CFA_UNWINDS_ADJ(_jmpbuf, _context, _adj) \
++  _JMPBUF_UNWINDS_ADJ (_jmpbuf, (void *) _Unwind_GetCFA (_context), _adj)
++
++#define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
++  ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[__JMP_BUF_SP] - (_adj))
++#endif
+diff --git a/libc/sysdeps/linux/i386/jmpbuf-unwind.h b/libc/sysdeps/linux/i386/jmpbuf-unwind.h
+index 8b75dce..4516d93 100644
+--- a/libc/sysdeps/linux/i386/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/i386/jmpbuf-unwind.h
+@@ -10,3 +10,14 @@
+    containing a local variable at ADDRESS.  */
+ #define _JMPBUF_UNWINDS(jmpbuf, address) \
+   ((void *) (address) < (void *) (jmpbuf)[JB_SP])
++
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++#include <stdint.h>
++#include <unwind.h>
++
++#define _JMPBUF_CFA_UNWINDS_ADJ(_jmpbuf, _context, _adj) \
++  _JMPBUF_UNWINDS_ADJ (_jmpbuf, (void *) _Unwind_GetCFA (_context), _adj)
++
++#define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
++  ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_SP] - (_adj))
++#endif
+diff --git a/libc/sysdeps/linux/mips/jmpbuf-unwind.h b/libc/sysdeps/linux/mips/jmpbuf-unwind.h
+index a24cd12..2c0df95 100644
+--- a/libc/sysdeps/linux/mips/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/mips/jmpbuf-unwind.h
+@@ -9,3 +9,14 @@
+    containing a local variable at ADDRESS.  */
+ #define _JMPBUF_UNWINDS(jmpbuf, address) \
+   ((void *) (address) < (void *) (jmpbuf)[0].__sp)
++
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++#include <stdint.h>
++#include <unwind.h>
++
++#define _JMPBUF_CFA_UNWINDS_ADJ(_jmpbuf, _context, _adj) \
++  _JMPBUF_UNWINDS_ADJ (_jmpbuf, (void *) _Unwind_GetCFA (_context), _adj)
++
++#define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
++  ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[0].__sp - (_adj))
++#endif
+diff --git a/libc/sysdeps/linux/powerpc/jmpbuf-unwind.h b/libc/sysdeps/linux/powerpc/jmpbuf-unwind.h
+index c6f5604..54322b8 100644
+--- a/libc/sysdeps/linux/powerpc/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/powerpc/jmpbuf-unwind.h
+@@ -10,3 +10,14 @@
+    containing a local variable at ADDRESS.  */
+ #define _JMPBUF_UNWINDS(jmpbuf, address) \
+   ((void *) (address) < (void *) (jmpbuf)[JB_GPR1])
++
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++#include <stdint.h>
++#include <unwind.h>
++
++#define _JMPBUF_CFA_UNWINDS_ADJ(_jmpbuf, _context, _adj) \
++  _JMPBUF_UNWINDS_ADJ (_jmpbuf, (void *) _Unwind_GetCFA (_context), _adj)
++
++#define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
++  ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_GPR1] - (_adj))
++#endif
+diff --git a/libc/sysdeps/linux/sh/jmpbuf-unwind.h b/libc/sysdeps/linux/sh/jmpbuf-unwind.h
+index 7753b4f..8875cc1 100644
+--- a/libc/sysdeps/linux/sh/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/sh/jmpbuf-unwind.h
+@@ -9,3 +9,14 @@
+    containing a local variable at ADDRESS.  */
+ #define _JMPBUF_UNWINDS(jmpbuf, address) \
+   ((void *) (address) < (void *) (jmpbuf)[0].__regs[7])
++
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++#include <stdint.h>
++#include <unwind.h>
++
++#define _JMPBUF_CFA_UNWINDS_ADJ(_jmpbuf, _context, _adj) \
++  _JMPBUF_UNWINDS_ADJ (_jmpbuf, (void *) _Unwind_GetCFA (_context), _adj)
++
++#define _JMPBUF_UNWINDS_ADJ(jmpbuf, address, adj) \
++  ((uintptr_t) (address) - (adj) < (uintptr_t) (jmpbuf)[0].__regs[7] - (adj))
++#endif
+diff --git a/libc/sysdeps/linux/sparc/jmpbuf-unwind.h b/libc/sysdeps/linux/sparc/jmpbuf-unwind.h
+index 9024a80..40303f0 100644
+--- a/libc/sysdeps/linux/sparc/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/sparc/jmpbuf-unwind.h
+@@ -21,3 +21,11 @@
+   ((int) (address) < (jmpbuf)[JB_SP])
+ 
+ #endif
++
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++#if defined(__arch64__)
++#include "sparc64/jmpbuf-unwind.h"
++#else
++#include "sparc32/jmpbuf-unwind.h"
++#endif
++#endif
+diff --git a/libc/sysdeps/linux/x86_64/jmpbuf-unwind.h b/libc/sysdeps/linux/x86_64/jmpbuf-unwind.h
+index 885f64f..1525872 100644
+--- a/libc/sysdeps/linux/x86_64/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/x86_64/jmpbuf-unwind.h
+@@ -15,3 +15,14 @@
+ # define _JMPBUF_UNWINDS(jmpbuf, address) \
+   ((void *) (address) < (void *) (jmpbuf)[JB_SP])
+ #endif
++
++#ifdef __UCLIBC_HAS_THREADS_NATIVE__
++#include <stdint.h>
++#include <unwind.h>
++
++#define _JMPBUF_CFA_UNWINDS_ADJ(_jmpbuf, _context, _adj) \
++  _JMPBUF_UNWINDS_ADJ (_jmpbuf, (void *) _Unwind_GetCFA (_context), _adj)
++
++#define _JMPBUF_UNWINDS_ADJ(_jmpbuf, _address, _adj) \
++  ((uintptr_t) (_address) - (_adj) < (uintptr_t) (_jmpbuf)[JB_RSP] - (_adj))
++#endif
+-- 
+1.7.12.2.21.g234cd45.dirty
+

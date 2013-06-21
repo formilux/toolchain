@@ -1,0 +1,865 @@
+From c53099f7dfa350391785fc3ded1e9d077f45417f Mon Sep 17 00:00:00 2001
+From: "Peter S. Mazinger" <ps.m@gmx.net>
+Date: Sun, 13 Mar 2011 21:43:14 +0100
+Subject: cleanup bits/setjmp.h of stuff moved to jmpbuf-offsets.h and
+ jmpbuf-unwind.h
+
+Make sure we use the new jmpbuf-*.h headers
+While there, adapt the offset on microblaze and the _JMPBUF_UNWINDS macro on bfin,
+it seems, these were changed in the meantime.
+
+Signed-off-by: Peter S. Mazinger <ps.m@gmx.net>
+Signed-off-by: Bernhard Reutner-Fischer <rep.dot.nop@gmail.com>
+---
+ Makefile.in                                    |  6 ++-
+ libc/sysdeps/linux/alpha/bits/setjmp.h         | 27 --------------
+ libc/sysdeps/linux/arm/bits/setjmp.h           | 19 ++++------
+ libc/sysdeps/linux/bfin/bits/setjmp.h          | 10 -----
+ libc/sysdeps/linux/bfin/jmpbuf-unwind.h        |  2 +-
+ libc/sysdeps/linux/cris/bits/setjmp.h          | 27 +++-----------
+ libc/sysdeps/linux/frv/bits/setjmp.h           |  7 ----
+ libc/sysdeps/linux/h8300/bits/setjmp.h         | 14 -------
+ libc/sysdeps/linux/hppa/bits/setjmp.h          | 13 +------
+ libc/sysdeps/linux/i386/bits/setjmp.h          | 20 +---------
+ libc/sysdeps/linux/ia64/bits/setjmp.h          |  7 +---
+ libc/sysdeps/linux/m68k/bits/setjmp.h          | 22 -----------
+ libc/sysdeps/linux/microblaze/bits/setjmp.h    |  8 ----
+ libc/sysdeps/linux/microblaze/jmpbuf-offsets.h |  2 +-
+ libc/sysdeps/linux/mips/bits/setjmp.h          | 11 ------
+ libc/sysdeps/linux/nios/bits/setjmp.h          | 31 ----------------
+ libc/sysdeps/linux/nios2/bits/setjmp.h         | 22 -----------
+ libc/sysdeps/linux/powerpc/bits/setjmp.h       | 40 +++-----------------
+ libc/sysdeps/linux/sh/bits/setjmp.h            | 17 ++-------
+ libc/sysdeps/linux/sh64/bits/setjmp.h          |  3 --
+ libc/sysdeps/linux/sparc/bits/setjmp.h         | 26 +------------
+ libc/sysdeps/linux/v850/bits/setjmp.h          |  9 -----
+ libc/sysdeps/linux/vax/bits/setjmp.h           |  7 ----
+ libc/sysdeps/linux/x86_64/bits/setjmp.h        | 51 ++------------------------
+ 24 files changed, 38 insertions(+), 363 deletions(-)
+
+diff --git a/Makefile.in b/Makefile.in
+index 3101527..5d58972 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -103,6 +103,8 @@ HEADERS_SYS_ARCH := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/$(TARGET
+ HEADERS_SYS_COMMON := $(filter-out $(HEADERS_SYS_ARCH),$(HEADERS_SYS_COMMON))
+ 
+ ALL_HEADERS_COMMON       := $(top_builddir)include/fpu_control.h \
++				$(top_builddir)include/jmpbuf-offsets.h \
++				$(top_builddir)include/jmpbuf-unwind.h \
+ 				$(top_builddir)include/dl-osinfo.h \
+ 				$(top_builddir)include/hp-timing.h
+ ALL_HEADERS_BITS_COMMON  := $(addprefix $(top_builddir)include/bits/,$(HEADERS_BITS_COMMON))
+@@ -124,7 +126,7 @@ target-headers-sysdep := \
+ 	$(ALL_HEADERS_SYS_ARCH) \
+ 	$(ALL_HEADERS_BITS_PTHREAD)
+ 
+-$(top_builddir)include/fpu_control.h:
++$(top_builddir)include/fpu_control.h $(top_builddir)include/jmpbuf-offsets.h $(top_builddir)include/jmpbuf-unwind.h:
+ 	@$(disp_ln)
+ 	$(Q)[ -r $(top_srcdir)libc/sysdeps/linux/$(TARGET_ARCH)/$(@F) ] && \
+ 		$(LN) -fs $(call rel_srcdir)libc/sysdeps/linux/$(TARGET_ARCH)/$(@F) $@ || \
+@@ -216,6 +218,8 @@ $(top_builddir)extra/scripts/unifdef: $(top_srcdir)extra/scripts/unifdef.c
+ HEADERS_RM- := \
+ 	internal \
+ 	dl-osinfo.h \
++	jmpbuf-offsets.h \
++	jmpbuf-unwind.h \
+ 	hp-timing.h \
+ 	_lfs_64.h \
+ 	bits/uClibc_arch_features.h \
+diff --git a/libc/sysdeps/linux/alpha/bits/setjmp.h b/libc/sysdeps/linux/alpha/bits/setjmp.h
+index 4471ba9..3041dda 100644
+--- a/libc/sysdeps/linux/alpha/bits/setjmp.h
++++ b/libc/sysdeps/linux/alpha/bits/setjmp.h
+@@ -55,33 +55,6 @@
+  * registers.
+  */
+ 
+-#if defined __USE_MISC || defined __ASSEMBLY__
+-# define JB_S0  0
+-# define JB_S1  1
+-# define JB_S2  2
+-# define JB_S3  3
+-# define JB_S4  4
+-# define JB_S5  5
+-# define JB_PC  6
+-# define JB_FP  7
+-# define JB_SP  8
+-# define JB_F2  9
+-# define JB_F3  10
+-# define JB_F4  11
+-# define JB_F5  12
+-# define JB_F6  13
+-# define JB_F7  14
+-# define JB_F8  15
+-# define JB_F9  16
+-#endif
+-
+-#ifndef __ASSEMBLY__
+ typedef long int __jmp_buf[17];
+ 
+-/* Test if longjmp to JMPBUF would unwind the frame containing a local
+-   variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(_jmpbuf, _address)				\
+-     ((void *)(_address) < (void *)((_jmpbuf)[JB_SP]))
+-#endif
+-
+ #endif  /* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/arm/bits/setjmp.h b/libc/sysdeps/linux/arm/bits/setjmp.h
+index ac52f12..84e0e62 100644
+--- a/libc/sysdeps/linux/arm/bits/setjmp.h
++++ b/libc/sysdeps/linux/arm/bits/setjmp.h
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 1997, 1998 Free Software Foundation, Inc.
++/* Copyright (C) 1997,1998,2005,2006 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -17,14 +17,14 @@
+    02111-1307 USA.  */
+ 
+ /* Define the machine-dependent type `jmp_buf'.  ARM version. */
++
+ #ifndef _BITS_SETJMP_H
+-#define _BITS_SETJMP_H	1
++#define _BITS_SETJMP_H 1
+ 
+ #if !defined _SETJMP_H && !defined _PTHREAD_H
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef _ASM
+ /* Jump buffer contains v1-v6, sl, fp, sp and pc.  Other registers are not
+    saved.  */
+ #ifdef __ARM_EABI__
+@@ -38,15 +38,10 @@ typedef int __jmp_buf[64] __attribute__((aligned (8)));
+ #elif defined __MAVERICK__ || defined __IWMMXT__
+ typedef int __jmp_buf[34];
+ #else
++# ifdef __UCLIBC_HAS_FPU__
+ typedef int __jmp_buf[22];
++# else
++typedef int __jmp_buf[10];
++# endif
+ #endif
+ #endif
+-
+-#define __JMP_BUF_SP		8
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf[__JMP_BUF_SP]))
+-
+-#endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/bfin/bits/setjmp.h b/libc/sysdeps/linux/bfin/bits/setjmp.h
+index adb9c23..f2f58fa 100644
+--- a/libc/sysdeps/linux/bfin/bits/setjmp.h
++++ b/libc/sysdeps/linux/bfin/bits/setjmp.h
+@@ -24,7 +24,6 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef _ASM
+ /* Jump buffer contains r7-r4, p5-p3, fp, sp and pc.  Other registers are not saved.  */
+ typedef struct
+ {
+@@ -45,13 +44,4 @@ typedef struct
+ 	unsigned long pc;
+ }__jmp_buf[1];
+ 
+-#endif
+-
+-#define __JMP_BUF_SP	8
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)->fp)
+-
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/bfin/jmpbuf-unwind.h b/libc/sysdeps/linux/bfin/jmpbuf-unwind.h
+index eeb5dca..bb7a374 100644
+--- a/libc/sysdeps/linux/bfin/jmpbuf-unwind.h
++++ b/libc/sysdeps/linux/bfin/jmpbuf-unwind.h
+@@ -8,4 +8,4 @@
+ /* Test if longjmp to JMPBUF would unwind the frame
+    containing a local variable at ADDRESS.  */
+ #define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)->__pregs[6])
++  ((void *) (address) < (void *) (jmpbuf)->fp)
+diff --git a/libc/sysdeps/linux/cris/bits/setjmp.h b/libc/sysdeps/linux/cris/bits/setjmp.h
+index 2a29c8c..89d3826 100644
+--- a/libc/sysdeps/linux/cris/bits/setjmp.h
++++ b/libc/sysdeps/linux/cris/bits/setjmp.h
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 1997, 1998 Free Software Foundation, Inc.
++/* Copyright (C) 1997, 1998, 2005 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -16,7 +16,7 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-/* Define the machine-dependent type `jmp_buf'.  CRIS version.  */
++/* Define the machine-dependent type `jmp_buf', CRIS version.  */
+ #ifndef _BITS_SETJMP_H
+ #define _BITS_SETJMP_H	1
+ 
+@@ -24,10 +24,8 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-/*
+-   Note that we save and restore CCR to be able to
+-   correctly handle DI/EI.  Note also that the "move x,ccr" does NOT affect
+-   the DMA enable bits (E and D).
++/* Note that saving and restoring CCR has no meaning in user mode, so we
++   don't actually do it; the slot is now reserved.
+ 
+    jmp_buf[0] - PC
+    jmp_buf[1] - SP (R14)
+@@ -46,21 +44,8 @@
+    jmp_buf[14] - R1
+    jmp_buf[15] - R0
+    jmp_buf[16] - SRP
+-   jmp_buf[17] - CCR
+-   */
++   jmp_buf[17] - CCR  */
+ 
+-#define _JBLEN 18
+-#if     defined (__USE_MISC) || defined (_ASM)
+-#define JB_SP 1
+-#endif
+-
+-#ifndef	_ASM
+-typedef int __jmp_buf[_JBLEN];
+-#endif
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[JB_SP])
++typedef int __jmp_buf[18];
+ 
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/frv/bits/setjmp.h b/libc/sysdeps/linux/frv/bits/setjmp.h
+index d49ad7b..26d995a 100644
+--- a/libc/sysdeps/linux/frv/bits/setjmp.h
++++ b/libc/sysdeps/linux/frv/bits/setjmp.h
+@@ -35,7 +35,6 @@
+ #define __SETJMP_FP	(__SETJMP_SP+1)
+ 
+ 
+-#ifndef _ASM
+ typedef struct
+ /* Demand 64-bit alignment such that we can use std/ldd in
+    setjmp/longjmp.  */
+@@ -48,11 +47,5 @@ __attribute__((__aligned__(8)))
+     unsigned long __sp;				/* stack pointer */
+     unsigned long __fp;				/* frame pointer */
+   } __jmp_buf[1];
+-#endif
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)->__sp)
+ 
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/h8300/bits/setjmp.h b/libc/sysdeps/linux/h8300/bits/setjmp.h
+index 15f8d84..67e1bc8 100644
+--- a/libc/sysdeps/linux/h8300/bits/setjmp.h
++++ b/libc/sysdeps/linux/h8300/bits/setjmp.h
+@@ -9,24 +9,10 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef	_ASM
+-
+ typedef struct
+   {
+     unsigned long __regs[4];  /* save er4 - er7(sp) */
+     unsigned long __pc;       /* the return address */
+   } __jmp_buf[1];
+ 
+-#endif /* _ASM */
+-
+-#define JB_REGS   0
+-#define JB_PC     16
+-#define JB_SIZE   20
+-
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)->__regs[3])
+-
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/hppa/bits/setjmp.h b/libc/sysdeps/linux/hppa/bits/setjmp.h
+index 4395b8f..e6c2d6d 100644
+--- a/libc/sysdeps/linux/hppa/bits/setjmp.h
++++ b/libc/sysdeps/linux/hppa/bits/setjmp.h
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 2000 Free Software Foundation, Inc.
++/* Copyright (C) 2000, 2005, 2006 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -29,17 +29,6 @@
+    easier, and to ensure proper alignment. Naturally, user code should
+    not depend on either representation. */
+ 
+-#if defined __USE_MISC || defined _ASM
+-#define JB_SP (76/4)
+-#endif
+-
+-#ifndef	_ASM
+ typedef double __jmp_buf[21];
+-#endif
+-
+-/* Test if longjmp to JMPBUF would unwind the frame containing a local
+-   variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(_jmpbuf, _address)				\
+-     ((void *)(_address) > (void *)(((unsigned long *) _jmpbuf)[JB_SP]))
+ 
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/i386/bits/setjmp.h b/libc/sysdeps/linux/i386/bits/setjmp.h
+index 107fe58..b59f182 100644
+--- a/libc/sysdeps/linux/i386/bits/setjmp.h
++++ b/libc/sysdeps/linux/i386/bits/setjmp.h
+@@ -1,4 +1,5 @@
+-/* Copyright (C) 1997, 1998, 2000, 2001, 2003 Free Software Foundation, Inc.
++/* Copyright (C) 1997,1998,2000,2001,2003,2005,2006
++	Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -24,23 +25,6 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#if defined __USE_MISC || defined _ASM
+-# define JB_BX	0
+-# define JB_SI	1
+-# define JB_DI	2
+-# define JB_BP	3
+-# define JB_SP	4
+-# define JB_PC	5
+-# define JB_SIZE 24
+-#endif
+-
+-#ifndef	_ASM
+ typedef int __jmp_buf[6];
+-#endif
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[JB_SP])
+ 
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/ia64/bits/setjmp.h b/libc/sysdeps/linux/ia64/bits/setjmp.h
+index 7662575..8bd675e 100644
+--- a/libc/sysdeps/linux/ia64/bits/setjmp.h
++++ b/libc/sysdeps/linux/ia64/bits/setjmp.h
+@@ -1,5 +1,5 @@
+ /* Define the machine-dependent type `jmp_buf'.  Linux/IA-64 version.
+-   Copyright (C) 1999, 2000, 2003 Free Software Foundation, Inc.
++   Copyright (C) 1999,2000,2003,2005,2006 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+    Contributed by David Mosberger-Tang <davidm@hpl.hp.com>.
+ 
+@@ -32,9 +32,4 @@
+ /* the __jmp_buf element type should be __float80 per ABI... */
+ typedef long __jmp_buf[_JBLEN] __attribute__ ((aligned (16))); /* guarantees 128-bit alignment! */
+ 
+-/* Test if longjmp to JMPBUF would unwind the frame containing a local
+-   variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(_jmpbuf, _address)		\
+-     ((void *)(_address) < (void *)(((long *)_jmpbuf)[0]))
+-
+ #endif  /* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/m68k/bits/setjmp.h b/libc/sysdeps/linux/m68k/bits/setjmp.h
+index a6b0ed0..fa9ff54 100644
+--- a/libc/sysdeps/linux/m68k/bits/setjmp.h
++++ b/libc/sysdeps/linux/m68k/bits/setjmp.h
+@@ -25,8 +25,6 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef _ASM
+-
+ typedef struct
+   {
+     /* There are eight 4-byte data registers, but D0 is not saved.  */
+@@ -45,24 +43,4 @@ typedef struct
+ 
+   } __jmp_buf[1];
+ 
+-#endif
+-
+-#define JB_REGS   0
+-#define JB_DREGS  0
+-#define JB_AREGS  24
+-#define JB_PC     48
+-#define JB_FPREGS 52
+-
+-#if defined __HAVE_68881__ || defined __HAVE_FPU__
+-# define JB_SIZE 76
+-#else
+-# define JB_SIZE 52
+-#endif
+-
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)->__aregs[5])
+-
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/microblaze/bits/setjmp.h b/libc/sysdeps/linux/microblaze/bits/setjmp.h
+index 0c0573c..5ae7381 100644
+--- a/libc/sysdeps/linux/microblaze/bits/setjmp.h
++++ b/libc/sysdeps/linux/microblaze/bits/setjmp.h
+@@ -19,7 +19,6 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef _ASM
+ typedef struct
+   {
+     /* Stack pointer.  */
+@@ -37,11 +36,4 @@ typedef struct
+   } __jmp_buf[1];
+ #endif
+ 
+-#define JB_SIZE		(4 * 18)
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[0].__sp)
+-
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/microblaze/jmpbuf-offsets.h b/libc/sysdeps/linux/microblaze/jmpbuf-offsets.h
+index b74acc6..c6cccc7 100644
+--- a/libc/sysdeps/linux/microblaze/jmpbuf-offsets.h
++++ b/libc/sysdeps/linux/microblaze/jmpbuf-offsets.h
+@@ -3,4 +3,4 @@
+  *
+  * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
+  */
+-#define JB_SIZE		(4 * 15)
++#define JB_SIZE		(4 * 18)
+diff --git a/libc/sysdeps/linux/mips/bits/setjmp.h b/libc/sysdeps/linux/mips/bits/setjmp.h
+index 08e74fe..951949b 100644
+--- a/libc/sysdeps/linux/mips/bits/setjmp.h
++++ b/libc/sysdeps/linux/mips/bits/setjmp.h
+@@ -58,15 +58,4 @@ typedef struct
+ #endif /* N32 || O32 */
+   } __jmp_buf[1];
+ 
+-#ifdef __USE_MISC
+-/* Offset to the program counter in `jmp_buf'.  */
+-# define JB_PC	0
+-#endif
+-
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[0].__sp)
+-
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/nios/bits/setjmp.h b/libc/sysdeps/linux/nios/bits/setjmp.h
+index 807ebea..373f5ab 100644
+--- a/libc/sysdeps/linux/nios/bits/setjmp.h
++++ b/libc/sysdeps/linux/nios/bits/setjmp.h
+@@ -24,8 +24,6 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef _ASM
+-
+ #include <signal.h>
+ 
+ typedef struct
+@@ -44,33 +42,4 @@ typedef struct
+ 
+   } __jmp_buf[1];
+ 
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)->__sp)
+-
+-#else /* _ASM */
+-
+-#define jmpbuf_l0 0x00
+-#define jmpbuf_l1 0x01
+-#define jmpbuf_l2 0x02
+-#define jmpbuf_l3 0x03
+-#define jmpbuf_l4 0x04
+-#define jmpbuf_l5 0x05
+-#define jmpbuf_l6 0x06
+-#define jmpbuf_l7 0x07
+-
+-#define jmpbuf_i0 0x08
+-#define jmpbuf_i1 0x09
+-#define jmpbuf_i2 0x0a
+-#define jmpbuf_i3 0x0b
+-#define jmpbuf_i4 0x0c
+-#define jmpbuf_i5 0x0d
+-
+-#define jmpbuf_sp 0x0e
+-#define jmpbuf_jmpret 0x0f
+-#define jmpbuf_callersret 0x10
+-
+-#endif /* _ASM */
+-
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/nios2/bits/setjmp.h b/libc/sysdeps/linux/nios2/bits/setjmp.h
+index fcff031..4985191 100644
+--- a/libc/sysdeps/linux/nios2/bits/setjmp.h
++++ b/libc/sysdeps/linux/nios2/bits/setjmp.h
+@@ -24,7 +24,6 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef	_ASM
+ typedef struct
+ {
+     /* Callee-saved registers r16 through r23.  */
+@@ -48,25 +47,4 @@ typedef struct
+ #endif
+ } __jmp_buf[1];
+ 
+-#endif
+-
+-#define JB_REGS		0
+-#define JB_PC		32
+-#define JB_SP		36
+-#define JB_FP		40
+-#define JB_GP		44
+-#define JB_FPREGS 	48
+-
+-#if defined __HAVE_FPU__
+-# define JB_SIZE 304
+-#else
+-# define JB_SIZE 48
+-#endif
+-
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void*)(jmpbuf)->__sp)
+-
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/powerpc/bits/setjmp.h b/libc/sysdeps/linux/powerpc/bits/setjmp.h
+index dad90c7..96ea8f3 100644
+--- a/libc/sysdeps/linux/powerpc/bits/setjmp.h
++++ b/libc/sysdeps/linux/powerpc/bits/setjmp.h
+@@ -1,4 +1,5 @@
+-/* Copyright (C) 1997, 1998, 2000, 2003, 2004 Free Software Foundation, Inc.
++/* Copyright (C) 1997,1998,2000,2003,2004,2005,2006
++	Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -31,30 +32,6 @@
+ 
+ #include <bits/wordsize.h>
+ 
+-#if defined __USE_MISC || defined _ASM
+-# define JB_GPR1   0  /* Also known as the stack pointer */
+-# define JB_GPR2   1
+-# define JB_LR     2  /* The address we will return to */
+-# if __WORDSIZE == 64
+-#  define JB_GPRS   3  /* GPRs 14 through 31 are saved, 18*2 words total.  */
+-#  define JB_CR     21 /* Condition code registers with the VRSAVE at */
+-                       /* offset 172 (low half of the double word.  */
+-#  define JB_FPRS   22 /* FPRs 14 through 31 are saved, 18*2 words total.  */
+-#  define JB_SIZE   (64 * 8) /* As per PPC64-VMX ABI.  */
+-#  define JB_VRSAVE 21 /* VRSAVE shares a double word with the CR at offset */
+-                       /* 168 (high half of the double word).  */
+-#  define JB_VRS    40 /* VRs 20 through 31 are saved, 12*4 words total.  */
+-# else
+-#  define JB_GPRS   3  /* GPRs 14 through 31 are saved, 18 in total.  */
+-#  define JB_CR     21 /* Condition code registers.  */
+-#  define JB_FPRS   22 /* FPRs 14 through 31 are saved, 18*2 words total.  */
+-#  define JB_SIZE   ((64 + (12 * 4)) * 4)
+-#  define JB_VRSAVE 62
+-#  define JB_VRS    64
+-# endif
+-#endif
+-
+-
+ /* The current powerpc 32-bit Altivec ABI specifies for SVR4 ABI and EABI
+    the vrsave must be at byte 248 & v20 at byte 256.  So we must pad this
+    correctly on 32 bit.  It also insists that vecregs are only gauranteed
+@@ -62,19 +39,12 @@
+    We have to version the code because members like  int __mask_was_saved
+    in the jmp_buf will move as jmp_buf is now larger than 248 bytes.  We
+    cannot keep the altivec jmp_buf backward compatible with the jmp_buf.  */
+-#ifndef	_ASM
+-# if __WORDSIZE == 64
++#if __WORDSIZE == 64
+ typedef long int __jmp_buf[64] __attribute__ ((__aligned__ (16)));
+-# else
++#else
+ /* The alignment is not essential, i.e.the buffer can be copied to a 4 byte
+    aligned buffer as per the ABI it is just added for performance reasons.  */
+ typedef long int __jmp_buf[64 + (12 * 4)] __attribute__ ((__aligned__ (16)));
+-# endif
+ #endif
+ 
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[JB_GPR1])
+-
+-#endif	/* bits/setjmp.h */
++#endif  /* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/sh/bits/setjmp.h b/libc/sysdeps/linux/sh/bits/setjmp.h
+index 6458dfe..a452b04 100644
+--- a/libc/sysdeps/linux/sh/bits/setjmp.h
++++ b/libc/sysdeps/linux/sh/bits/setjmp.h
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 1999, 2000, 2003, 2005 Free Software Foundation, Inc.
++/* Copyright (C) 1999,2000,2003,2005,2006 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -18,13 +18,12 @@
+ 
+ /* Define the machine-dependent type `jmp_buf'.  SH version. */
+ #ifndef _BITS_SETJMP_H
+-#define _BITS_SETJMP_H	1
++#define _BITS_SETJMP_H  1
+ 
+ #if !defined _SETJMP_H && !defined _PTHREAD_H
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef _ASM
+ typedef struct
+   {
+     /* Callee-saved registers r8 through r15.  */
+@@ -42,15 +41,5 @@ typedef struct
+     /* Callee-saved floating point registers fr12 through fr15.  */
+     int __fpregs[4];
+   } __jmp_buf[1];
+-#endif
+-
+-#if defined __USE_MISC || defined _ASM
+-# define JB_SIZE		(4 * 15)
+-#endif
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[0].__regs[7])
+ 
+-#endif	/* bits/setjmp.h */
++#endif  /* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/sh64/bits/setjmp.h b/libc/sysdeps/linux/sh64/bits/setjmp.h
+index ad1ec9d..3aac78e 100644
+--- a/libc/sysdeps/linux/sh64/bits/setjmp.h
++++ b/libc/sysdeps/linux/sh64/bits/setjmp.h
+@@ -33,8 +33,6 @@
+ #define	__SETJMP_TRG(x)	(__SETJMP_NUM_INT+__SETJMP_NUM_DBL+(x))
+ #define	__SETJMP_LR	(__SETJMP_NUM_INT+__SETJMP_NUM_DBL+__SETJMP_NUM_TRG)
+ 
+-
+-#ifndef _ASM
+ typedef struct
+   {
+ 	    /* Callee-saved registers.  */
+@@ -45,6 +43,5 @@ typedef struct
+     unsigned long long __trgs[__SETJMP_NUM_TRG];	/* traget registers */
+     unsigned long long __lr;				/* linkage register */
+   } __jmp_buf[1];
+-#endif
+ 
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/sparc/bits/setjmp.h b/libc/sysdeps/linux/sparc/bits/setjmp.h
+index ac5a4b2..f6c7401 100644
+--- a/libc/sysdeps/linux/sparc/bits/setjmp.h
++++ b/libc/sysdeps/linux/sparc/bits/setjmp.h
+@@ -1,4 +1,5 @@
+-/* Copyright (C) 1997,1999,2000,2003 Free Software Foundation, Inc.
++/* Copyright (C) 1997, 1999, 2000, 2003, 2005, 2006
++   Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -27,7 +28,6 @@
+ 
+ #if 0 /*__WORDSIZE == 64*/
+ 
+-#ifndef _ASM
+ typedef struct __sparc64_jmp_buf
+   {
+     struct __sparc64_jmp_buf	*uc_link;
+@@ -55,30 +55,8 @@ typedef struct __sparc64_jmp_buf
+ 	  }			mc_fpregs;
+       }				uc_mcontext;
+   } __jmp_buf[1];
+-#endif
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((unsigned long int) (address) < (jmpbuf)->uc_mcontext.mc_fp)
+-
+ #else
+-
+-#if defined __USE_MISC || defined _ASM
+-# define JB_SP  0
+-# define JB_FP  1
+-# define JB_PC  2
+-#endif
+-
+-#ifndef _ASM
+ typedef int __jmp_buf[3];
+ #endif
+ 
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((int) (address) < (jmpbuf)[JB_SP])
+-
+-#endif
+-
+ #endif  /* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/v850/bits/setjmp.h b/libc/sysdeps/linux/v850/bits/setjmp.h
+index c943737..b76df85 100644
+--- a/libc/sysdeps/linux/v850/bits/setjmp.h
++++ b/libc/sysdeps/linux/v850/bits/setjmp.h
+@@ -18,7 +18,6 @@
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+ #endif
+ 
+-#ifndef _ASM
+ typedef struct
+   {
+     /* Stack pointer.  */
+@@ -30,13 +29,5 @@ typedef struct
+     /* Callee-saved registers r2 and r20-r29.  */
+     int __regs[11];
+   } __jmp_buf[1];
+-#endif
+-
+-#define JB_SIZE		(4 * 13)
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[0].__sp)
+ 
+ #endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/vax/bits/setjmp.h b/libc/sysdeps/linux/vax/bits/setjmp.h
+index 68a1b32..06b00e5 100644
+--- a/libc/sysdeps/linux/vax/bits/setjmp.h
++++ b/libc/sysdeps/linux/vax/bits/setjmp.h
+@@ -6,14 +6,8 @@
+ 
+ /* we want to save enough that we can use this to fool RET,
+  * So we basically save all of the CALLS stack frame. Plus regs. */
+-#ifndef	_ASM
+ typedef int __jmp_buf[16];
+-#endif
+ 
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-#define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf[4]))
+ /*
+ 	jmp_buf layout. jmp_buf[0]
+ 	void *__cond;		 The condition handler
+@@ -34,4 +28,3 @@ typedef int __jmp_buf[16];
+ 	void *__rA;		 regs, r0->r11.
+ 	void *__rB;		 regs, r0->r11.
+ */
+-
+diff --git a/libc/sysdeps/linux/x86_64/bits/setjmp.h b/libc/sysdeps/linux/x86_64/bits/setjmp.h
+index 515d769..49c8428 100644
+--- a/libc/sysdeps/linux/x86_64/bits/setjmp.h
++++ b/libc/sysdeps/linux/x86_64/bits/setjmp.h
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 2001, 2002, 2003 Free Software Foundation, Inc.
++/* Copyright (C) 2001,2002,2003,2005,2006 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -18,7 +18,7 @@
+ 
+ /* Define the machine-dependent type `jmp_buf'.  x86-64 version.  */
+ #ifndef _BITS_SETJMP_H
+-#define _BITS_SETJMP_H	1
++#define _BITS_SETJMP_H  1
+ 
+ #if !defined _SETJMP_H && !defined _PTHREAD_H
+ # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
+@@ -27,52 +27,9 @@
+ #include <bits/wordsize.h>
+ 
+ #if __WORDSIZE == 64
+-
+-/* We only need to save callee-saved registers plus stackpointer and
+-   program counter.  */
+-# if defined __USE_MISC || defined _ASM
+-#  define JB_RBX	0
+-#  define JB_RBP	1
+-#  define JB_R12	2
+-#  define JB_R13	3
+-#  define JB_R14	4
+-#  define JB_R15	5
+-#  define JB_RSP	6
+-#  define JB_PC	7
+-#  define JB_SIZE (8*8)
+-# endif
+-
+-#else
+-
+-# if defined __USE_MISC || defined _ASM
+-#  define JB_BX	0
+-#  define JB_SI	1
+-#  define JB_DI	2
+-#  define JB_BP	3
+-#  define JB_SP	4
+-#  define JB_PC	5
+-#  define JB_SIZE 24
+-# endif
+-
+-#endif
+-
+-#ifndef _ASM
+-
+-# if __WORDSIZE == 64
+ typedef long int __jmp_buf[8];
+-# else
++#else
+ typedef int __jmp_buf[6];
+-# endif
+-
+-/* Test if longjmp to JMPBUF would unwind the frame
+-   containing a local variable at ADDRESS.  */
+-# if __WORDSIZE == 64
+-#  define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[JB_RSP])
+-# else
+-#  define _JMPBUF_UNWINDS(jmpbuf, address) \
+-  ((void *) (address) < (void *) (jmpbuf)[JB_SP])
+-# endif
+ #endif
+ 
+-#endif	/* bits/setjmp.h */
++#endif  /* bits/setjmp.h */
+-- 
+1.7.12.2.21.g234cd45.dirty
+

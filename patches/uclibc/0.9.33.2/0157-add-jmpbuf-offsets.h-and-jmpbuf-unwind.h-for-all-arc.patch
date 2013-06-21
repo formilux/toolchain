@@ -1,0 +1,903 @@
+From 0078a92e395d3e351c0ff23536781b58a800131e Mon Sep 17 00:00:00 2001
+From: "Peter S. Mazinger" <ps.m@gmx.net>
+Date: Sun, 13 Mar 2011 20:56:54 +0100
+Subject: add jmpbuf-offsets.h and jmpbuf-unwind.h for all archs (LT related)
+
+Signed-off-by: Peter S. Mazinger <ps.m@gmx.net>
+Signed-off-by: Bernhard Reutner-Fischer <rep.dot.nop@gmail.com>
+---
+ libc/sysdeps/linux/alpha/jmpbuf-offsets.h      | 36 ++++++++++++++++++++
+ libc/sysdeps/linux/alpha/jmpbuf-unwind.h       | 12 +++++++
+ libc/sysdeps/linux/arm/jmpbuf-offsets.h        | 24 ++++++++++++++
+ libc/sysdeps/linux/arm/jmpbuf-unwind.h         | 12 +++++++
+ libc/sysdeps/linux/bfin/jmpbuf-offsets.h       |  8 +++++
+ libc/sysdeps/linux/bfin/jmpbuf-unwind.h        | 11 ++++++
+ libc/sysdeps/linux/common/jmpbuf-offsets.h     |  6 ++++
+ libc/sysdeps/linux/cris/jmpbuf-offsets.h       |  8 +++++
+ libc/sysdeps/linux/cris/jmpbuf-unwind.h        | 12 +++++++
+ libc/sysdeps/linux/frv/jmpbuf-unwind.h         | 14 ++++++++
+ libc/sysdeps/linux/h8300/jmpbuf-offsets.h      |  9 +++++
+ libc/sysdeps/linux/h8300/jmpbuf-unwind.h       | 12 +++++++
+ libc/sysdeps/linux/hppa/jmpbuf-offsets.h       | 20 +++++++++++
+ libc/sysdeps/linux/hppa/jmpbuf-unwind.h        | 12 +++++++
+ libc/sysdeps/linux/i386/jmpbuf-offsets.h       | 26 +++++++++++++++
+ libc/sysdeps/linux/i386/jmpbuf-unwind.h        | 12 +++++++
+ libc/sysdeps/linux/ia64/jmpbuf-unwind.h        | 11 ++++++
+ libc/sysdeps/linux/m68k/jmpbuf-offsets.h       | 17 ++++++++++
+ libc/sysdeps/linux/m68k/jmpbuf-unwind.h        | 11 ++++++
+ libc/sysdeps/linux/microblaze/jmpbuf-offsets.h |  6 ++++
+ libc/sysdeps/linux/microblaze/jmpbuf-unwind.h  | 11 ++++++
+ libc/sysdeps/linux/mips/jmpbuf-unwind.h        | 11 ++++++
+ libc/sysdeps/linux/nios/jmpbuf-offsets.h       | 25 ++++++++++++++
+ libc/sysdeps/linux/nios/jmpbuf-unwind.h        | 11 ++++++
+ libc/sysdeps/linux/nios2/jmpbuf-offsets.h      | 18 ++++++++++
+ libc/sysdeps/linux/nios2/jmpbuf-unwind.h       | 11 ++++++
+ libc/sysdeps/linux/powerpc/jmpbuf-offsets.h    | 41 +++++++++++++++++++++++
+ libc/sysdeps/linux/powerpc/jmpbuf-unwind.h     | 12 +++++++
+ libc/sysdeps/linux/sh/jmpbuf-offsets.h         | 20 +++++++++++
+ libc/sysdeps/linux/sh/jmpbuf-unwind.h          | 11 ++++++
+ libc/sysdeps/linux/sparc/jmpbuf-offsets.h      | 30 +++++++++++++++++
+ libc/sysdeps/linux/sparc/jmpbuf-unwind.h       | 23 +++++++++++++
+ libc/sysdeps/linux/v850/jmpbuf-offsets.h       |  6 ++++
+ libc/sysdeps/linux/v850/jmpbuf-unwind.h        | 11 ++++++
+ libc/sysdeps/linux/vax/jmpbuf-unwind.h         | 11 ++++++
+ libc/sysdeps/linux/x86_64/jmpbuf-offsets.h     | 46 ++++++++++++++++++++++++++
+ libc/sysdeps/linux/x86_64/jmpbuf-unwind.h      | 17 ++++++++++
+ 37 files changed, 594 insertions(+)
+ create mode 100644 libc/sysdeps/linux/alpha/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/alpha/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/arm/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/arm/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/bfin/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/bfin/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/common/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/cris/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/cris/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/frv/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/h8300/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/h8300/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/hppa/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/hppa/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/i386/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/i386/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/ia64/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/m68k/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/m68k/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/microblaze/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/microblaze/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/mips/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/nios/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/nios/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/nios2/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/nios2/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/powerpc/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/powerpc/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/sh/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/sh/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/sparc/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/sparc/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/v850/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/v850/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/vax/jmpbuf-unwind.h
+ create mode 100644 libc/sysdeps/linux/x86_64/jmpbuf-offsets.h
+ create mode 100644 libc/sysdeps/linux/x86_64/jmpbuf-unwind.h
+
+diff --git a/libc/sysdeps/linux/alpha/jmpbuf-offsets.h b/libc/sysdeps/linux/alpha/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..c2503d4
+--- /dev/null
++++ b/libc/sysdeps/linux/alpha/jmpbuf-offsets.h
+@@ -0,0 +1,36 @@
++/* Private macros for accessing __jmp_buf contents.  Alpha version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#define JB_S0  0
++#define JB_S1  1
++#define JB_S2  2
++#define JB_S3  3
++#define JB_S4  4
++#define JB_S5  5
++#define JB_PC  6
++#define JB_FP  7
++#define JB_SP  8
++#define JB_F2  9
++#define JB_F3  10
++#define JB_F4  11
++#define JB_F5  12
++#define JB_F6  13
++#define JB_F7  14
++#define JB_F8  15
++#define JB_F9  16
+diff --git a/libc/sysdeps/linux/alpha/jmpbuf-unwind.h b/libc/sysdeps/linux/alpha/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..168df5b
+--- /dev/null
++++ b/libc/sysdeps/linux/alpha/jmpbuf-unwind.h
+@@ -0,0 +1,12 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame containing a local
++   variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(_jmpbuf, _address)				\
++     ((void *)(_address) < (void *)((_jmpbuf)[JB_SP]))
+diff --git a/libc/sysdeps/linux/arm/jmpbuf-offsets.h b/libc/sysdeps/linux/arm/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..8184a61
+--- /dev/null
++++ b/libc/sysdeps/linux/arm/jmpbuf-offsets.h
+@@ -0,0 +1,24 @@
++/* Private macros for accessing __jmp_buf contents.  ARM version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#ifdef __UCLIBC_HAS_FPU__
++#define __JMP_BUF_SP		20
++#else
++#define __JMP_BUF_SP		8
++#endif
+diff --git a/libc/sysdeps/linux/arm/jmpbuf-unwind.h b/libc/sysdeps/linux/arm/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..d83c681
+--- /dev/null
++++ b/libc/sysdeps/linux/arm/jmpbuf-unwind.h
+@@ -0,0 +1,12 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf[__JMP_BUF_SP]))
+diff --git a/libc/sysdeps/linux/bfin/jmpbuf-offsets.h b/libc/sysdeps/linux/bfin/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..7a91f18
+--- /dev/null
++++ b/libc/sysdeps/linux/bfin/jmpbuf-offsets.h
+@@ -0,0 +1,8 @@
++/* Private macros for accessing __jmp_buf contents.  BFIN version.  */
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++
++#define __JMP_BUF_SP		8
+diff --git a/libc/sysdeps/linux/bfin/jmpbuf-unwind.h b/libc/sysdeps/linux/bfin/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..eeb5dca
+--- /dev/null
++++ b/libc/sysdeps/linux/bfin/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)->__pregs[6])
+diff --git a/libc/sysdeps/linux/common/jmpbuf-offsets.h b/libc/sysdeps/linux/common/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..9456178
+--- /dev/null
++++ b/libc/sysdeps/linux/common/jmpbuf-offsets.h
+@@ -0,0 +1,6 @@
++/* Private macros for accessing __jmp_buf contents.  dummy version.  */
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
+diff --git a/libc/sysdeps/linux/cris/jmpbuf-offsets.h b/libc/sysdeps/linux/cris/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..9a95acc
+--- /dev/null
++++ b/libc/sysdeps/linux/cris/jmpbuf-offsets.h
+@@ -0,0 +1,8 @@
++/* Private macros for accessing __jmp_buf contents.  BFIN version.  */
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++
++#define JB_SP		1
+diff --git a/libc/sysdeps/linux/cris/jmpbuf-unwind.h b/libc/sysdeps/linux/cris/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..8b75dce
+--- /dev/null
++++ b/libc/sysdeps/linux/cris/jmpbuf-unwind.h
+@@ -0,0 +1,12 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[JB_SP])
+diff --git a/libc/sysdeps/linux/frv/jmpbuf-unwind.h b/libc/sysdeps/linux/frv/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..b58f3f0
+--- /dev/null
++++ b/libc/sysdeps/linux/frv/jmpbuf-unwind.h
+@@ -0,0 +1,14 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)->__sp)
++
++#endif	/* bits/setjmp.h */
+diff --git a/libc/sysdeps/linux/h8300/jmpbuf-offsets.h b/libc/sysdeps/linux/h8300/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..8351f59
+--- /dev/null
++++ b/libc/sysdeps/linux/h8300/jmpbuf-offsets.h
+@@ -0,0 +1,9 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++
++#define JB_REGS   0
++#define JB_PC     16
++#define JB_SIZE   20
+diff --git a/libc/sysdeps/linux/h8300/jmpbuf-unwind.h b/libc/sysdeps/linux/h8300/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..fe3f758
+--- /dev/null
++++ b/libc/sysdeps/linux/h8300/jmpbuf-unwind.h
+@@ -0,0 +1,12 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)->__regs[3])
+diff --git a/libc/sysdeps/linux/hppa/jmpbuf-offsets.h b/libc/sysdeps/linux/hppa/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..d95ed8a
+--- /dev/null
++++ b/libc/sysdeps/linux/hppa/jmpbuf-offsets.h
+@@ -0,0 +1,20 @@
++/* Private macros for accessing __jmp_buf contents.  HPPA version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#define JB_SP (76/4)
+diff --git a/libc/sysdeps/linux/hppa/jmpbuf-unwind.h b/libc/sysdeps/linux/hppa/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..0590754
+--- /dev/null
++++ b/libc/sysdeps/linux/hppa/jmpbuf-unwind.h
+@@ -0,0 +1,12 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame containing a local
++   variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(_jmpbuf, _address)				\
++     ((void *)(_address) > (void *)(((unsigned long *) _jmpbuf)[JB_SP]))
+diff --git a/libc/sysdeps/linux/i386/jmpbuf-offsets.h b/libc/sysdeps/linux/i386/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..c53d539
+--- /dev/null
++++ b/libc/sysdeps/linux/i386/jmpbuf-offsets.h
+@@ -0,0 +1,26 @@
++/* Private macros for accessing __jmp_buf contents.  i386 version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#define JB_BX	0
++#define JB_SI	1
++#define JB_DI	2
++#define JB_BP	3
++#define JB_SP	4
++#define JB_PC	5
++#define JB_SIZE 24
+diff --git a/libc/sysdeps/linux/i386/jmpbuf-unwind.h b/libc/sysdeps/linux/i386/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..8b75dce
+--- /dev/null
++++ b/libc/sysdeps/linux/i386/jmpbuf-unwind.h
+@@ -0,0 +1,12 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[JB_SP])
+diff --git a/libc/sysdeps/linux/ia64/jmpbuf-unwind.h b/libc/sysdeps/linux/ia64/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..91e2df8
+--- /dev/null
++++ b/libc/sysdeps/linux/ia64/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame containing a local
++   variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(_jmpbuf, _address)		\
++     ((void *)(_address) < (void *)(((long *)_jmpbuf)[0]))
+diff --git a/libc/sysdeps/linux/m68k/jmpbuf-offsets.h b/libc/sysdeps/linux/m68k/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..cb0df83
+--- /dev/null
++++ b/libc/sysdeps/linux/m68k/jmpbuf-offsets.h
+@@ -0,0 +1,17 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++
++#define JB_REGS   0
++#define JB_DREGS  0
++#define JB_AREGS  24
++#define JB_PC     48
++#define JB_FPREGS 52
++
++#if defined __HAVE_68881__ || defined __UCLIBC_HAS_FPU__
++# define JB_SIZE 76
++#else
++# define JB_SIZE 52
++#endif
+diff --git a/libc/sysdeps/linux/m68k/jmpbuf-unwind.h b/libc/sysdeps/linux/m68k/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..d87ace3
+--- /dev/null
++++ b/libc/sysdeps/linux/m68k/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)->__aregs[5])
+diff --git a/libc/sysdeps/linux/microblaze/jmpbuf-offsets.h b/libc/sysdeps/linux/microblaze/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..b74acc6
+--- /dev/null
++++ b/libc/sysdeps/linux/microblaze/jmpbuf-offsets.h
+@@ -0,0 +1,6 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#define JB_SIZE		(4 * 15)
+diff --git a/libc/sysdeps/linux/microblaze/jmpbuf-unwind.h b/libc/sysdeps/linux/microblaze/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..a24cd12
+--- /dev/null
++++ b/libc/sysdeps/linux/microblaze/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[0].__sp)
+diff --git a/libc/sysdeps/linux/mips/jmpbuf-unwind.h b/libc/sysdeps/linux/mips/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..a24cd12
+--- /dev/null
++++ b/libc/sysdeps/linux/mips/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[0].__sp)
+diff --git a/libc/sysdeps/linux/nios/jmpbuf-offsets.h b/libc/sysdeps/linux/nios/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..266a7e9
+--- /dev/null
++++ b/libc/sysdeps/linux/nios/jmpbuf-offsets.h
+@@ -0,0 +1,25 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++
++#define jmpbuf_l0 0x00
++#define jmpbuf_l1 0x01
++#define jmpbuf_l2 0x02
++#define jmpbuf_l3 0x03
++#define jmpbuf_l4 0x04
++#define jmpbuf_l5 0x05
++#define jmpbuf_l6 0x06
++#define jmpbuf_l7 0x07
++
++#define jmpbuf_i0 0x08
++#define jmpbuf_i1 0x09
++#define jmpbuf_i2 0x0a
++#define jmpbuf_i3 0x0b
++#define jmpbuf_i4 0x0c
++#define jmpbuf_i5 0x0d
++
++#define jmpbuf_sp 0x0e
++#define jmpbuf_jmpret 0x0f
++#define jmpbuf_callersret 0x10
+diff --git a/libc/sysdeps/linux/nios/jmpbuf-unwind.h b/libc/sysdeps/linux/nios/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..64cd55f
+--- /dev/null
++++ b/libc/sysdeps/linux/nios/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)->__sp)
+diff --git a/libc/sysdeps/linux/nios2/jmpbuf-offsets.h b/libc/sysdeps/linux/nios2/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..3ade24e
+--- /dev/null
++++ b/libc/sysdeps/linux/nios2/jmpbuf-offsets.h
+@@ -0,0 +1,18 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++
++#define JB_REGS		0
++#define JB_PC		32
++#define JB_SP		36
++#define JB_FP		40
++#define JB_GP		44
++#define JB_FPREGS 	48
++
++#if defined __UCLIBC_HAS_FPU__
++# define JB_SIZE 304
++#else
++# define JB_SIZE 48
++#endif
+diff --git a/libc/sysdeps/linux/nios2/jmpbuf-unwind.h b/libc/sysdeps/linux/nios2/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..64cd55f
+--- /dev/null
++++ b/libc/sysdeps/linux/nios2/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)->__sp)
+diff --git a/libc/sysdeps/linux/powerpc/jmpbuf-offsets.h b/libc/sysdeps/linux/powerpc/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..1b9f766
+--- /dev/null
++++ b/libc/sysdeps/linux/powerpc/jmpbuf-offsets.h
+@@ -0,0 +1,41 @@
++/* Private macros for accessing __jmp_buf contents.  PowerPC version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <bits/wordsize.h>
++
++#define JB_GPR1   0  /* Also known as the stack pointer */
++#define JB_GPR2   1
++#define JB_LR     2  /* The address we will return to */
++#if __WORDSIZE == 64
++# define JB_GPRS   3  /* GPRs 14 through 31 are saved, 18*2 words total.  */
++# define JB_CR     21 /* Condition code registers with the VRSAVE at */
++                       /* offset 172 (low half of the double word.  */
++# define JB_FPRS   22 /* FPRs 14 through 31 are saved, 18*2 words total.  */
++# define JB_SIZE   (64 * 8) /* As per PPC64-VMX ABI.  */
++# define JB_VRSAVE 21 /* VRSAVE shares a double word with the CR at offset */
++                       /* 168 (high half of the double word).  */
++# define JB_VRS    40 /* VRs 20 through 31 are saved, 12*4 words total.  */
++#else
++# define JB_GPRS   3  /* GPRs 14 through 31 are saved, 18 in total.  */
++# define JB_CR     21 /* Condition code registers.  */
++# define JB_FPRS   22 /* FPRs 14 through 31 are saved, 18*2 words total.  */
++# define JB_SIZE   ((64 + (12 * 4)) * 4)
++# define JB_VRSAVE 62
++# define JB_VRS    64
++#endif
+diff --git a/libc/sysdeps/linux/powerpc/jmpbuf-unwind.h b/libc/sysdeps/linux/powerpc/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..c6f5604
+--- /dev/null
++++ b/libc/sysdeps/linux/powerpc/jmpbuf-unwind.h
+@@ -0,0 +1,12 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[JB_GPR1])
+diff --git a/libc/sysdeps/linux/sh/jmpbuf-offsets.h b/libc/sysdeps/linux/sh/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..312051e
+--- /dev/null
++++ b/libc/sysdeps/linux/sh/jmpbuf-offsets.h
+@@ -0,0 +1,20 @@
++/* Private macros for accessing __jmp_buf contents.  SH version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#define JB_SIZE		(4 * 15)
+diff --git a/libc/sysdeps/linux/sh/jmpbuf-unwind.h b/libc/sysdeps/linux/sh/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..7753b4f
+--- /dev/null
++++ b/libc/sysdeps/linux/sh/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[0].__regs[7])
+diff --git a/libc/sysdeps/linux/sparc/jmpbuf-offsets.h b/libc/sysdeps/linux/sparc/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..43bcbaf
+--- /dev/null
++++ b/libc/sysdeps/linux/sparc/jmpbuf-offsets.h
+@@ -0,0 +1,30 @@
++/* Private macros for accessing __jmp_buf contents.  SPARC version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <bits/wordsize.h>
++
++#if __WORDSIZE == 64
++#define O_mask_was_saved	512
++#define O_gregs			32
++#define O_g1			(O_gregs + 4*8)
++#else
++#define JB_SP	0
++#define JB_FP	1
++#define JB_PC	2
++#endif
+diff --git a/libc/sysdeps/linux/sparc/jmpbuf-unwind.h b/libc/sysdeps/linux/sparc/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..9024a80
+--- /dev/null
++++ b/libc/sysdeps/linux/sparc/jmpbuf-unwind.h
+@@ -0,0 +1,23 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++#if __WORDSIZE == 64
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((unsigned long int) (address) < (jmpbuf)->uc_mcontext.mc_fp)
++
++#else
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((int) (address) < (jmpbuf)[JB_SP])
++
++#endif
+diff --git a/libc/sysdeps/linux/v850/jmpbuf-offsets.h b/libc/sysdeps/linux/v850/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..cea9963
+--- /dev/null
++++ b/libc/sysdeps/linux/v850/jmpbuf-offsets.h
+@@ -0,0 +1,6 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#define JB_SIZE		(4 * 13)
+diff --git a/libc/sysdeps/linux/v850/jmpbuf-unwind.h b/libc/sysdeps/linux/v850/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..a24cd12
+--- /dev/null
++++ b/libc/sysdeps/linux/v850/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[0].__sp)
+diff --git a/libc/sysdeps/linux/vax/jmpbuf-unwind.h b/libc/sysdeps/linux/vax/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..18bbd96
+--- /dev/null
++++ b/libc/sysdeps/linux/vax/jmpbuf-unwind.h
+@@ -0,0 +1,11 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf[4]))
+diff --git a/libc/sysdeps/linux/x86_64/jmpbuf-offsets.h b/libc/sysdeps/linux/x86_64/jmpbuf-offsets.h
+new file mode 100644
+index 0000000..ad5f80e
+--- /dev/null
++++ b/libc/sysdeps/linux/x86_64/jmpbuf-offsets.h
+@@ -0,0 +1,46 @@
++/* Private macros for accessing __jmp_buf contents.  x86-64 version.
++   Copyright (C) 2006 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, write to the Free
++   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
++   02111-1307 USA.  */
++
++#include <bits/wordsize.h>
++
++#if __WORDSIZE == 64
++
++/* We only need to save callee-saved registers plus stackpointer and
++   program counter.  */
++# define JB_RBX	0
++# define JB_RBP	1
++# define JB_R12	2
++# define JB_R13	3
++# define JB_R14	4
++# define JB_R15	5
++# define JB_RSP	6
++# define JB_PC	7
++# define JB_SIZE (8*8)
++
++#else
++
++# define JB_BX	0
++# define JB_SI	1
++# define JB_DI	2
++# define JB_BP	3
++# define JB_SP	4
++# define JB_PC	5
++# define JB_SIZE 24
++
++#endif
+diff --git a/libc/sysdeps/linux/x86_64/jmpbuf-unwind.h b/libc/sysdeps/linux/x86_64/jmpbuf-unwind.h
+new file mode 100644
+index 0000000..885f64f
+--- /dev/null
++++ b/libc/sysdeps/linux/x86_64/jmpbuf-unwind.h
+@@ -0,0 +1,17 @@
++/*
++ * Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
++ *
++ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
++ */
++#include <setjmp.h>
++#include <jmpbuf-offsets.h>
++
++/* Test if longjmp to JMPBUF would unwind the frame
++   containing a local variable at ADDRESS.  */
++#if __WORDSIZE == 64
++# define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[JB_RSP])
++#else
++# define _JMPBUF_UNWINDS(jmpbuf, address) \
++  ((void *) (address) < (void *) (jmpbuf)[JB_SP])
++#endif
+-- 
+1.7.12.2.21.g234cd45.dirty
+

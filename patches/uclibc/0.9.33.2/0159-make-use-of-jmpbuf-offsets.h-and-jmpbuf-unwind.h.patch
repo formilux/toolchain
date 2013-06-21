@@ -1,0 +1,717 @@
+From 14647468df0b45ecf15223ee6a14ae50304b1f11 Mon Sep 17 00:00:00 2001
+From: "Peter S. Mazinger" <ps.m@gmx.net>
+Date: Sun, 13 Mar 2011 21:24:42 +0100
+Subject: make use of jmpbuf-offsets.h and jmpbuf-unwind.h
+
+Signed-off-by: Peter S. Mazinger <ps.m@gmx.net>
+Signed-off-by: Bernhard Reutner-Fischer <rep.dot.nop@gmail.com>
+---
+ libc/sysdeps/linux/alpha/__longjmp.S      |  5 +----
+ libc/sysdeps/linux/alpha/setjmp.S         | 35 ++++++++++++++++---------------
+ libc/sysdeps/linux/arm/__longjmp.S        |  4 ----
+ libc/sysdeps/linux/cris/__longjmp.S       |  4 ----
+ libc/sysdeps/linux/cris/setjmp.S          |  3 ---
+ libc/sysdeps/linux/frv/__longjmp.S        |  4 ----
+ libc/sysdeps/linux/h8300/bsd-_setjmp.S    |  4 +---
+ libc/sysdeps/linux/h8300/bsd-setjmp.S     |  4 +---
+ libc/sysdeps/linux/h8300/setjmp.S         |  4 +---
+ libc/sysdeps/linux/hppa/__longjmp.S       |  5 -----
+ libc/sysdeps/linux/i386/__longjmp.S       |  5 +----
+ libc/sysdeps/linux/i386/bsd-_setjmp.S     |  4 +---
+ libc/sysdeps/linux/i386/bsd-setjmp.S      |  4 ----
+ libc/sysdeps/linux/i386/setjmp.S          |  5 -----
+ libc/sysdeps/linux/m68k/__longjmp.S       |  4 +---
+ libc/sysdeps/linux/m68k/bsd-_setjmp.S     |  4 +---
+ libc/sysdeps/linux/m68k/bsd-setjmp.S      |  4 +---
+ libc/sysdeps/linux/m68k/setjmp.S          |  4 +---
+ libc/sysdeps/linux/microblaze/__longjmp.S |  4 ----
+ libc/sysdeps/linux/microblaze/setjmp.S    |  4 ----
+ libc/sysdeps/linux/nios/__longjmp.S       |  6 +-----
+ libc/sysdeps/linux/nios/setjmp.S          |  5 +----
+ libc/sysdeps/linux/nios2/__longjmp.S      |  4 +---
+ libc/sysdeps/linux/nios2/bsd-_setjmp.S    |  4 +---
+ libc/sysdeps/linux/nios2/bsd-setjmp.S     |  4 +---
+ libc/sysdeps/linux/nios2/setjmp.S         |  4 +---
+ libc/sysdeps/linux/powerpc/__longjmp.S    |  4 +---
+ libc/sysdeps/linux/powerpc/setjmp.S       |  4 +---
+ libc/sysdeps/linux/sh/__longjmp.S         |  3 ---
+ libc/sysdeps/linux/sh/setjmp.S            |  4 +---
+ libc/sysdeps/linux/sparc/__longjmp.S      |  6 +-----
+ libc/sysdeps/linux/sparc/setjmp.S         |  5 +----
+ libc/sysdeps/linux/v850/__longjmp.S       |  5 -----
+ libc/sysdeps/linux/v850/setjmp.S          |  4 ----
+ libc/sysdeps/linux/x86_64/__longjmp.S     |  5 +----
+ libc/sysdeps/linux/x86_64/bsd-setjmp.S    |  5 -----
+ libc/sysdeps/linux/x86_64/setjmp.S        |  5 +----
+ libpthread/linuxthreads.old/ptlongjmp.c   |  1 +
+ libpthread/linuxthreads/ptcleanup.c       |  2 +-
+ 39 files changed, 43 insertions(+), 151 deletions(-)
+
+diff --git a/libc/sysdeps/linux/alpha/__longjmp.S b/libc/sysdeps/linux/alpha/__longjmp.S
+index 910ec07..6871715 100644
+--- a/libc/sysdeps/linux/alpha/__longjmp.S
++++ b/libc/sysdeps/linux/alpha/__longjmp.S
+@@ -16,10 +16,7 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#include <features.h>
+-#define _SETJMP_H
+-#define __ASSEMBLY__
+-#include <bits/setjmp.h>
++#include <setjmp-offsets.h>
+ 
+ #define a0  $16
+ 
+diff --git a/libc/sysdeps/linux/alpha/setjmp.S b/libc/sysdeps/linux/alpha/setjmp.S
+index 105cc82..f037f7a 100644
+--- a/libc/sysdeps/linux/alpha/setjmp.S
++++ b/libc/sysdeps/linux/alpha/setjmp.S
+@@ -16,11 +16,7 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#include <features.h>
+-#define _ASM
+-#define _SETJMP_H
+-#define __ASSEMBLY__
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ #define a0  $16
+ 
+@@ -30,10 +26,16 @@ __sigsetjmp:
+        ldgp    $29, 0($27)
+ 
+ $sigsetjmp_local:
+-       subq    $30, 16, $30
+-       .frame  $26, 16, $26, 0
+-       stq     $26, 0($30)
+-       .mask   0x04000000, -16
++#ifndef __PIC__
++# define FRAME 16
++	subq    $30, FRAME, $30
++	.frame  $30, FRAME, $26, 0
++	stq     $26, 0($30)
++	.mask   0x04000000, -FRAME
++#else
++# define FRAME 0
++	.frame	$30, FRAME, $26, 0
++#endif
+ 	.prologue 1
+ 
+ 	stq	$9, JB_S0*8(a0)
+@@ -43,9 +45,9 @@ $sigsetjmp_local:
+ 	stq	$13, JB_S4*8(a0)
+ 	stq	$14, JB_S5*8(a0)
+ 	stq	$26, JB_PC*8(a0)
+-	addq	$30, 16, $1
+-	stq	$15, JB_FP*8(a0)
++	addq	$30, FRAME, $1
+ 	stq	$1, JB_SP*8(a0)
++	stq	$15, JB_FP*8(a0)
+ 	stt	$f2, JB_F2*8(a0)
+ 	stt	$f3, JB_F3*8(a0)
+ 	stt	$f4, JB_F4*8(a0)
+@@ -55,12 +57,16 @@ $sigsetjmp_local:
+ 	stt	$f8, JB_F8*8(a0)
+ 	stt	$f9, JB_F9*8(a0)
+ 
++#ifndef __PIC__
+ 	/* Call to C to (potentially) save our signal mask.  */
+ 	jsr	$26, __sigjmp_save
+-
+ 	ldq	$26, 0($30)
+ 	addq	$30, 16, $30
+ 	ret
++#else
++	/* Tailcall to save the signal mask.  */
++	br	$31, __sigjmp_save	!samegp
++#endif
+ 
+ .end __sigsetjmp
+ 
+@@ -71,7 +77,6 @@ $sigsetjmp_local:
+ .align 3;
+ .ent  _setjmp , 0;
+ _setjmp:
+-	.frame $30 , 0, $26
+ 	ldgp	$29, 0($27)
+ 	mov	0, $17
+ 	br	$sigsetjmp_local
+@@ -81,11 +86,7 @@ _setjmp:
+ .align 3;
+ .ent  setjmp , 0;
+ setjmp:
+-	.frame $30 , 0, $26
+ 	ldgp	$29, 0($27)
+ 	mov	1, $17
+ 	br	$sigsetjmp_local
+ .end setjmp
+-
+-.weak   _setjmp
+-.weak   setjmp
+diff --git a/libc/sysdeps/linux/arm/__longjmp.S b/libc/sysdeps/linux/arm/__longjmp.S
+index 5faf4ec..a3cb44c 100644
+--- a/libc/sysdeps/linux/arm/__longjmp.S
++++ b/libc/sysdeps/linux/arm/__longjmp.S
+@@ -19,10 +19,6 @@
+ 
+ #include <features.h>
+ #include <bits/arm_asm.h>
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+-
+ 
+ .global __longjmp
+ .type __longjmp,%function
+diff --git a/libc/sysdeps/linux/cris/__longjmp.S b/libc/sysdeps/linux/cris/__longjmp.S
+index 52a986f..8763c27 100644
+--- a/libc/sysdeps/linux/cris/__longjmp.S
++++ b/libc/sysdeps/linux/cris/__longjmp.S
+@@ -17,11 +17,7 @@
+    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+    Boston, MA 02111-1307, USA.  */
+ 
+-#include <features.h>
+ #include "sysdep.h"
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+ 
+ 	.syntax no_register_prefix
+ 
+diff --git a/libc/sysdeps/linux/cris/setjmp.S b/libc/sysdeps/linux/cris/setjmp.S
+index e7bb635..84fcbda 100644
+--- a/libc/sysdeps/linux/cris/setjmp.S
++++ b/libc/sysdeps/linux/cris/setjmp.S
+@@ -18,9 +18,6 @@
+    Boston, MA 02111-1307, USA.  */
+ 
+ #include "sysdep.h"
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+ 
+         .syntax no_register_prefix
+ 
+diff --git a/libc/sysdeps/linux/frv/__longjmp.S b/libc/sysdeps/linux/frv/__longjmp.S
+index c3145c8..d186ab1 100644
+--- a/libc/sysdeps/linux/frv/__longjmp.S
++++ b/libc/sysdeps/linux/frv/__longjmp.S
+@@ -4,10 +4,6 @@
+  * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
+  */
+ 
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+-
+ # setjmp/longjmp for Frv.  The jmpbuf looks like this:
+ #	
+ # Register	jmpbuf offset
+diff --git a/libc/sysdeps/linux/h8300/bsd-_setjmp.S b/libc/sysdeps/linux/h8300/bsd-_setjmp.S
+index e315058..fbe7025 100644
+--- a/libc/sysdeps/linux/h8300/bsd-_setjmp.S
++++ b/libc/sysdeps/linux/h8300/bsd-_setjmp.S
+@@ -1,8 +1,6 @@
+ /* BSD `_setjmp' entry point to `sigsetjmp (..., 0)'.  H8/300 version. */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ #ifdef __H8300S__
+ 	.h8300s
+diff --git a/libc/sysdeps/linux/h8300/bsd-setjmp.S b/libc/sysdeps/linux/h8300/bsd-setjmp.S
+index 9c35355..74ebb8f 100644
+--- a/libc/sysdeps/linux/h8300/bsd-setjmp.S
++++ b/libc/sysdeps/linux/h8300/bsd-setjmp.S
+@@ -1,8 +1,6 @@
+ /* BSD `_setjmp' entry point to `sigsetjmp (..., 1)'.  H8/300 version. */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ #ifdef __H8300S__
+ 	.h8300s
+diff --git a/libc/sysdeps/linux/h8300/setjmp.S b/libc/sysdeps/linux/h8300/setjmp.S
+index 5e48767..f2795fa 100644
+--- a/libc/sysdeps/linux/h8300/setjmp.S
++++ b/libc/sysdeps/linux/h8300/setjmp.S
+@@ -1,6 +1,4 @@
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ #ifdef __H8300S__
+ 	.h8300s
+diff --git a/libc/sysdeps/linux/hppa/__longjmp.S b/libc/sysdeps/linux/hppa/__longjmp.S
+index 750863e..7534711 100644
+--- a/libc/sysdeps/linux/hppa/__longjmp.S
++++ b/libc/sysdeps/linux/hppa/__longjmp.S
+@@ -17,11 +17,6 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#include <features.h>
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+-
+ /* __longjmp(jmpbuf, val) */
+ 
+ 	.text
+diff --git a/libc/sysdeps/linux/i386/__longjmp.S b/libc/sysdeps/linux/i386/__longjmp.S
+index e2809c0..cc333ea 100644
+--- a/libc/sysdeps/linux/i386/__longjmp.S
++++ b/libc/sysdeps/linux/i386/__longjmp.S
+@@ -17,10 +17,7 @@
+    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+    Boston, MA 02111-1307, USA.  */
+ 
+-#include <features.h>
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ .global __longjmp
+ .type   __longjmp,%function
+diff --git a/libc/sysdeps/linux/i386/bsd-_setjmp.S b/libc/sysdeps/linux/i386/bsd-_setjmp.S
+index f3cd6cb..e794732 100644
+--- a/libc/sysdeps/linux/i386/bsd-_setjmp.S
++++ b/libc/sysdeps/linux/i386/bsd-_setjmp.S
+@@ -21,9 +21,7 @@
+    We cannot do it in C because it must be a tail-call, so frame-unwinding
+    in setjmp doesn't clobber the state restored by longjmp.  */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ .global _setjmp
+ .type   _setjmp,%function
+diff --git a/libc/sysdeps/linux/i386/bsd-setjmp.S b/libc/sysdeps/linux/i386/bsd-setjmp.S
+index df46997..950b1f4 100644
+--- a/libc/sysdeps/linux/i386/bsd-setjmp.S
++++ b/libc/sysdeps/linux/i386/bsd-setjmp.S
+@@ -17,10 +17,6 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
+-
+ .global setjmp
+ .type   setjmp,%function
+ setjmp:
+diff --git a/libc/sysdeps/linux/i386/setjmp.S b/libc/sysdeps/linux/i386/setjmp.S
+index 20a6a0b..64b1503 100644
+--- a/libc/sysdeps/linux/i386/setjmp.S
++++ b/libc/sysdeps/linux/i386/setjmp.S
+@@ -17,11 +17,6 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
+-
+-
+ .global __sigsetjmp
+ .type   __sigsetjmp,%function
+ 
+diff --git a/libc/sysdeps/linux/m68k/__longjmp.S b/libc/sysdeps/linux/m68k/__longjmp.S
+index 5db9e43..f80c087 100644
+--- a/libc/sysdeps/linux/m68k/__longjmp.S
++++ b/libc/sysdeps/linux/m68k/__longjmp.S
+@@ -2,10 +2,8 @@
+ /* Copyright (C) 2002, David McCullough <davidm@snapgear.com> */
+ /* This file is released under the LGPL, any version you like */
+ 
+-#define _ASM
+-#define _SETJMP_H
+ #include <features.h>
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ .globl __longjmp
+ .type  __longjmp,@function
+diff --git a/libc/sysdeps/linux/m68k/bsd-_setjmp.S b/libc/sysdeps/linux/m68k/bsd-_setjmp.S
+index 0380c3d..cc472f7 100644
+--- a/libc/sysdeps/linux/m68k/bsd-_setjmp.S
++++ b/libc/sysdeps/linux/m68k/bsd-_setjmp.S
+@@ -2,9 +2,7 @@
+ /* Copyright (C) 2002, David McCullough <davidm@snapgear.com> */
+ /* This file is released under the LGPL, any version you like */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ .globl _setjmp;
+ .type  _setjmp,@function
+diff --git a/libc/sysdeps/linux/m68k/bsd-setjmp.S b/libc/sysdeps/linux/m68k/bsd-setjmp.S
+index fdd7540..b41b4c1 100644
+--- a/libc/sysdeps/linux/m68k/bsd-setjmp.S
++++ b/libc/sysdeps/linux/m68k/bsd-setjmp.S
+@@ -2,9 +2,7 @@
+ /* Copyright (C) 2002, David McCullough <davidm@snapgear.com> */
+ /* This file is released under the LGPL, any version you like */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ #include "m68k_pic.S"
+ 
+ .globl setjmp;
+diff --git a/libc/sysdeps/linux/m68k/setjmp.S b/libc/sysdeps/linux/m68k/setjmp.S
+index 4adda0a..b5bc6e0 100644
+--- a/libc/sysdeps/linux/m68k/setjmp.S
++++ b/libc/sysdeps/linux/m68k/setjmp.S
+@@ -2,9 +2,7 @@
+ /* Copyright (C) 2002, David McCullough <davidm@snapgear.com> */
+ /* This file is released under the LGPL, any version you like */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ #include "m68k_pic.S"
+ 
+ .globl __sigsetjmp;
+diff --git a/libc/sysdeps/linux/microblaze/__longjmp.S b/libc/sysdeps/linux/microblaze/__longjmp.S
+index c4423be..c7fce34 100644
+--- a/libc/sysdeps/linux/microblaze/__longjmp.S
++++ b/libc/sysdeps/linux/microblaze/__longjmp.S
+@@ -12,10 +12,6 @@
+  * Written by Miles Bader <miles@gnu.org>
+  */
+ 
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+-
+ #include <libc-symbols.h>
+ 
+ 	.text
+diff --git a/libc/sysdeps/linux/microblaze/setjmp.S b/libc/sysdeps/linux/microblaze/setjmp.S
+index d01c745..2e1e0d7 100644
+--- a/libc/sysdeps/linux/microblaze/setjmp.S
++++ b/libc/sysdeps/linux/microblaze/setjmp.S
+@@ -29,10 +29,6 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+-
+ #include <libc-symbols.h>
+ 
+ 	.text
+diff --git a/libc/sysdeps/linux/nios/__longjmp.S b/libc/sysdeps/linux/nios/__longjmp.S
+index d7d1cdd..2340ecf 100644
+--- a/libc/sysdeps/linux/nios/__longjmp.S
++++ b/libc/sysdeps/linux/nios/__longjmp.S
+@@ -16,11 +16,7 @@
+    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+    Boston, MA 02111-1307, USA.  */
+ 
+-#include <features.h>
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
+-
++#include <jmpbuf-offsets.h>
+ 
+ ;----------------------------------------
+ ;         Name: __longjmp
+diff --git a/libc/sysdeps/linux/nios/setjmp.S b/libc/sysdeps/linux/nios/setjmp.S
+index c285146..4731bb4 100644
+--- a/libc/sysdeps/linux/nios/setjmp.S
++++ b/libc/sysdeps/linux/nios/setjmp.S
+@@ -16,10 +16,7 @@
+    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+    Boston, MA 02111-1307, USA.  */
+ 
+-#include <features.h>
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ #include "NM_Macros.S"
+ 
+ ;----------------------------------------
+diff --git a/libc/sysdeps/linux/nios2/__longjmp.S b/libc/sysdeps/linux/nios2/__longjmp.S
+index 4b6508e..7769773 100644
+--- a/libc/sysdeps/linux/nios2/__longjmp.S
++++ b/libc/sysdeps/linux/nios2/__longjmp.S
+@@ -12,9 +12,7 @@
+  */
+ 
+ #include <features.h>
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ .globl __longjmp
+ .type  __longjmp,@function
+diff --git a/libc/sysdeps/linux/nios2/bsd-_setjmp.S b/libc/sysdeps/linux/nios2/bsd-_setjmp.S
+index ed4061c..ac101bd 100644
+--- a/libc/sysdeps/linux/nios2/bsd-_setjmp.S
++++ b/libc/sysdeps/linux/nios2/bsd-_setjmp.S
+@@ -11,9 +11,7 @@
+  * 
+  */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+    .globl _setjmp
+    .type  _setjmp,@function
+diff --git a/libc/sysdeps/linux/nios2/bsd-setjmp.S b/libc/sysdeps/linux/nios2/bsd-setjmp.S
+index ac99bfe..aa2e64f 100644
+--- a/libc/sysdeps/linux/nios2/bsd-setjmp.S
++++ b/libc/sysdeps/linux/nios2/bsd-setjmp.S
+@@ -12,9 +12,7 @@
+  */
+ 
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+    .globl setjmp
+    .type  setjmp,@function
+diff --git a/libc/sysdeps/linux/nios2/setjmp.S b/libc/sysdeps/linux/nios2/setjmp.S
+index 8acd220..22b52d1 100644
+--- a/libc/sysdeps/linux/nios2/setjmp.S
++++ b/libc/sysdeps/linux/nios2/setjmp.S
+@@ -12,9 +12,7 @@
+  */
+ 
+ #include <features.h>
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ .globl __sigsetjmp
+ .type  __sigsetjmp,@function
+diff --git a/libc/sysdeps/linux/powerpc/__longjmp.S b/libc/sysdeps/linux/powerpc/__longjmp.S
+index 765a873..846eca5 100644
+--- a/libc/sysdeps/linux/powerpc/__longjmp.S
++++ b/libc/sysdeps/linux/powerpc/__longjmp.S
+@@ -21,9 +21,7 @@
+ 
+ #include <features.h>
+ #include "ppc_asm.h"
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ 
+ #if defined __UCLIBC_HAS_FLOATS__ && ! defined __UCLIBC_HAS_SOFT_FLOAT__
+diff --git a/libc/sysdeps/linux/powerpc/setjmp.S b/libc/sysdeps/linux/powerpc/setjmp.S
+index 04b06d6..2c53744 100644
+--- a/libc/sysdeps/linux/powerpc/setjmp.S
++++ b/libc/sysdeps/linux/powerpc/setjmp.S
+@@ -21,9 +21,7 @@
+ 
+ #include <features.h>
+ #include "ppc_asm.h"
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ #if defined __UCLIBC_HAS_FLOATS__ && ! defined __UCLIBC_HAS_SOFT_FLOAT__
+ #define FP(x...) x
+diff --git a/libc/sysdeps/linux/sh/__longjmp.S b/libc/sysdeps/linux/sh/__longjmp.S
+index eb56991..b4f2af8 100644
+--- a/libc/sysdeps/linux/sh/__longjmp.S
++++ b/libc/sysdeps/linux/sh/__longjmp.S
+@@ -17,9 +17,6 @@
+    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+    Boston, MA 02111-1307, USA.  */
+ 
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+ #include <features.h>
+ 
+ /* __longjmp(jmpbuf, val) */
+diff --git a/libc/sysdeps/linux/sh/setjmp.S b/libc/sysdeps/linux/sh/setjmp.S
+index 0a81424..31d1a35 100644
+--- a/libc/sysdeps/linux/sh/setjmp.S
++++ b/libc/sysdeps/linux/sh/setjmp.S
+@@ -18,9 +18,7 @@
+    Boston, MA 02111-1307, USA.  */
+ 
+ #include <features.h>
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ 	.text
+ 
+diff --git a/libc/sysdeps/linux/sparc/__longjmp.S b/libc/sysdeps/linux/sparc/__longjmp.S
+index c7d4f07..46619d1 100644
+--- a/libc/sysdeps/linux/sparc/__longjmp.S
++++ b/libc/sysdeps/linux/sparc/__longjmp.S
+@@ -16,12 +16,8 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#include <features.h>
+-#include <sys/syscall.h>
++#include <jmpbuf-offsets.h>
+ 
+-#define _ASM 1
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
+ #define ENV(base,reg) [%base + (reg * 4)]
+ #define ST_FLUSH_WINDOWS 3
+ #define RW_FP [%fp + 0x48]
+diff --git a/libc/sysdeps/linux/sparc/setjmp.S b/libc/sysdeps/linux/sparc/setjmp.S
+index 796abc7..7b9e4c8 100644
+--- a/libc/sysdeps/linux/sparc/setjmp.S
++++ b/libc/sysdeps/linux/sparc/setjmp.S
+@@ -16,11 +16,8 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#include <sys/syscall.h>
++#include <jmpbuf-offsets.h>
+ 
+-#define _ASM 1
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
+ #define ST_FLUSH_WINDOWS 3
+ 
+ .global _setjmp
+diff --git a/libc/sysdeps/linux/v850/__longjmp.S b/libc/sysdeps/linux/v850/__longjmp.S
+index fa29e0f..0996099 100644
+--- a/libc/sysdeps/linux/v850/__longjmp.S
++++ b/libc/sysdeps/linux/v850/__longjmp.S
+@@ -11,11 +11,6 @@
+  * Written by Miles Bader <miles@gnu.org>
+  */
+ 
+-#include <features.h>
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+-
+ #include <clinkage.h>
+ 
+ 	.text
+diff --git a/libc/sysdeps/linux/v850/setjmp.S b/libc/sysdeps/linux/v850/setjmp.S
+index 87a5e38..8bb3649 100644
+--- a/libc/sysdeps/linux/v850/setjmp.S
++++ b/libc/sysdeps/linux/v850/setjmp.S
+@@ -11,10 +11,6 @@
+  * Written by Miles Bader <miles@gnu.org>
+  */
+ 
+-#define _SETJMP_H
+-#define _ASM
+-#include <bits/setjmp.h>
+-
+ #include <clinkage.h>
+ 
+ 	.text
+diff --git a/libc/sysdeps/linux/x86_64/__longjmp.S b/libc/sysdeps/linux/x86_64/__longjmp.S
+index db2928b..4dc329b 100644
+--- a/libc/sysdeps/linux/x86_64/__longjmp.S
++++ b/libc/sysdeps/linux/x86_64/__longjmp.S
+@@ -16,10 +16,7 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#include <features.h>
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
++#include <jmpbuf-offsets.h>
+ 
+ /* Jump to the position specified by ENV, causing the
+    setjmp call there to return VAL, or 1 if VAL is 0.
+diff --git a/libc/sysdeps/linux/x86_64/bsd-setjmp.S b/libc/sysdeps/linux/x86_64/bsd-setjmp.S
+index 889efa6..8f68f5c 100644
+--- a/libc/sysdeps/linux/x86_64/bsd-setjmp.S
++++ b/libc/sysdeps/linux/x86_64/bsd-setjmp.S
+@@ -17,11 +17,6 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
+-#include <sysdep.h>
+-
+ .global setjmp
+ .type   setjmp,%function
+ setjmp:
+diff --git a/libc/sysdeps/linux/x86_64/setjmp.S b/libc/sysdeps/linux/x86_64/setjmp.S
+index 3a0f30b..68c3e4d 100644
+--- a/libc/sysdeps/linux/x86_64/setjmp.S
++++ b/libc/sysdeps/linux/x86_64/setjmp.S
+@@ -17,10 +17,7 @@
+    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+    02111-1307 USA.  */
+ 
+-#define _ASM
+-#define _SETJMP_H
+-#include <bits/setjmp.h>
+-#include <sysdep.h>
++#include <jmpbuf-offsets.h>
+ 
+ .global __sigsetjmp
+ .type   __sigsetjmp,%function
+diff --git a/libpthread/linuxthreads.old/ptlongjmp.c b/libpthread/linuxthreads.old/ptlongjmp.c
+index c01b919..5cb7089 100644
+--- a/libpthread/linuxthreads.old/ptlongjmp.c
++++ b/libpthread/linuxthreads.old/ptlongjmp.c
+@@ -19,6 +19,7 @@
+ #include "pthread.h"
+ #include "internals.h"
+ #include <bits/stackinfo.h>
++#include <jmpbuf-unwind.h>
+ 
+ static void pthread_cleanup_upto(__jmp_buf target)
+ {
+diff --git a/libpthread/linuxthreads/ptcleanup.c b/libpthread/linuxthreads/ptcleanup.c
+index 75bb7d5..88b9453 100644
+--- a/libpthread/linuxthreads/ptcleanup.c
++++ b/libpthread/linuxthreads/ptcleanup.c
+@@ -20,8 +20,8 @@
+ #include <setjmp.h>
+ #include "pthread.h"
+ #include "internals.h"
+-#ifndef NO_PTR_DEMANGLE
+ #include <jmpbuf-unwind.h>
++#ifndef NO_PTR_DEMANGLE
+ #define __JMPBUF_UNWINDS(a,b,c) _JMPBUF_UNWINDS(a,b,c)
+ #else
+ #define __JMPBUF_UNWINDS(a,b,c) _JMPBUF_UNWINDS(a,b)
+-- 
+1.7.12.2.21.g234cd45.dirty
+
