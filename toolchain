@@ -801,6 +801,8 @@ tc_build() {
 
 		echo "Removing build directory $BUILD/tc-$PREF ..."
 		rm -rf "$BUILD/tc-$PREF" || die $?
+		echo "Removing work directory $BUILD/$PREF ..."
+		rm -rf "$BUILD/$PREF" || die $?
 	done
 	cd "$p" || die $?
 }
