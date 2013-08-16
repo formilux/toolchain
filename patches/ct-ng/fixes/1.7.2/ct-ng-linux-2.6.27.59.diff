@@ -1,0 +1,38 @@
+--- ct-ng-1.7.2/config/kernel/linux.in.orig	2013-08-16 10:10:25.466252487 +0200
++++ ct-ng-1.7.2/config/kernel/linux.in	2013-08-16 10:11:54.062249143 +0200
+@@ -70,7 +70,26 @@
+ 
+ config KERNEL_V_2_6_27_46
+     bool
+-    prompt "2.6.27.46 (long-term stable)"
++    prompt "2.6.27.46 (long-term stable, not compatible with make 3.82)"
++    help
++      The Linux 2.6.27 tree is the current "long-term stable" maintenance branch.
++      It is intended to fill the niche for users who are not using distribution
++      kernels but want to use a regression-free kernel for a longer time.
++      
++      Critical bug fixes to later 2.6 releases are often ported to this branch
++      which makes 2.6.27 a very useful base for many embedded developers seeking
++      stable APIs or those who do not need the latest bleeding edge features.
++      
++      ... and no, this kernel has not undergone any specific QA testing.
++      
++      See the original announcement by Adrian Bunk in the following mailing list
++      entry: http://marc.info/?l=linux-kernel&m=122375909403298&w=2
++
++      NOTE: This version does not build with make 3.82. Use 2.6.27.59 instead.
++
++config KERNEL_V_2_6_27_59
++    bool
++    prompt "2.6.27.59 (long-term stable)"
+     help
+       The Linux 2.6.27 tree is the current "long-term stable" maintenance branch.
+       It is intended to fill the niche for users who are not using distribution
+@@ -100,6 +119,7 @@
+     default "2.6.29.6" if KERNEL_V_2_6_29_6
+     default "2.6.28.10" if KERNEL_V_2_6_28_10
+     default "2.6.27.46" if KERNEL_V_2_6_27_46
++    default "2.6.27.59" if KERNEL_V_2_6_27_59
+ 
+ choice
+     bool
