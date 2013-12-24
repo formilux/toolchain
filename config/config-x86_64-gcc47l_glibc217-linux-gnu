@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# crosstool-NG 1.18.0 Configuration
-# Wed Oct  2 23:57:32 2013
+# crosstool-NG 1.19.0 Configuration
+# Thu Oct  3 18:29:59 2013
 #
 CT_CONFIGURE_has_xz=y
 CT_CONFIGURE_has_cvs=y
@@ -27,11 +27,11 @@ CT_DEBUG_CT=y
 #
 # Paths
 #
-CT_LOCAL_TARBALLS_DIR="/data/git/private/toolchain/src"
+CT_LOCAL_TARBALLS_DIR="/g/own/toolchain/src"
 CT_SAVE_TARBALLS=y
 CT_CUSTOM_LOCATION_ROOT_DIR="/cache/src"
-CT_WORK_DIR="/tmp/flx"
-CT_PREFIX_DIR="/w/dev/armv7pj4bthf-gcc47l_glibc217-linux-gnueabi"
+CT_WORK_DIR="/dev/shm/flx"
+CT_PREFIX_DIR="/f/tc/x86_64-gcc47l_glibc217-linux-gnu"
 CT_INSTALL_DIR="${CT_PREFIX_DIR}"
 CT_RM_RF_PREFIX_DIR=y
 CT_REMOVE_DOCS=y
@@ -106,30 +106,30 @@ CT_ARCH_64=y
 CT_ARCH_BITNESS=64
 CT_TARGET_CFLAGS="-funroll-loops -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels --param=early-inlining-insns=10 -fomit-frame-pointer"
 CT_TARGET_LDFLAGS=""
-# CT_ARCH_alpha is not set
 # CT_ARCH_arm is not set
+CT_ARCH_x86=y
+# CT_ARCH_sh is not set
 # CT_ARCH_avr32 is not set
-# CT_ARCH_blackfin is not set
-# CT_ARCH_m68k is not set
-# CT_ARCH_microblaze is not set
 # CT_ARCH_mips is not set
+# CT_ARCH_sparc is not set
 # CT_ARCH_powerpc is not set
 # CT_ARCH_s390 is not set
-# CT_ARCH_sh is not set
-# CT_ARCH_sparc is not set
-CT_ARCH_x86=y
-CT_ARCH_alpha_AVAILABLE=y
+# CT_ARCH_m68k is not set
+# CT_ARCH_alpha is not set
+# CT_ARCH_microblaze is not set
+# CT_ARCH_blackfin is not set
 CT_ARCH_arm_AVAILABLE=y
+CT_ARCH_x86_AVAILABLE=y
+CT_ARCH_sh_AVAILABLE=y
 CT_ARCH_avr32_AVAILABLE=y
-CT_ARCH_blackfin_AVAILABLE=y
-CT_ARCH_m68k_AVAILABLE=y
-CT_ARCH_microblaze_AVAILABLE=y
 CT_ARCH_mips_AVAILABLE=y
+CT_ARCH_sparc_AVAILABLE=y
 CT_ARCH_powerpc_AVAILABLE=y
 CT_ARCH_s390_AVAILABLE=y
-CT_ARCH_sh_AVAILABLE=y
-CT_ARCH_sparc_AVAILABLE=y
-CT_ARCH_x86_AVAILABLE=y
+CT_ARCH_m68k_AVAILABLE=y
+CT_ARCH_alpha_AVAILABLE=y
+CT_ARCH_microblaze_AVAILABLE=y
+CT_ARCH_blackfin_AVAILABLE=y
 CT_ARCH_SUFFIX=""
 
 #
@@ -191,16 +191,17 @@ CT_BUILD_SUFFIX=""
 #
 CT_KERNEL_SUPPORTS_SHARED_LIBS=y
 CT_KERNEL="linux"
-CT_KERNEL_VERSION="2.6.32.60"
+CT_KERNEL_VERSION="2.6.32.61"
 # CT_KERNEL_bare_metal is not set
-CT_KERNEL_linux=y
 # CT_KERNEL_windows is not set
+CT_KERNEL_linux=y
 CT_KERNEL_bare_metal_AVAILABLE=y
+CT_KERNEL_windows_AVAILABLE=y
 CT_KERNEL_linux_AVAILABLE=y
 # CT_KERNEL_LINUX_USE_CUSTOM_HEADERS is not set
-# CT_KERNEL_V_3_7_3 is not set
-# CT_KERNEL_V_3_7_2 is not set
-# CT_KERNEL_V_3_7_1 is not set
+# CT_KERNEL_V_3_10 is not set
+# CT_KERNEL_V_3_9 is not set
+# CT_KERNEL_V_3_8 is not set
 # CT_KERNEL_V_3_7 is not set
 # CT_KERNEL_V_3_6 is not set
 # CT_KERNEL_V_3_5 is not set
@@ -218,7 +219,6 @@ CT_KERNEL_V_2_6_32=y
 # CT_KERNEL_V_2_6_31 is not set
 # CT_KERNEL_V_2_6_27 is not set
 # CT_KERNEL_LINUX_CUSTOM is not set
-CT_KERNEL_windows_AVAILABLE=y
 
 #
 # Common kernel options
@@ -289,12 +289,16 @@ CT_CC_VERSION="linaro-4.7-2013.09"
 CT_CC_CORE_PASSES_NEEDED=y
 CT_CC_gcc=y
 CT_CC_GCC_SHOW_LINARO=y
+# CT_CC_V_linaro_4_8 is not set
+# CT_CC_V_4_8_1 is not set
+# CT_CC_V_4_8_0 is not set
 CT_CC_V_linaro_4_7=y
 # CT_CC_V_4_7_3 is not set
 # CT_CC_V_4_7_2 is not set
 # CT_CC_V_4_7_1 is not set
 # CT_CC_V_4_7_0 is not set
 # CT_CC_V_linaro_4_6 is not set
+# CT_CC_V_4_6_4 is not set
 # CT_CC_V_4_6_3 is not set
 # CT_CC_V_4_6_2 is not set
 # CT_CC_V_4_6_1 is not set
@@ -333,12 +337,13 @@ CT_CC_GCC_4_6_or_later=y
 CT_CC_GCC_4_7=y
 CT_CC_GCC_4_7_or_later=y
 CT_CC_GCC_HAS_GRAPHITE=y
+CT_CC_GCC_USE_GRAPHITE=y
 CT_CC_GCC_HAS_LTO=y
+# CT_CC_GCC_USE_LTO is not set
 CT_CC_GCC_HAS_PKGVERSION_BUGURL=y
 CT_CC_GCC_HAS_BUILD_ID=y
 CT_CC_GCC_HAS_LNK_HASH_STYLE=y
 CT_CC_GCC_USE_GMP_MPFR=y
-CT_CC_GCC_USE_PPL_CLOOG=y
 CT_CC_GCC_USE_MPC=y
 CT_CC_GCC_HAS_LIBQUADMATH=y
 # CT_CC_LANG_FORTRAN is not set
@@ -371,8 +376,6 @@ CT_CC_STATIC_LIBSTDCXX=y
 #
 # Optimisation features
 #
-CT_CC_GCC_USE_GRAPHITE=y
-# CT_CC_GCC_USE_LTO is not set
 
 #
 # Settings for libraries running on target
@@ -403,9 +406,13 @@ CT_CC_GCC_LNK_HASH_STYLE=""
 CT_LIBC="glibc"
 CT_LIBC_VERSION="2.17"
 # CT_LIBC_eglibc is not set
-CT_LIBC_glibc=y
 # CT_LIBC_uClibc is not set
+CT_LIBC_glibc=y
+CT_LIBC_none_AVAILABLE=y
+CT_LIBC_mingw_AVAILABLE=y
 CT_LIBC_eglibc_AVAILABLE=y
+CT_LIBC_newlib_AVAILABLE=y
+CT_LIBC_uClibc_AVAILABLE=y
 CT_LIBC_glibc_AVAILABLE=y
 CT_LIBC_GLIBC_V_2_17=y
 # CT_LIBC_GLIBC_V_2_16_0 is not set
@@ -420,10 +427,6 @@ CT_LIBC_GLIBC_V_2_17=y
 # CT_LIBC_GLIBC_V_2_10_1 is not set
 # CT_LIBC_GLIBC_V_2_9 is not set
 # CT_LIBC_GLIBC_V_2_8 is not set
-CT_LIBC_mingw_AVAILABLE=y
-CT_LIBC_newlib_AVAILABLE=y
-CT_LIBC_none_AVAILABLE=y
-CT_LIBC_uClibc_AVAILABLE=y
 CT_LIBC_SUPPORT_THREADS_ANY=y
 CT_LIBC_SUPPORT_NPTL=y
 CT_THREADS="nptl"
@@ -478,8 +481,6 @@ CT_LIBC_GLIBC_MIN_KERNEL="2.6.32"
 #
 # Debug facilities
 #
-# CT_DEBUG_dmalloc is not set
-# CT_DEBUG_duma is not set
 CT_DEBUG_gdb=y
 CT_GDB_CROSS=y
 # CT_GDB_CROSS_STATIC is not set
@@ -487,7 +488,7 @@ CT_GDB_CROSS=y
 # CT_GDB_CROSS_PYTHON is not set
 CT_GDB_CROSS_EXTRA_CONFIG_ARRAY=""
 CT_GDB_NATIVE=y
-CT_GDB_NATIVE_STATIC=y
+# CT_GDB_NATIVE_STATIC is not set
 CT_GDB_GDBSERVER=y
 CT_GDB_GDBSERVER_HAS_IPA_LIB=y
 # CT_GDB_GDBSERVER_STATIC is not set
@@ -497,6 +498,7 @@ CT_GDB_GDBSERVER_HAS_IPA_LIB=y
 # gdb version
 #
 CT_DEBUG_GDB_SHOW_LINARO=y
+# CT_GDB_V_linaro_7_6_2013_05 is not set
 # CT_GDB_V_linaro_7_5_2012_12_1 is not set
 # CT_GDB_V_linaro_7_4_2012_06 is not set
 CT_GDB_V_7_4_1=y
@@ -521,6 +523,8 @@ CT_LTRACE_V_0_5_3=y
 # CT_LTRACE_V_0_5_2 is not set
 CT_LTRACE_VERSION="0.5.3"
 CT_LTRACE_0_5_3_or_later=y
+# CT_DEBUG_duma is not set
+# CT_DEBUG_dmalloc is not set
 # CT_DEBUG_strace is not set
 
 #
@@ -539,12 +543,14 @@ CT_PPL=y
 CT_CLOOG=y
 CT_MPC=y
 CT_LIBELF_TARGET=y
+# CT_GMP_V_5_1_1 is not set
 # CT_GMP_V_5_0_2 is not set
 # CT_GMP_V_5_0_1 is not set
 CT_GMP_V_4_3_2=y
 # CT_GMP_V_4_3_1 is not set
 # CT_GMP_V_4_3_0 is not set
 CT_GMP_VERSION="4.3.2"
+# CT_MPFR_V_3_1_2 is not set
 # CT_MPFR_V_3_1_0 is not set
 # CT_MPFR_V_3_0_1 is not set
 # CT_MPFR_V_3_0_0 is not set
@@ -568,6 +574,8 @@ CT_CLOOG_V_0_15_11=y
 CT_CLOOG_VERSION="0.15.11"
 CT_CLOOG_0_15_1x=y
 CT_CLOOG_NEEDS_AUTORECONF=y
+# CT_MPC_V_1_0_1 is not set
+# CT_MPC_V_1_0 is not set
 CT_MPC_V_0_9=y
 # CT_MPC_V_0_8_2 is not set
 # CT_MPC_V_0_8_1 is not set
