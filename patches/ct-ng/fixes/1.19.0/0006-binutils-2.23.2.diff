@@ -1,0 +1,23 @@
+--- ./config/binutils/binutils.in.orig	2013-10-02 22:04:08.887698341 +0200
++++ ./config/binutils/binutils.in	2013-10-02 22:05:13.790628627 +0200
+@@ -8,6 +8,12 @@
+ # Don't remove next line
+ # CT_INSERT_VERSION_BELOW
+ 
++config BINUTILS_V_2_23_2
++    bool
++    prompt "2.23.2 (EXPERIMENTAL)"
++    depends on EXPERIMENTAL
++    select BINUTILS_2_23_or_later
++
+ config BINUTILS_V_2_23_1
+     bool
+     prompt "2.23.1 (EXPERIMENTAL)"
+@@ -68,6 +74,7 @@
+     string
+ # Don't remove next line
+ # CT_INSERT_VERSION_STRING_BELOW
++    default "2.23.2" if BINUTILS_V_2_23_2
+     default "2.23.1" if BINUTILS_V_2_23_1
+     default "2.22" if BINUTILS_V_2_22
+     default "2.21.53" if BINUTILS_V_2_21_53
