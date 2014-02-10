@@ -442,7 +442,7 @@ CT_LIBC_XLDD=y
 # glibc other options
 #
 CT_LIBC_glibc_familly=y
-CT_LIBC_GLIBC_EXTRA_CONFIG_ARRAY="--disable-multi-arch libc_cv_cc_sse4=no libc_cv_cc_fma4=no libc_cv_cc_avx=no libc_cv_cc_sse2avx=no"
+CT_LIBC_GLIBC_EXTRA_CONFIG_ARRAY="--disable-multi-arch --enable-obsolete-rpc libc_cv_cc_sse4=no libc_cv_cc_fma4=no libc_cv_cc_avx=no libc_cv_cc_sse2avx=no"
 CT_LIBC_GLIBC_CONFIGPARMS=""
 CT_LIBC_GLIBC_EXTRA_CFLAGS=""
 CT_LIBC_EXTRA_CC_ARGS=""
