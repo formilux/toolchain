@@ -1,0 +1,147 @@
+This is a merge of the 3 following fixes from the binutils git repository :
+
+ https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commitdiff_plain;h=7ca1d6f5dd402483dcbda6216c0810140a1c481b
+ https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commitdiff_plain;h=e3d0ce2299f27ae4b2e783b5be666cc1e0a808f8
+ https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commitdiff_plain;h=20c56bb5feaee69067e2bd3e42dcdd2e63edcafb
+
+These aim at fixing some whitespace issues which prevent gmp-4.2.4 from
+building on ARM because whitespaces are not allowed around brackets.
+
+
+diff -urN binutils-2.23.2.orig/gas/config/tc-arm.c binutils-2.23.2/gas/config/tc-arm.c
+--- binutils-2.23.2.orig/gas/config/tc-arm.c	2013-03-25 09:06:21.000000000 +0100
++++ binutils-2.23.2/gas/config/tc-arm.c	2014-02-11 13:19:48.419793301 +0100
+@@ -323,8 +323,9 @@
+ 
+ /* An immediate operand can start with #, and ld*, st*, pld operands
+    can contain [ and ].  We need to tell APP not to elide whitespace
+-   before a [, which can appear as the first operand for pld.  */
+-const char arm_symbol_chars[] = "#[]";
++   before a [, which can appear as the first operand for pld.
++   Likewise, a { can appear as the first operand for push, pop, vld*, etc.  */
++const char arm_symbol_chars[] = "#[]{}";
+ 
+ enum neon_el_type
+ {
+@@ -885,6 +886,9 @@
+ static inline int
+ skip_past_char (char ** str, char c)
+ {
++  /* PR gas/14987: Allow for whitespace before the expected character.  */
++  skip_whitespace (*str);
++  
+   if (**str == c)
+     {
+       (*str)++;
+@@ -1154,6 +1158,8 @@
+   char *p;
+   struct reg_entry *reg;
+ 
++  skip_whitespace (start);
++
+ #ifdef REGISTER_PREFIX
+   if (*start != REGISTER_PREFIX)
+     return NULL;
+@@ -1579,6 +1585,8 @@
+   /* We come back here if we get ranges concatenated by '+' or '|'.  */
+   do
+     {
++      skip_whitespace (str);
++
+       another_range = 0;
+ 
+       if (*str == '{')
+@@ -1730,14 +1738,12 @@
+   unsigned long mask = 0;
+   int i;
+ 
+-  if (*str != '{')
++  if (skip_past_char (&str, '{') == FAIL)
+     {
+       inst.error = _("expecting {");
+       return FAIL;
+     }
+ 
+-  str++;
+-
+   switch (etype)
+     {
+     case REGLIST_VFP_S:
+@@ -4026,6 +4032,8 @@
+   if (*input_line_pointer == '{')
+     input_line_pointer++;
+ 
++  skip_whitespace (input_line_pointer);
++
+   do
+     {
+       reg = arm_reg_parse (&input_line_pointer, REG_TYPE_MMXWCG);
+@@ -5168,6 +5176,9 @@
+       return PARSE_OPERAND_SUCCESS;
+     }
+ 
++  /* PR gas/14887: Allow for whitespace after the opening bracket.  */
++  skip_whitespace (p);
++
+   if ((reg = arm_reg_parse (&p, REG_TYPE_RN)) == FAIL)
+     {
+       inst.error = _(reg_expected_msgs[REG_TYPE_RN]);
+diff -urN binutils-2.23.2.orig/gas/testsuite/gas/arm/macro-pld.d binutils-2.23.2/gas/testsuite/gas/arm/macro-pld.d
+--- binutils-2.23.2.orig/gas/testsuite/gas/arm/macro-pld.d	2012-11-20 18:58:31.000000000 +0100
++++ binutils-2.23.2/gas/testsuite/gas/arm/macro-pld.d	2014-02-11 13:19:43.895793381 +0100
+@@ -6,3 +6,4 @@
+ 
+ 0+ <.*>:
+ \s*0:\s+f5d0f000\s+pld\s+\[r0\]
++\s*4:\s+e52d0004\s+push\s+{r0}\s*.*
+diff -urN binutils-2.23.2.orig/gas/testsuite/gas/arm/macro-pld.s binutils-2.23.2/gas/testsuite/gas/arm/macro-pld.s
+--- binutils-2.23.2.orig/gas/testsuite/gas/arm/macro-pld.s	2012-11-20 18:58:31.000000000 +0100
++++ binutils-2.23.2/gas/testsuite/gas/arm/macro-pld.s	2014-02-11 13:19:43.895793381 +0100
+@@ -2,3 +2,4 @@
+ 	\rest
+ .endm
+ 	foo r0, pld [r0]
++	foo r0, push {r0}
+diff -urN binutils-2.23.2.orig/gas/testsuite/gas/arm/macro-vld1.d binutils-2.23.2/gas/testsuite/gas/arm/macro-vld1.d
+--- binutils-2.23.2.orig/gas/testsuite/gas/arm/macro-vld1.d	1970-01-01 01:00:00.000000000 +0100
++++ binutils-2.23.2/gas/testsuite/gas/arm/macro-vld1.d	2014-02-11 13:19:43.895793381 +0100
+@@ -0,0 +1,8 @@
++#objdump: -dr
++
++.*:     file format .*
++
++Disassembly of section \.text:
++
++0+ <.*>:
++\s*0:\s+f420070f\s+vld1.8\s+{d0},\s*\[r0\]
+diff -urN binutils-2.23.2.orig/gas/testsuite/gas/arm/macro-vld1.s binutils-2.23.2/gas/testsuite/gas/arm/macro-vld1.s
+--- binutils-2.23.2.orig/gas/testsuite/gas/arm/macro-vld1.s	1970-01-01 01:00:00.000000000 +0100
++++ binutils-2.23.2/gas/testsuite/gas/arm/macro-vld1.s	2014-02-11 13:19:43.895793381 +0100
+@@ -0,0 +1,9 @@
++	.fpu neon
++        .macro sfi_breg basereg, insn, operands:vararg
++                .macro _sfi_breg_doit B
++                \insn \operands
++                .endm
++                _sfi_breg_doit \basereg
++                .purgem _sfi_breg_doit
++        .endm
++	sfi_breg r0, vld1.8 {d0}, [\B]
+diff -urN binutils-2.23.2.orig/gas/testsuite/gas/arm/neon-ldst-es.d binutils-2.23.2/gas/testsuite/gas/arm/neon-ldst-es.d
+--- binutils-2.23.2.orig/gas/testsuite/gas/arm/neon-ldst-es.d	2010-06-28 11:10:25.000000000 +0200
++++ binutils-2.23.2/gas/testsuite/gas/arm/neon-ldst-es.d	2014-02-11 13:19:45.811793347 +0100
+@@ -55,3 +55,4 @@
+ 0[0-9a-f]+ <[^>]+> f427288f 	vld2\.32	{d2-d3}, \[r7\]
+ 0[0-9a-f]+ <[^>]+> f427208f 	vld4\.32	{d2-d5}, \[r7\]
+ 0[0-9a-f]+ <[^>]+> f467c08f 	vld4\.32	{d28-d31}, \[r7\]
++0[0-9a-f]+ <[^>]+> f4a21c83 	vld1\.32	{d1\[\]}, \[r2\], r3
+diff -urN binutils-2.23.2.orig/gas/testsuite/gas/arm/neon-ldst-es.s binutils-2.23.2/gas/testsuite/gas/arm/neon-ldst-es.s
+--- binutils-2.23.2.orig/gas/testsuite/gas/arm/neon-ldst-es.s	2010-06-28 11:10:25.000000000 +0200
++++ binutils-2.23.2/gas/testsuite/gas/arm/neon-ldst-es.s	2014-02-11 13:19:48.419793301 +0100
+@@ -57,3 +57,6 @@
+ 	vld2.32 {q1},[r7]
+ 	vld4.32 {q1-q2},[r7]
+ 	vld4.32 {q14-q15},[r7]
++
++	@ PR 14987 and 14887: Allow for whitespace in the instruction.
++	vld1.32 { d1 [ ] } , [ r2 ] , r3
