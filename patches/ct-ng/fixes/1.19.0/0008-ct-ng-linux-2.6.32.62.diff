@@ -1,0 +1,20 @@
+--- ct-ng-1.19.0/config/kernel/linux.in.orig	2013-10-02 20:06:22.000000000 +0200
++++ ct-ng-1.19.0/config/kernel/linux.in	2014-06-17 17:58:50.282378196 +0200
+@@ -96,7 +96,7 @@ config KERNEL_V_2_6_33
+ 
+ config KERNEL_V_2_6_32
+     bool
+-    prompt "2.6.32.61 (longterm)"
++    prompt "2.6.32.62 (longterm)"
+     help
+       The Linux 2.6.32 tree is a "longterm" maintenance branch.
+       
+@@ -175,7 +175,7 @@ config KERNEL_VERSION
+     default "2.6.37.6" if KERNEL_V_2_6_37
+     default "2.6.36.4" if KERNEL_V_2_6_36
+     default "2.6.33.20" if KERNEL_V_2_6_33
+-    default "2.6.32.61" if KERNEL_V_2_6_32
++    default "2.6.32.62" if KERNEL_V_2_6_32
+     default "2.6.31.14" if KERNEL_V_2_6_31
+     default "2.6.27.62" if KERNEL_V_2_6_27
+     default "custom" if KERNEL_LINUX_CUSTOM
