@@ -191,7 +191,7 @@ CT_BUILD_SUFFIX=""
 #
 CT_KERNEL_SUPPORTS_SHARED_LIBS=y
 CT_KERNEL="linux"
-CT_KERNEL_VERSION="2.6.32.61"
+CT_KERNEL_VERSION="2.6.32.62"
 # CT_KERNEL_bare_metal is not set
 # CT_KERNEL_windows is not set
 CT_KERNEL_linux=y
