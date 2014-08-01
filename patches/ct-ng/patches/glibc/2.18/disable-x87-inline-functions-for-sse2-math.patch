@@ -1,0 +1,47 @@
+From: H.J. Lu <hjl.tools@gmail.com>
+Date: Wed, 29 Jan 2014 15:51:41 +0000 (-0800)
+Subject: Disable x87 inline functions for SSE2 math
+X-Git-Url: http://sourceware.org/git/?p=glibc.git;a=commitdiff_plain;h=d680656b61891159d21a535f38219cf01d5edeea
+
+Disable x87 inline functions for SSE2 math
+
+When i386 and x86-64 mathinline.h was merged into a single mathinline.h,
+"gcc -m32" enables x87 inline functions on x86-64 even when -mfpmath=sse
+and SSE2 is enabled.  It is a regression on x86-64.  We should check
+__SSE2_MATH__ instead of __x86_64__ when disabling x87 inline functions.
+
+(cherry picked from commit 409e00bd69b8d8dd74d7327085351d26769ea6fc)
+
+Conflicts:
+	ChangeLog
+	NEWS
+
+WT: removed ChangeLog and NEWS
+---
+
+diff --git a/sysdeps/x86/fpu/bits/mathinline.h b/sysdeps/x86/fpu/bits/mathinline.h
+index fed6414..b4b28f3 100644
+--- a/sysdeps/x86/fpu/bits/mathinline.h
++++ b/sysdeps/x86/fpu/bits/mathinline.h
+@@ -1,5 +1,5 @@
+ /* Inline math functions for i387 and SSE.
+-   Copyright (C) 1995-2013 Free Software Foundation, Inc.
++   Copyright (C) 1995-2014 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+ 
+    The GNU C Library is free software; you can redistribute it and/or
+@@ -384,7 +384,7 @@ __END_NAMESPACE_C99
+ # endif
+ #endif
+ 
+-#ifndef __x86_64__
++#ifndef __SSE2_MATH__
+ # if ((!defined __NO_MATH_INLINES || defined __LIBC_INTERNAL_MATH_INLINES) \
+      && defined __OPTIMIZE__)
+ 
+@@ -970,4 +970,4 @@ __inline_mathcode2 (__ieee754_atan2, __y, __x,
+ 		    return __value;)
+ # endif
+ 
+-#endif /* !__x86_64__ */
++#endif /* !__SSE2_MATH__ */
