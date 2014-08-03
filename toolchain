@@ -7,7 +7,7 @@ TC_DIR="${TC_DIR-${MYSELF%/*}}"
 TC_SRC="${TC_SRC-$TC_DIR/src}"
 
 # WARNING! need about 2GB per toolchain in $TC_TMP !
-TC_DST="${TC_DST-/w/dev/tc2}"
+TC_DST="${TC_DST-$HOME/flx-tc}"
 TC_TMP="${TC_TMP-/tmp}"
 
 # If set, then the toolchains will be chowned/chgrped to these respective user
