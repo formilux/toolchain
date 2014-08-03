@@ -1,0 +1,154 @@
+Formilux toolchain build script - 2014/08/03
+
+This is Formilux's toolchain build script. It relies on crosstool-ng (called
+ct-ng below) to build each toolchain, and can iterate over multiple configs and
+build uClibc as well.
+
+There is no Makefile. The main script is "toolchain". It determines its build
+sequence based on environment variables, a list of commands and a list of
+ct-ng configuration files.
+
+The commands the script takes may be enumerated as a comma-delimited action
+list consisting in a single argument. The supported commands can be obtained
+by executing the script with no argument. The most commonly used actions are :
+
+  - src-check : ensure that all identified sources are available. This relies
+    on the config files and environment variables to guess what will be needed
+    both for ct-ng and the script itself. If the config files result from a
+    previous build, it can be accurate.
+
+  - tc-all : run all the toolchain steps from tc-cond-init to tc-sysroot. This
+    basically builds the complete toolchains and packages them.
+
+  - uc-build : build uClibc for each toolchain. This requires that some config
+    files named uclibc-$VERSION-$ARCH are needed in the same directory as the
+    config files.
+
+A typical run will use "src-check" first to ensure that everything is available
+to start building, then "tc-all,uc-build" to build everything at once.
+
+A few environment variables are needed or recommended :
+
+  - UCLIBC_PREFERRED_VERSION : this is the version of uClibc that is preferred
+    to be used for uc-build. If unspecified, the script tries to find the
+    highest version of uClibc for which a config file exists in the config
+    directory. It is highly recommended to force it. The current configurations
+    are known to build and work well with version 0.9.33.2.
+
+  - PARALLEL : this is the number of parallel jobs. It's recommended to set it
+    to the number of processors the machine uses.
+
+  - CT_VERSION : this is the version of crosstool-ng. Version 1.19.0 builds all 
+    the most recent toolchains and is the recommended one. If unspecified, the
+    version mentionned in the config files will be used if it can be determined.
+    It is recommended to set it to avoid any trouble.
+
+  - TC_SRC : where all source files can be found. It defaults to the the "src"
+    sub-directory in the script's directory.
+
+  - TC_DST : this is the directory where all the toolchains will be installed.
+    A "config" directory will be created there as well which will contain a
+    copy of the config files. If some of the config files to be used are already
+    present, the script verifies that they match exactly otherwise it refuses to
+    rebuild the associated toolchains. In case of complete rebuild, it might be
+    necessary to remove these config files.
+
+  - TC_TMP : this is the directory used to put temporary files. An "flx"
+    subdirectory will be created there, and the script will automatically clean
+    up what can be removed between builds to conserve enough free space to
+    build everything. Latest toolchains are known for requiring approximately
+    5 GB of free space to be built.
+
+Currently, the toolchains based on updated gcc-4.7 from Linaro and glibc-2.18
+are known for building and working well for all supported architectures using
+uClibc 0.9.33.2 and crosstool-ng-1.19.0, so these are the recommended versions.
+The following source files are required to build these toolchains in these
+conditions :
+
+  automake-1.11.1.tar.bz2
+  binutils-2.23.2.tar.bz2
+  cloog-ppl-0.15.11.tar.gz
+  crosstool-ng-1.19.0.tar.bz2
+  expat-2.1.0.tar.gz
+  gcc-linaro-4.7-2014.06.tar.bz2
+  gdb-7.4.1.tar.bz2
+  glibc-2.18.tar.bz2
+  gmp-4.3.2.tar.bz2
+  libelf-0.8.13.tar.gz
+  libtool-2.2.6b.tar.lzma
+  linux-2.6.32.62.tar.bz2
+  ltrace-0.5.3.tar.gz
+  ltrace_0.5.3.orig.tar.gz
+  mpc-0.9.tar.gz
+  mpfr-2.4.2.tar.bz2
+  ncurses-5.9.tar.gz
+  ppl-0.11.2.tar.bz2
+  uClibc-0.9.33.2.tar.bz2
+
+Locally, a number of tools are needed during the build process, which may be
+available as separate packages for your local system :
+
+  - bash >= 3.4
+  - cpp >= 3.4
+  - gcc >= 3.4
+  - gcc-c++ >= 3.4
+  - libstdc++-devel >= 3.4
+  - bison >= 2.3
+  - flex >= 2.5
+  - GNU make >= 3.81
+  - GNU patch >= 2.5.4
+  - GNU texinfo >= 4.8 (for makeinfo)
+  - autoconf >= 2.60
+  - automake >= 1.10
+  - libtool >= 1.5.26
+
+Some very strange bugs can result from using incompatible versions. Some bogus
+versions of "make" (eg: 3.82 with the use-after free not fixed) can result in
+an error with accidental inherintance of some variables deep inside the latest
+step of gcc-core's build. This is one reason for using known working versions
+of all of the packages above with known good config files.
+
+A typical build command will look like this to build armv5, armv7-hf,
+armv7-thumb-hf, armv7-neon, armv7-neon-thumb, i586 and x86_64 toolchains :
+
+  UCLIBC_PREFERRED_VERSION=0.9.33.2 \
+  CT_VERSION=1.19.0 \
+  PARALLEL=4 \
+  TC_SRC=/cache/src \
+  TC_DST=/w/dev \
+  TC_TMP=/tmp \
+      ./toolchain tc-all,uc-build \
+          config/config-arm-gcc47l_glibc218-linux-gnueabi \
+          config/config-armv7hf-gcc47l_glibc218-linux-gnueabi \
+          config/config-armv7thf-gcc47l_glibc218-linux-gnueabi \
+          config/config-armv7nhf-gcc47l_glibc218-linux-gnueabi \
+          config/config-armv7nthf-gcc47l_glibc218-linux-gnueabi \
+          config/config-i586-gcc47l_glibc218-linux-gnu \
+          config/config-x86_64-gcc47l_glibc218-linux-gnu
+  echo $? ; ls /w/dev/
+  rm -rf /tmp/flx
+
+Each toolchain will take about 200MB of space in TC_DST.
+
+If something goes wrong or if the configs need to be edited, then the
+recommended way to proceed is to use the "ct-all" action to build the ct-ng
+utility, and to go to the temporary directory, copy the relevant config file
+as ".config" and run "ct-ng oldconfig" or "ct-ng menuconfig" and try to adapt
+the configuration. The resulting configuration (.config) can then be used as
+the input for the toolchain script. It is recommended to copy it to a permanent
+directory and not to leave it in the temporary directory to avoid losing it
+during the operations.
+
+In order to update some components, it might be necessary to add new entries
+in some Kconfig files. For this, the ct-ng has to be built, the file modified
+and a diff between the original and new files be saved as a patch under
+patches/ct-ng/$VERSION/. The patches there are applied in alpha-numerical
+order.
+
+One component which merits being regularly upgraded is the GCC source from
+Linaro : it has the benefit of tracking fixes from GCC's SVN repository without
+having to deal with the complexity of retrieving and building a developer's
+code over SVN. Updating it typically requires modifying config/cc/gcc.in. A
+simple solution consists in modifying and renaming the latest patch to always
+track the latest Linaro version available, and to update it accordingly in all
+config files.
