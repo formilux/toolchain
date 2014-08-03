@@ -28,7 +28,7 @@ UCLIBC_PREFERRED_VERSION="${UCLIBC_PREFERRED_VERSION-}"
 
 # Warning: using an improper crosstool-ng version can result in losing some
 # settings.
-CT_DEFAULT_VERSION="${CT_VERSION-1.7.2}"
+CT_DEFAULT_VERSION="${CT_VERSION-1.19.0}"
 
 # Path to the "make" utility. Some tools only build with older versions
 # (<= 3.81), and other ones only build with >= 3.82 (eg: uClibc-0.9.33.2).
