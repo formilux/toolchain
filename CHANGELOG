@@ -1,3 +1,11 @@
+2014/08/03 : version 2.0
+	* upgrade to gcc-4.7, glibc-2.18, crosstool-ng-1.19.0
+	* fix failure to build "tic" in ncurses
+	* add support for Linaro toolchains
+	* add a patch to optimize for Marvell's PJ4B core.
+	* clean up various issues
+	* add a README
+
 2011/11/16 : version 1.0
 	* move to crosstool-ng and remove old scripts, patches, makefiles,
 	  and tests.
