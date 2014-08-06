@@ -885,9 +885,11 @@ tc_finish() {
 		# and for this we have to extract them both first.
 
 		echo "Making static libgcc for toolchain $PREF (libgcc_s.a) ..."
-		if [ -e "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so ]; then
-			rename "libgcc_s" ".unused.libgcc_s" "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so* || die $?
-		fi
+		for i in "$TC_DST/$PREF/$PREF"/sys-root/lib/libgcc_s.so*; do
+			if [ -e "$i" ]; then
+				mv "$i" "${i/libgcc_s/.unused.libgcc_s}" || die $?
+			fi
+		done
 
 		# when the compiler is from a second source (eg: linaro), CC_VERSION
 		# does not necessarily reflect the directory name (eg: 4.7.3).
