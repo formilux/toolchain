@@ -1,0 +1,24 @@
+In the context where the toolchain would be deployed in order to be called
+by distccd, at minima, we need to have the following directories on a target
+machine :
+
+$PREF/$PREF/bin
+$PREF/bin
+$PREF/lib/gcc/$PREF/$VER  [ dir only ]
+$PREF/libexec
+
+It can be achieved by removing all this :
+
+$PREF/$PREF/[d-z]*
+$PREF/share
+$PREF/build.log*
+$PREF/include
+$PREF/lib/gcc/$PREF/$VER/*
+$PREF/lib/*.a
+
+The following tar command line is able to archive an existing toolchain to
+save only the required files :
+
+   tar --exclude="*-gcc*/*-gcc*/[d-z]*" --exclude="*-gcc*/share" --exclude="*-gcc*/build.log*" --exclude="*-gcc*/lib/gcc/*-gcc*/*/*" --exclude="*-gcc*/lib/*.a" -cf - $PREF | gzip -9 > $PREF-mini.tgz
+
+
