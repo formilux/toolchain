@@ -1,0 +1,5 @@
+In order to archive the minimally required files for future builds, just
+remove build.log* and the sys-root directory that "pkg prepare" will extract
+again :
+
+  tar --exclude="*-gcc*/*-gcc*/sys-root" --exclude="*-gcc*/build.log*" -cf - $PREF | gzip -9 > $PREF-clean-$HOST.tgz
