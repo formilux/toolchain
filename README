@@ -101,12 +101,22 @@ available as separate packages for your local system :
   - autoconf >= 2.60
   - automake >= 1.10
   - libtool >= 1.5.26
+  - expat-devel >= 2.0.1  (for gdb)
+
+The toolchain has also been built on a minimal debian 6 system on top of
+which the following command had to be used to install the strictest minimal
+list of required packages :
+
+    apt-get install build-essential flex bison texinfo autoconf automake \
+            libtool gperf gawk libncurses5-dev libexpat1-dev
 
 Some very strange bugs can result from using incompatible versions. Some bogus
 versions of "make" (eg: 3.82 with the use-after free not fixed) can result in
 an error with accidental inherintance of some variables deep inside the latest
-step of gcc-core's build. This is one reason for using known working versions
-of all of the packages above with known good config files.
+step of gcc-core's build. The absence of the libexpat-dev package will cause
+gdb's build at the end to fail when almost everything is done. These are good
+reasons for using known working versions of all of the packages above with
+known good config files.
 
 A typical build command will look like this to build armv5, armv7-hf,
 armv7-thumb-hf, armv7-neon, armv7-neon-thumb, i586 and x86_64 toolchains :
@@ -130,6 +140,11 @@ armv7-thumb-hf, armv7-neon, armv7-neon-thumb, i586 and x86_64 toolchains :
 
 Each toolchain will take about 200MB of space in TC_DST.
 
+Note that a few tools such as gdb and some parts of gcc will still write some
+files in /tmp regardless of TC_DST. Some builds have failed with less than
+20 MB under /tmp. So as a safe bet, please ensure you keep at least 20MB free
+in /tmp per parallel toolchain being built.
+
 If something goes wrong or if the configs need to be edited, then the
 recommended way to proceed is to use the "ct-all" action to build the ct-ng
 utility, and to go to the temporary directory, copy the relevant config file
@@ -152,3 +167,4 @@ code over SVN. Updating it typically requires modifying config/cc/gcc.in. A
 simple solution consists in modifying and renaming the latest patch to always
 track the latest Linaro version available, and to update it accordingly in all
 config files.
+
