@@ -1,0 +1,20 @@
+--- crosstool-ng-1.19.0.orig/config/kernel/linux.in	2015-11-05 11:25:36.000000000 +0100
++++ crosstool-ng-1.19.0/config/kernel/linux.in	2015-11-05 11:36:36.570242440 +0100
+@@ -28,7 +28,7 @@
+ 
+ config KERNEL_V_3_10
+     bool
+-    prompt "3.10.2"
++    prompt "3.10.92"
+ 
+ config KERNEL_V_3_9
+     bool
+@@ -159,7 +159,7 @@
+     string
+ # Don't remove next line
+ # CT_INSERT_VERSION_STRING_BELOW
+-    default "3.10.2" if KERNEL_V_3_10
++    default "3.10.92" if KERNEL_V_3_10
+     default "3.9.11" if KERNEL_V_3_9
+     default "3.8.13" if KERNEL_V_3_8
+     default "3.7.10" if KERNEL_V_3_7
