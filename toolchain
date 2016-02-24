@@ -34,6 +34,10 @@ CT_DEFAULT_VERSION="${CT_VERSION-1.19.0}"
 # (<= 3.81), and other ones only build with >= 3.82 (eg: uClibc-0.9.33.2).
 MAKE="${MAKE-make}"
 
+# Path to the "ar" and "ranlib" utilities.
+AR="${AR-ar}"
+RANLIB="${RANLIB-ranlib}"
+
 ## patches to apply on top of uclibc
 #UCLIBC_PATCHES="uclibc-arm-no-asm-page.diff uclibc-armv5te.diff"
 
@@ -737,6 +741,7 @@ tc_build() {
 	local p="$PWD"
 	local in_conf config cfg_list
 
+
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
 	# their uclibc-* counter parts exist too. Let's rebuild the config list
@@ -900,13 +905,13 @@ tc_finish() {
 			cd "$gcc_dir"/ || die $?
 			mkdir tmp && cd tmp || die $?
 			if [ -e ../libgcc.a ]; then
-				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc.a || die $?
+				"$AR" x ../libgcc.a || die $?
 			fi
 			if [ -e ../libgcc_eh.a ]; then
-				"$TC_DST/$PREF/bin/$PREF-ar" x ../libgcc_eh.a || die $?
+				"$AR" x ../libgcc_eh.a || die $?
 			fi
-			"$TC_DST/$PREF/bin/$PREF-ar" r ../libgcc_s.a *.o || die $?
-			"$TC_DST/$PREF/bin/$PREF-ranlib" ../libgcc_s.a || die $?
+			"$AR" r ../libgcc_s.a *.o || die $?
+			"$RANLIB" ../libgcc_s.a || die $?
 			cd .. && rm -rf tmp || die $?
 		fi
 
