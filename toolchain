@@ -851,8 +851,7 @@ tc_restart() {
 	cd "$p" || $?
 }
 
-# build all toolchains for configs passed in arguments. It can work both with
-# original or destination config files.
+# fix permissions, make libgcc_s static, etc.
 tc_finish() {
 	local p="$PWD"
 	local in_conf config cfg_list
@@ -927,6 +926,13 @@ tc_finish() {
 				mv "$TC_DST/$PREF/$PREF"/sys-root/lib/{,.unused.}libstdc++.la || die $?
 			fi
 		fi
+
+		echo "Listing glibc patches applied to toolchain $PREF (version $LIBC_VERSION)..."
+		for i in "$BUILD/ct-ng-$CT_VERSION/lib/ct-ng.$CT_VERSION/patches/glibc/$LIBC_VERSION"/*; do
+			if [ -s "$i" ]; then
+				echo "${i##*/}"
+			fi
+		done > "$TC_DST/$PREF/.glibc-patches"
 	done
 	cd "$p" || $?
 }
