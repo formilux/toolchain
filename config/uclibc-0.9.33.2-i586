@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Version: 0.9.33.2
-# Wed Oct  2 22:33:03 2013
+# Wed Oct  2 13:21:06 2013
 #
 # TARGET_alpha is not set
 # TARGET_arm is not set
@@ -58,8 +58,6 @@ TARGET_SUBARCH="i586"
 # Using ELF file format
 #
 ARCH_LITTLE_ENDIAN=y
-# ARCH_WANTS_BIG_ENDIAN is not set
-# ARCH_WANTS_LITTLE_ENDIAN is not set
 
 #
 # Using Little Endian
@@ -71,7 +69,7 @@ UCLIBC_HAS_FPU=y
 # DO_C99_MATH is not set
 # DO_XSI_MATH is not set
 # UCLIBC_HAS_FENV is not set
-KERNEL_HEADERS="/build/toolchain-2.0/platform/arm-cc43_gl29_bu219-linux-gnueabi/arm-cc43_gl29_bu219-linux-gnueabi/sys-root/usr/include"
+KERNEL_HEADERS="/w/dev/tc2/i586-gcc47_glibc217-linux-gnu/i586-gcc47_glibc217-linux-gnu/sys-root/usr/include"
 HAVE_DOT_CONFIG=y
 
 #
@@ -82,7 +80,7 @@ HAVE_SHARED=y
 # FORCE_SHAREABLE_TEXT_SEGMENTS is not set
 LDSO_LDD_SUPPORT=y
 LDSO_CACHE_SUPPORT=y
-# LDSO_PRELOAD_ENV_SUPPORT is not set
+LDSO_PRELOAD_ENV_SUPPORT=y
 # LDSO_PRELOAD_FILE_SUPPORT is not set
 LDSO_BASE_FILENAME="ld.so"
 # LDSO_STANDALONE_SUPPORT is not set
@@ -140,8 +138,8 @@ UCLIBC_LINUX_MODULE_26=y
 # UCLIBC_LINUX_MODULE_24 is not set
 UCLIBC_LINUX_SPECIFIC=y
 UCLIBC_HAS_GNU_ERROR=y
-# UCLIBC_BSD_SPECIFIC is not set
-# UCLIBC_HAS_BSD_ERR is not set
+UCLIBC_BSD_SPECIFIC=y
+UCLIBC_HAS_BSD_ERR=y
 # UCLIBC_HAS_OBSOLETE_BSD_SIGNAL is not set
 # UCLIBC_HAS_OBSOLETE_SYSV_SIGNAL is not set
 # UCLIBC_NTP_LEGACY is not set
@@ -149,10 +147,12 @@ UCLIBC_HAS_GNU_ERROR=y
 UCLIBC_HAS_REALTIME=y
 UCLIBC_HAS_ADVANCED_REALTIME=y
 UCLIBC_HAS_EPOLL=y
-# UCLIBC_HAS_XATTR is not set
-# UCLIBC_HAS_PROFILING is not set
-# UCLIBC_HAS_CRYPT_IMPL is not set
-# UCLIBC_HAS_CRYPT_STUB is not set
+UCLIBC_HAS_XATTR=y
+UCLIBC_HAS_PROFILING=y
+UCLIBC_HAS_CRYPT_IMPL=y
+# UCLIBC_HAS_SHA256_CRYPT_IMPL is not set
+# UCLIBC_HAS_SHA512_CRYPT_IMPL is not set
+UCLIBC_HAS_CRYPT=y
 UCLIBC_HAS_NETWORK_SUPPORT=y
 UCLIBC_HAS_SOCKET=y
 UCLIBC_HAS_IPV4=y
@@ -227,8 +227,8 @@ UCLIBC_HAS_GLOB=y
 #
 # Library Installation Options
 #
-RUNTIME_PREFIX="/build/toolchain-2.0/platform/arm-cc43_gl29_bu219-linux-gnueabi/arm-cc43_gl29_bu219-linux-gnueabi/uclibc-root"
-DEVEL_PREFIX="${RUNTIME_PREFIX}/usr"
+RUNTIME_PREFIX="/w/dev/tc2/i586-gcc47_glibc217-linux-gnu/i586-gcc47_glibc217-linux-gnu/uclibc-root"
+DEVEL_PREFIX="/w/dev/tc2/i586-gcc47_glibc217-linux-gnu/i586-gcc47_glibc217-linux-gnu/uclibc-root/usr"
 MULTILIB_DIR="lib"
 HARDWIRED_ABSPATH=y
 
@@ -238,7 +238,7 @@ HARDWIRED_ABSPATH=y
 # UCLIBC_BUILD_PIE is not set
 # UCLIBC_HAS_ARC4RANDOM is not set
 # UCLIBC_HAS_SSP is not set
-# UCLIBC_BUILD_RELRO is not set
+UCLIBC_BUILD_RELRO=y
 # UCLIBC_BUILD_NOW is not set
 UCLIBC_BUILD_NOEXECSTACK=y
 
