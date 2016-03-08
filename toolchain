@@ -304,9 +304,12 @@ tc_set_names() {
 		fi
 
 		# some archs have "64" appended to their name for 64-bit variants
-		# (eg: sparc4, mips64, ppc64).
+		# (eg: sparc4, mips64, ppc64). ARM64 is called "aarch64".
 		if [ "$ARCHIS64" = y ]; then
-			ARCH="${ARCH}64"
+			case "$ARCH" in
+			arm)           ARCH="aarch64"   ;;
+			*)             ARCH="${ARCH}64" ;;
+			esac
 		fi
 	fi
 
