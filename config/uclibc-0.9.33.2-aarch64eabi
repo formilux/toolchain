@@ -1,0 +1,3 @@
+# This file is intentionally empty to remind that uclibc-0.9.33.2 doesn't
+# support aarch64 at all.
+
