@@ -1,0 +1,47 @@
+
+# HG changeset patch
+# User "Yann E. MORIN" <yann.morin.1998@free.fr>
+# Date 1388600060 -3600
+# Node ID c010db3c6ab7856e52ad4534ff7b6f1877c6898a
+# Parent  38113b831a2f3fd4b495d352dc75984ea9cf303a
+kernel/linux: fix fall-out due to arm64 special case
+
+Cset 3b61be3d7aa6 (prepare for arch whose kenel name is not the standard name)
+failed to name a variable consistently, so all archs but arm64 were broken.
+
+Fix that by renaming the variable in a consistent way.
+
+Reported-by: Maxime Hadjinlian <maxime.hadjinlian@gmail.com>
+Signed-off-by: "Yann E. MORIN" <yann.morin.1998@free.fr>
+
+diff -r 38113b831a2f -r c010db3c6ab7 scripts/build/kernel/linux.sh
+--- a/scripts/build/kernel/linux.sh	Tue Dec 31 18:03:33 2013 +0100
++++ b/scripts/build/kernel/linux.sh	Wed Jan 01 19:14:20 2014 +0100
+@@ -97,7 +97,7 @@
+ # Install kernel headers using headers_install from kernel sources.
+ do_kernel_install() {
+     local kernel_path
+-    local arch
++    local kernel_arch
+ 
+     CT_DoLog DEBUG "Using kernel's headers_install"
+ 
+@@ -119,7 +119,7 @@
+     CT_DoExecLog ALL                                    \
+     make -C "${kernel_path}"                            \
+          O="${CT_BUILD_DIR}/build-kernel-headers"       \
+-         ARCH=${arch}                                   \
++         ARCH=${kernel_arch}                            \
+          INSTALL_HDR_PATH="${CT_SYSROOT_DIR}/usr"       \
+          ${V_OPT}                                       \
+          headers_install
+@@ -129,7 +129,7 @@
+         CT_DoExecLog ALL                                    \
+         make -C "${kernel_path}"                            \
+              O="${CT_BUILD_DIR}/build-kernel-headers"       \
+-             ARCH=${arch}                                   \
++             ARCH=${kernel_arch}                            \
+              INSTALL_HDR_PATH="${CT_SYSROOT_DIR}/usr"       \
+              ${V_OPT}                                       \
+              headers_check
+

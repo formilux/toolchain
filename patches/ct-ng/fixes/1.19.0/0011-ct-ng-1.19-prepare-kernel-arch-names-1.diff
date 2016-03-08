@@ -1,0 +1,55 @@
+
+# HG changeset patch
+# User Zhenqiang Chen <zhenqiang.chen@linaro.org>
+# Date 1388441702 -3600
+# Node ID 3b61be3d7aa66c6363b07aa0a4964713cf84e86c
+# Parent  f43e37c7c04700c535c7e2d05db3c79f45b690d1
+kernel/linux: prepare for arch whose kenel name is not the standard name
+
+For some architectures, the kernel architecture name is not the common
+name of the architecture for other tools.
+
+For example: ARM 64-bit is commonly referenced as aarch64, but the kernel
+calls it arm64.
+
+Signed-off-by: Michael Hope <michael.hope@linaro.org>
+Signed-off-by: Zhenqiang Chen <zhenqiang.chen@linaro.org>
+[yann.morin.1998@free.fr: split out of the aarch64 patch]
+Signed-off-by: "Yann E. MORIN" <yann.morin.1998@free.fr>
+
+diff -r f43e37c7c047 -r 3b61be3d7aa6 scripts/build/kernel/linux.sh
+--- a/scripts/build/kernel/linux.sh	Tue Dec 31 13:02:57 2013 +0100
++++ b/scripts/build/kernel/linux.sh	Mon Dec 30 23:15:02 2013 +0100
+@@ -97,6 +97,7 @@
+ # Install kernel headers using headers_install from kernel sources.
+ do_kernel_install() {
+     local kernel_path
++    local arch
+ 
+     CT_DoLog DEBUG "Using kernel's headers_install"
+ 
+@@ -108,11 +109,13 @@
+     fi
+     V_OPT="V=${CT_KERNEL_LINUX_VERBOSE_LEVEL}"
+ 
++    kernel_arch="${CT_ARCH}"
++
+     CT_DoLog EXTRA "Installing kernel headers"
+     CT_DoExecLog ALL                                    \
+     make -C "${kernel_path}"                            \
+          O="${CT_BUILD_DIR}/build-kernel-headers"       \
+-         ARCH=${CT_ARCH}                                \
++         ARCH=${arch}                                   \
+          INSTALL_HDR_PATH="${CT_SYSROOT_DIR}/usr"       \
+          ${V_OPT}                                       \
+          headers_install
+@@ -122,7 +125,7 @@
+         CT_DoExecLog ALL                                    \
+         make -C "${kernel_path}"                            \
+              O="${CT_BUILD_DIR}/build-kernel-headers"       \
+-             ARCH=${CT_ARCH}                                \
++             ARCH=${arch}                                   \
+              INSTALL_HDR_PATH="${CT_SYSROOT_DIR}/usr"       \
+              ${V_OPT}                                       \
+              headers_check
+

@@ -1,0 +1,74 @@
+
+# HG changeset patch
+# User "Yann E. MORIN" <yann.morin.1998@free.fr>
+# Date 1388442498 -3600
+# Node ID 87ad9e82546df3ce0127d1046ec644b4486aa626
+# Parent  3b61be3d7aa66c6363b07aa0a4964713cf84e86c
+arch/arm: add support for AArch64
+
+AArch64 id the 64-bit variant for ARM.
+
+Signed-off-by: "Yann E. MORIN" <yann.morin.1998@free.fr>
+Cc: Zhenqiang Chen <zhenqiang.chen@linaro.org>
+Cc: Michael Hope <michael.hope@linaro.org>
+
+diff -r 3b61be3d7aa6 -r 87ad9e82546d config/arch/arm.in
+--- a/config/arch/arm.in	Mon Dec 30 23:15:02 2013 +0100
++++ b/config/arch/arm.in	Mon Dec 30 23:28:18 2013 +0100
+@@ -1,6 +1,7 @@
+ # ARM specific configuration file
+ 
+ ## select ARCH_SUPPORTS_32
++## select ARCH_SUPPORTS_64
+ ## select ARCH_DEFAULT_32
+ ## select ARCH_SUPPORTS_BOTH_MMU
+ ## select ARCH_DEFAULT_HAS_MMU
+@@ -9,9 +10,9 @@
+ ## select ARCH_SUPPORTS_WITH_ARCH
+ ## select ARCH_SUPPORTS_WITH_CPU
+ ## select ARCH_SUPPORTS_WITH_TUNE
+-## select ARCH_SUPPORTS_WITH_FLOAT
+-## select ARCH_SUPPORTS_WITH_FPU
+-## select ARCH_SUPPORTS_SOFTFP
++## select ARCH_SUPPORTS_WITH_FLOAT if ARCH_32
++## select ARCH_SUPPORTS_WITH_FPU if ARCH_32
++## select ARCH_SUPPORTS_SOFTFP if ARCH_32
+ ##
+ ## help The ARM architecture, as defined by:
+ ## help     http://www.arm.com/
+diff -r 3b61be3d7aa6 -r 87ad9e82546d scripts/build/arch/arm.sh
+--- a/scripts/build/arch/arm.sh	Mon Dec 30 23:15:02 2013 +0100
++++ b/scripts/build/arch/arm.sh	Mon Dec 30 23:28:18 2013 +0100
+@@ -2,7 +2,16 @@
+ 
+ CT_DoArchTupleValues() {
+     # The architecture part of the tuple:
+-    CT_TARGET_ARCH="${CT_ARCH}${CT_ARCH_SUFFIX:-${target_endian_eb}}"
++    case "${CT_ARCH_BITNESS}" in
++        32)
++            CT_TARGET_ARCH="${CT_ARCH}${CT_ARCH_SUFFIX:-${target_endian_eb}}"
++            ;;
++        64)
++            # ARM 64 (aka AArch64) is special
++            [ "${CT_ARCH_BE}" = "y" ] && target_endian_eb="_be"
++            CT_TARGET_ARCH="aarch64${CT_ARCH_SUFFIX:-${target_endian_eb}}"
++            ;;
++    esac
+ 
+     # The system part of the tuple:
+     case "${CT_LIBC},${CT_ARCH_ARM_EABI}" in
+diff -r 3b61be3d7aa6 -r 87ad9e82546d scripts/build/kernel/linux.sh
+--- a/scripts/build/kernel/linux.sh	Mon Dec 30 23:15:02 2013 +0100
++++ b/scripts/build/kernel/linux.sh	Mon Dec 30 23:28:18 2013 +0100
+@@ -110,6 +110,10 @@
+     V_OPT="V=${CT_KERNEL_LINUX_VERBOSE_LEVEL}"
+ 
+     kernel_arch="${CT_ARCH}"
++    case "${CT_ARCH}:${CT_ARCH_BITNESS}" in
++        # ARM 64 (aka AArch64) is special
++        arm:64) kernel_arch="arm64";;
++    esac
+ 
+     CT_DoLog EXTRA "Installing kernel headers"
+     CT_DoExecLog ALL                                    \
+
