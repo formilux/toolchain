@@ -18,6 +18,9 @@ TC_GRP="${TC_GRP-}"
 # If set, forces the host tuple to use to build a canadian cross compiler
 TC_HOST="${TC_HOST-}"
 
+# If set, forces the build tuple to use for the local system
+TC_BUILD="${TC_BUILD-}"
+
 # NOTE: If a variable V is set, it is passed to most makefiles (use V=1 for more verbosity)
 
 # Build directory for various steps, may be totally removed at any time
@@ -791,6 +794,22 @@ tc_build() {
 		sed -i -e "s#\(CT_PREFIX_DIR=\).*#\1\"${TC_DST}/${PREF}\"#" .config
 		sed -i -e "s#\(CT_TARGET_VENDOR=\).*#\1\"${VENDOR}\"#" .config
 		sed -i -e "s#\(CT_WORK_DIR=\).*#\1\"${BUILD}\"#" .config
+
+		if [ -n "$TC_BUILD" ]; then
+			# force CT_BUILD to match TC_BUILD, and add
+			# CT_BUILD_{PREFIX,SUFFIX} if not set
+			sed -i -e "/^CT_BUILD=/d" .config
+			echo "CT_BUILD=\"$TC_BUILD\"" >> .config
+
+			get_config_var CT_BUILD_PREFIX .config
+			[ -n "$REPLY" ] || REPLY="${TC_BUILD}-"
+			sed -i -e "/^CT_BUILD_PREFIX=/d" .config
+			echo "CT_BUILD_PREFIX=\"$REPLY\"" >> .config
+
+			get_config_var CT_BUILD_SUFFIX .config
+			sed -i -e "/^CT_BUILD_SUFFIX=/d" .config
+			echo "CT_BUILD_SUFFIX=\"$REPLY\"" >> .config
+		fi
 
 		if [ -n "$TC_HOST" ]; then
 			sed -i -e "s:\([# ]*\)\(CT_CROSS\)[= ].*:# \2 is not set:" .config
