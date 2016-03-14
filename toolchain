@@ -803,6 +803,7 @@ tc_build() {
 			echo "CT_HOST=\"$TC_HOST\"" >> .config
 
 			get_config_var CT_HOST_PREFIX .config
+			[ -n "$REPLY" ] || REPLY="${TC_HOST}-"
 			sed -i -e "/^CT_HOST_PREFIX=/d" .config
 			echo "CT_HOST_PREFIX=\"$REPLY\"" >> .config
 
