@@ -1,0 +1,24 @@
+--- ./scripts/build/cc/gcc.sh.bug	2016-03-15 08:42:13.720573756 +0100
++++ ./scripts/build/cc/gcc.sh	2016-03-15 08:43:28.072412935 +0100
+@@ -101,8 +101,8 @@
+     core_opts+=( "host=${CT_BUILD}" )
+     core_opts+=( "complibs=${CT_BUILDTOOLS_PREFIX_DIR}" )
+     core_opts+=( "prefix=${CT_BUILDTOOLS_PREFIX_DIR}" )
+-    core_opts+=( "cflags=${CT_CFLAGS_FOR_HOST}" )
+-    core_opts+=( "ldflags=${CT_LDFLAGS_FOR_HOST}" )
++    core_opts+=( "cflags=${CT_CFLAGS_FOR_BUILD}" )
++    core_opts+=( "ldflags=${CT_LDFLAGS_FOR_BUILD}" )
+     core_opts+=( "lang_list=c" )
+     core_opts+=( "build_step=core1" )
+ 
+@@ -127,8 +127,8 @@
+     core_opts+=( "host=${CT_BUILD}" )
+     core_opts+=( "prefix=${CT_BUILDTOOLS_PREFIX_DIR}" )
+     core_opts+=( "complibs=${CT_BUILDTOOLS_PREFIX_DIR}" )
+-    core_opts+=( "cflags=${CT_CFLAGS_FOR_HOST}" )
+-    core_opts+=( "ldflags=${CT_LDFLAGS_FOR_HOST}" )
++    core_opts+=( "cflags=${CT_CFLAGS_FOR_BUILD}" )
++    core_opts+=( "ldflags=${CT_LDFLAGS_FOR_BUILD}" )
+     core_opts+=( "lang_list=c" )
+     core_opts+=( "build_step=core2" )
+ 
