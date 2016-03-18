@@ -474,7 +474,7 @@ cfg_info() {
 
 # check source 
 src_check() {
-	local config file
+	local config file err
 
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 	tc_check_configs "$@"
@@ -485,12 +485,14 @@ src_check() {
 		uc_find_best_match "$config"
 		for file in "gcc-$CC_VERSION" "glibc-$LIBC_VERSION" "binutils-$BINUTILS_VERSION" "uClibc-$UCLIBC_VERSION" "linux-$KERNEL_VERSION"; do
 			if ! get_src_path "$file"; then
-				die 1 "$file source is missing from $TC_SRC"
+				echo "$file source is missing from $TC_SRC"
+				err=1
 			else
 				[ -n "$V" ] && echo "  -> found $REPLY"
 			fi
 		done
 	done
+	[ -z "$err" ] || die 1 "Some files are missing."
 }
 
 # copy configuration files to the destination. Ignore existing files when
