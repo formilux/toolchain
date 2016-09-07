@@ -628,8 +628,8 @@ CT_LIBELF_VERSION="0.8.13"
 #
 CT_COMP_TOOLS=y
 # CT_COMP_TOOLS_make is not set
-# CT_COMP_TOOLS_m4 is not set
-# CT_COMP_TOOLS_autoconf is not set
+CT_COMP_TOOLS_m4=y
+CT_COMP_TOOLS_autoconf=y
 CT_COMP_TOOLS_automake=y
 CT_COMP_TOOLS_libtool=y
 
