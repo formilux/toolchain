@@ -1,0 +1,63 @@
+From patchwork Sat Aug  9 03:51:05 2014
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [1/2] Revert PR49721's patch
+From: Andrew Pinski <apinski@cavium.com>
+X-Patchwork-Id: 35179
+Message-Id: <1407556266-12337-2-git-send-email-apinski@cavium.com>
+To: gcc-patches@gcc.gnu.org
+Cc: Andrew Pinski <apinski@cavium.com>
+Date: Fri,  8 Aug 2014 20:51:05 -0700
+
+OK? When the second patch is approved?
+
+Thanks,
+Andrew Pinski
+
+ChangeLog:
+	Revert:
+	2011-08-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+        PR middle-end/49721
+        * explow.c (convert_memory_address_addr_space): Also permute the
+        conversion and addition of constant for zero-extend.
+---
+ gcc/explow.c |   19 +++++++------------
+ 1 files changed, 7 insertions(+), 12 deletions(-)
+
+diff --git a/gcc/explow.c b/gcc/explow.c
+index 92c4e57..eb7dc85 100644
+--- a/gcc/explow.c
++++ b/gcc/explow.c
+@@ -376,23 +376,18 @@ convert_memory_address_addr_space (enum machine_mode to_mode ATTRIBUTE_UNUSED,
+ 
+     case PLUS:
+     case MULT:
+-      /* FIXME: For addition, we used to permute the conversion and
+-	 addition operation only if one operand is a constant and
+-	 converting the constant does not change it or if one operand
+-	 is a constant and we are using a ptr_extend instruction
+-	 (POINTERS_EXTEND_UNSIGNED < 0) even if the resulting address
+-	 may overflow/underflow.  We relax the condition to include
+-	 zero-extend (POINTERS_EXTEND_UNSIGNED > 0) since the other
+-	 parts of the compiler depend on it.  See PR 49721.
+-
++      /* For addition we can safely permute the conversion and addition
++	 operation if one operand is a constant and converting the constant
++	 does not change it or if one operand is a constant and we are
++	 using a ptr_extend instruction  (POINTERS_EXTEND_UNSIGNED < 0).
+ 	 We can always safely permute them if we are making the address
+ 	 narrower.  */
+       if (GET_MODE_SIZE (to_mode) < GET_MODE_SIZE (from_mode)
+ 	  || (GET_CODE (x) == PLUS
+ 	      && CONST_INT_P (XEXP (x, 1))
+-	      && (POINTERS_EXTEND_UNSIGNED != 0
+-		  || XEXP (x, 1) == convert_memory_address_addr_space
+-		  			(to_mode, XEXP (x, 1), as))))
++	      && (XEXP (x, 1) == convert_memory_address_addr_space
++				   (to_mode, XEXP (x, 1), as)
++                 || POINTERS_EXTEND_UNSIGNED < 0)))
+ 	return gen_rtx_fmt_ee (GET_CODE (x), to_mode,
+ 			       convert_memory_address_addr_space
+ 				 (to_mode, XEXP (x, 0), as),

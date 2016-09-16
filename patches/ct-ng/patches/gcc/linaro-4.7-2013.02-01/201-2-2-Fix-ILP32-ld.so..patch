@@ -1,0 +1,115 @@
+From patchwork Sat Aug  9 03:51:06 2014
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [2/2] Fix ILP32 ld.so.
+From: Andrew Pinski <apinski@cavium.com>
+X-Patchwork-Id: 35178
+Message-Id: <1407556266-12337-3-git-send-email-apinski@cavium.com>
+To: gcc-patches@gcc.gnu.org
+Cc: Andrew Pinski <apinski@cavium.com>
+Date: Fri,  8 Aug 2014 20:51:06 -0700
+
+This patch fixes the original problem that HJL was having with x32 in
+PR 47727, it is more constraint than HJL's patch only care about what
+is happening inside a CONST;  if we allow it for other cases,
+the RTL and generated code is incorrect as it does not have the needed
+zero extend.  This allows ILP32 to work correctlya and allows &a + 2 to
+be still generated correctly when doing a convert_memory_address_addr_space.
+
+
+OK?  Bootstrapped and tested on x86_64-linux-gnu (though not with x32 but
+visually looked at the failing testcase with a much older compiler).
+Also tested on aarch64-linux-gnu with no regressions and also fixing ld.so
+for ILP32.
+
+Thanks,
+Andrew Pinski
+
+ChangeLog:
+	* explow.c (convert_memory_address_addr_space): Rename to ...
+	(convert_memory_address_addr_space_1): This.  Add in_const argument.
+	Inside a CONST RTL, permute the conversion and addition of constant
+	for zero and sign extended pointers.
+	(convert_memory_address_addr_space): New function.
+---
+ gcc/explow.c |   40 ++++++++++++++++++++++++++++------------
+ 1 files changed, 28 insertions(+), 12 deletions(-)
+
+diff --git a/gcc/explow.c b/gcc/explow.c
+index eb7dc85..64017a0 100644
+--- a/gcc/explow.c
++++ b/gcc/explow.c
+@@ -310,11 +310,13 @@ break_out_memory_refs (rtx x)
+    an address in the address space's address mode, or vice versa (TO_MODE says
+    which way).  We take advantage of the fact that pointers are not allowed to
+    overflow by commuting arithmetic operations over conversions so that address
+-   arithmetic insns can be used.  */
++   arithmetic insns can be used. IN_CONST is true if this conversion is inside
++   a CONST.  */
+ 
+-rtx
+-convert_memory_address_addr_space (enum machine_mode to_mode ATTRIBUTE_UNUSED,
+-				   rtx x, addr_space_t as ATTRIBUTE_UNUSED)
++static rtx
++convert_memory_address_addr_space_1 (enum machine_mode to_mode ATTRIBUTE_UNUSED,
++				     rtx x, addr_space_t as ATTRIBUTE_UNUSED,
++				     bool in_const)
+ {
+ #ifndef POINTERS_EXTEND_UNSIGNED
+   gcc_assert (GET_MODE (x) == to_mode || GET_MODE (x) == VOIDmode);
+@@ -370,8 +372,8 @@ convert_memory_address_addr_space (enum machine_mode to_mode ATTRIBUTE_UNUSED,
+ 
+     case CONST:
+       return gen_rtx_CONST (to_mode,
+-			    convert_memory_address_addr_space
+-			      (to_mode, XEXP (x, 0), as));
++			    convert_memory_address_addr_space_1
++			      (to_mode, XEXP (x, 0), as, true));
+       break;
+ 
+     case PLUS:
+@@ -381,16 +383,18 @@ convert_memory_address_addr_space (enum machine_mode to_mode ATTRIBUTE_UNUSED,
+ 	 does not change it or if one operand is a constant and we are
+ 	 using a ptr_extend instruction  (POINTERS_EXTEND_UNSIGNED < 0).
+ 	 We can always safely permute them if we are making the address
+-	 narrower.  */
++	 narrower. Inside a CONST RTL, this is safe for both pointers
++	 zero or sign extended as pointers cannot wrap. */
+       if (GET_MODE_SIZE (to_mode) < GET_MODE_SIZE (from_mode)
+ 	  || (GET_CODE (x) == PLUS
+ 	      && CONST_INT_P (XEXP (x, 1))
+-	      && (XEXP (x, 1) == convert_memory_address_addr_space
+-				   (to_mode, XEXP (x, 1), as)
+-                 || POINTERS_EXTEND_UNSIGNED < 0)))
++	      && ((in_const && POINTERS_EXTEND_UNSIGNED !=0)
++		  || XEXP (x, 1) == convert_memory_address_addr_space_1
++				     (to_mode, XEXP (x, 1), as, in_const)
++                  || POINTERS_EXTEND_UNSIGNED < 0)))
+ 	return gen_rtx_fmt_ee (GET_CODE (x), to_mode,
+-			       convert_memory_address_addr_space
+-				 (to_mode, XEXP (x, 0), as),
++			       convert_memory_address_addr_space_1
++				 (to_mode, XEXP (x, 0), as, in_const),
+ 			       XEXP (x, 1));
+       break;
+ 
+@@ -402,6 +406,18 @@ convert_memory_address_addr_space (enum machine_mode to_mode ATTRIBUTE_UNUSED,
+ 			x, POINTERS_EXTEND_UNSIGNED);
+ #endif /* defined(POINTERS_EXTEND_UNSIGNED) */
+ }
++
++/* Given X, a memory address in address space AS' pointer mode, convert it to
++   an address in the address space's address mode, or vice versa (TO_MODE says
++   which way).  We take advantage of the fact that pointers are not allowed to
++   overflow by commuting arithmetic operations over conversions so that address
++   arithmetic insns can be used.  */
++
++rtx
++convert_memory_address_addr_space (enum machine_mode to_mode, rtx x, addr_space_t as)
++{
++  return convert_memory_address_addr_space_1 (to_mode, x, as, false);
++}
+ 
+ /* Return something equivalent to X but valid as a memory address for something
+    of mode MODE in the named address space AS.  When X is not itself valid,
