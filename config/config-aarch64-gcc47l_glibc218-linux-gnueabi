@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # crosstool-NG 1.19.0 Configuration
-# Tue Mar  8 08:32:03 2016
+# Fri Sep 16 23:51:34 2016
 #
 CT_CONFIGURE_has_xz=y
 CT_CONFIGURE_has_cvs=y
@@ -29,9 +29,9 @@ CT_DEBUG_CT=y
 #
 CT_LOCAL_TARBALLS_DIR="/cache/src"
 CT_SAVE_TARBALLS=y
-CT_CUSTOM_LOCATION_ROOT_DIR=""
+CT_CUSTOM_LOCATION_ROOT_DIR="/cache/src"
 CT_WORK_DIR="/dev/shm/flx"
-CT_PREFIX_DIR="/f/tc/flx2/arm64-gcc47l_glibc218-linux-gnueabi"
+CT_PREFIX_DIR="/dev/shm/flx2/aarch64-gcc47l_glibc218-linux-gnueabi"
 CT_INSTALL_DIR="${CT_PREFIX_DIR}"
 CT_RM_RF_PREFIX_DIR=y
 CT_REMOVE_DOCS=y
@@ -111,7 +111,7 @@ CT_ARCH_LE=y
 # CT_ARCH_32 is not set
 CT_ARCH_64=y
 CT_ARCH_BITNESS=64
-CT_TARGET_CFLAGS="-funsafe-math-optimizations -fsingle-precision-constant -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels --param=early-inlining-insns=10"
+CT_TARGET_CFLAGS=""
 CT_TARGET_LDFLAGS=""
 CT_ARCH_arm=y
 # CT_ARCH_x86 is not set
@@ -499,11 +499,7 @@ CT_LIBC_GLIBC_MIN_KERNEL="2.6.32"
 # Debug facilities
 #
 # CT_DEBUG_gdb is not set
-CT_DEBUG_ltrace=n
-# CT_LTRACE_V_0_5_3 is not set
-# CT_LTRACE_V_0_5_2 is not set
-CT_LTRACE_VERSION="0.5.3"
-CT_LTRACE_0_5_3_or_later=y
+# CT_DEBUG_ltrace is not set
 # CT_DEBUG_duma is not set
 # CT_DEBUG_dmalloc is not set
 # CT_DEBUG_strace is not set
@@ -523,7 +519,6 @@ CT_MPFR=y
 CT_PPL=y
 CT_CLOOG=y
 CT_MPC=y
-CT_LIBELF_TARGET=y
 # CT_GMP_V_5_1_1 is not set
 # CT_GMP_V_5_0_2 is not set
 # CT_GMP_V_5_0_1 is not set
@@ -546,8 +541,6 @@ CT_PPL_V_0_11_2=y
 CT_PPL_VERSION="0.11.2"
 CT_PPL_0_11=y
 CT_PPL_NEEDS_LIBPWL=y
-# CT_ISL_V_0_11_1 is not set
-# CT_CLOOG_V_0_18_0 is not set
 CT_CLOOG_V_0_15_11=y
 # CT_CLOOG_V_0_15_10 is not set
 # CT_CLOOG_V_0_15_9 is not set
@@ -564,13 +557,6 @@ CT_MPC_V_0_9=y
 # CT_MPC_V_0_8_1 is not set
 # CT_MPC_V_0_7 is not set
 CT_MPC_VERSION="0.9"
-
-#
-# libelf version needed to build for target
-#
-CT_LIBELF_V_0_8_13=y
-# CT_LIBELF_V_0_8_12 is not set
-CT_LIBELF_VERSION="0.8.13"
 
 #
 # Companion libraries common options
