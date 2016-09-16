@@ -1,0 +1,24 @@
+From: Alan Modra <amodra@bigpond.net.au>
+Date: Sat, 20 Jul 2013 09:57:16 +0000 (+0000)
+Subject: 	PR ld/15762
+X-Git-Url: https://sourceware.org/git/?p=binutils.git;a=commitdiff_plain;h=619ca5e2d9fa706d5b2f00e87b81f582a53fc5b8
+
+	PR ld/15762
+	PR ld/12761
+	* elflink.c (elf_link_add_object_symbols): Don't clobber
+	.gnu.warning.symbol sections when shared.
+---
+
+diff --git a/bfd/elflink.c b/bfd/elflink.c
+index bcd3add..c80108d 100644
+--- a/bfd/elflink.c
++++ b/bfd/elflink.c
+@@ -3468,7 +3468,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
+ 		      FALSE, bed->collect, NULL)))
+ 		goto error_return;
+ 
+-	      if (! info->relocatable)
++	      if (!info->relocatable && !info->shared)
+ 		{
+ 		  /* Clobber the section size so that the warning does
+ 		     not get copied into the output file.  */
