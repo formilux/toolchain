@@ -1,0 +1,11 @@
+--- glibc-2.3.6/configure.orig	2016-10-20 08:48:06.517421385 +0200
++++ glibc-2.3.6/configure	2016-10-20 08:48:57.812682971 +0200
+@@ -4093,7 +4093,7 @@
+   ac_prog_version=`$CC -v 2>&1 | sed -n 's/^.*version \([egcygnustpi-]*[0-9.]*\).*$/\1/p'`
+   case $ac_prog_version in
+     '') ac_prog_version="v. ?.??, bad"; ac_verc_fail=yes;;
+-    3.[2-9]* | 4.[0-9]* )
++    3.[2-9]* | [4-9].[0-9]* )
+        ac_prog_version="$ac_prog_version, ok"; ac_verc_fail=no;;
+     *) ac_prog_version="$ac_prog_version, bad"; ac_verc_fail=yes;;
+ 
