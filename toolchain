@@ -483,7 +483,7 @@ src_check() {
 	for config in "$@"; do
 		[ -n "$V" ] && echo "Checking source dependencies for config file $config ..."
 		uc_find_best_match "$config"
-		for file in "gcc-$CC_VERSION" "glibc-$LIBC_VERSION" "binutils-$BINUTILS_VERSION" "uClibc-$UCLIBC_VERSION" "linux-$KERNEL_VERSION"; do
+		for file in "gcc-$CC_VERSION" "glibc-$LIBC_VERSION" "binutils-$BINUTILS_VERSION" "uClibc-$UCLIBC_VERSION" "${KERNEL_VERSION:+linux-$KERNEL_VERSION}"; do
 			if ! get_src_path "$file"; then
 				echo "$file source is missing from $TC_SRC"
 				err=1
