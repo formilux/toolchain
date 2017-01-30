@@ -29,7 +29,8 @@ BUILD="${BUILD-$TC_TMP/flx}"
 TC_CFG="${TC_CFG-$TC_DST/config}"
 
 # When multiple uclibc configs are available, the following variable tells
-# which version is preferred (eg: 0.9.28.3).
+# which version is preferred (eg: 0.9.28.3). It's also possible to pass
+# "none" indicating that we purposely don't want to build uclibc.
 UCLIBC_PREFERRED_VERSION="${UCLIBC_PREFERRED_VERSION-}"
 
 # Warning: using an improper crosstool-ng version can result in losing some
@@ -364,6 +365,7 @@ tc_check_configs() {
 
 # Extracts uclibc version number from file name $1 and sets UCLIBC_VERSION
 # accordingly. The file name should be in the form /path/uclibc-$VER-anything.
+# Passing "none" will properly result in "none" being used for UCLIBC_VERSION.
 set_uclibc_version() {
 	UCLIBC_VERSION="${1##*/}"
 	UCLIBC_VERSION="${UCLIBC_VERSION#uclibc-}"
@@ -374,7 +376,9 @@ set_uclibc_version() {
 # config file match or an empty string. Returns 0 only if an exact match is
 # found. If a file matches, its name is returned in UCLIBC_FILE, the required uclibc
 # version is set in UCLIBC_VERSION, and zero is returned. Otherwise, all matches
-# (possibly none) are returned in UCLIBC_FILE and the result is non-zero.
+# (possibly none) are returned in UCLIBC_FILE and the result is non-zero. If the
+# preferred version is set to "none", it will be propagated to the file and to the
+# version.
 uc_find_best_match() {
 	local file="$1"
 	local dir
@@ -383,7 +387,11 @@ uc_find_best_match() {
 	tc_set_names "$file"
 	[ -n "${file##*/*}" ] && dir="." || dir="${file%/*}"
 
-	if [ -n "$UCLIBC_PREFERRED_VERSION" ]; then
+	if [ "$UCLIBC_PREFERRED_VERSION" = "none" ]; then
+		UCLIBC_FILE="none"
+		UCLIBC_VERSION="none"
+		return 0
+	elif [ -n "$UCLIBC_PREFERRED_VERSION" ]; then
 		UCLIBC_FILE="${dir}/uclibc-${UCLIBC_PREFERRED_VERSION}-${ALIAS}${ABI}"
 		if [ -e "$UCLIBC_FILE" ]; then
 			set_uclibc_version "$UCLIBC_FILE"
@@ -416,7 +424,8 @@ uc_find_best_match() {
 
 # Check that all of the config files passed in arguments have a pending uclibc
 # config file in the same directory. The config files are assumed to have already
-# been checked for correctness.
+# been checked for correctness. When the version is set to "none", the configs
+# are silently ignored.
 uc_check_configs() {
 	local file
 
@@ -431,7 +440,9 @@ uc_check_configs() {
 		fi
 
 		err=""
-		if [ ! -e "$UCLIBC_FILE" ]; then
+		if [ "$UCLIBC_FILE" = "none" ]; then
+			:
+		elif [ ! -e "$UCLIBC_FILE" ]; then
 			err="uclibc config file $UCLIBC_FILE does not exist"
 		elif [ ! -f "$UCLIBC_FILE" ]; then
 			err="uclibc config file $UCLIBC_FILE is not a regular file"
@@ -484,7 +495,9 @@ src_check() {
 		[ -n "$V" ] && echo "Checking source dependencies for config file $config ..."
 		uc_find_best_match "$config"
 		for file in "gcc-$CC_VERSION" "glibc-$LIBC_VERSION" "binutils-$BINUTILS_VERSION" "uClibc-$UCLIBC_VERSION" "${KERNEL_VERSION:+linux-$KERNEL_VERSION}"; do
-			if ! get_src_path "$file"; then
+			if [ "$file" = "uClibc-none" ]; then
+				:
+			elif ! get_src_path "$file"; then
 				echo "$file source is missing from $TC_SRC"
 				err=1
 			else
@@ -516,7 +529,9 @@ tc_init() {
 			die 1 "Error: $TC_CFG/config-$PREF already exists and differs from $config. Please remove it and re-run tc-init, or use tc-cond-init instead to preserve current files"
 		fi
 
-		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" ]; then
+		if [ "$UCLIBC_VERSION" = "none" ]; then
+			:
+		elif [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" ]; then
 			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} ..."
 			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" || die $?
 		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}"; then
@@ -562,7 +577,9 @@ tc_cond_init() {
 			fi
 		fi
 
-		if [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" ]; then
+		if [ "$UCLIBC_VERSION" = "none" ]; then
+			:
+		elif [ ! -s "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" ]; then
 			echo "Copying uclibc config file $UCLIBC_FILE to $TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI} ..."
 			cp "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}" || die $?
 		elif ! cmp -s "$UCLIBC_FILE" "$TC_CFG/uclibc-${UCLIBC_VERSION}-${ALIAS}${ABI}"; then
@@ -1020,6 +1037,10 @@ uc_build() {
 
 	tc_cond_init "$@"
 	uc_check_configs "$@"
+
+	if [ "$UCLIBC_VERSION" = "none" ]; then
+		return 0
+	fi
 
 	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
 	# their uclibc-* counter parts exist too. Let's rebuild the config list

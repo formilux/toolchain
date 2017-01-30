@@ -33,7 +33,8 @@ A few environment variables are needed or recommended :
     to be used for uc-build. If unspecified, the script tries to find the
     highest version of uClibc for which a config file exists in the config
     directory. It is highly recommended to force it. The current configurations
-    are known to build and work well with version 0.9.33.2.
+    are known to build and work well with version 0.9.33.2. If uClibc is not
+    desired, this version must be forced to "none".
 
   - PARALLEL : this is the number of parallel jobs. It's recommended to set it
     to the number of processors the machine uses.
