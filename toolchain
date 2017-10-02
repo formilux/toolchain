@@ -17,6 +17,7 @@ TC_GRP="${TC_GRP-}"
 
 # If set, forces the host tuple to use to build a canadian cross compiler
 TC_HOST="${TC_HOST-}"
+TC_HOST_CFLAGS="${TC_HOST_CFLAGS-}"
 
 # If set, forces the build tuple to use for the local system
 TC_BUILD="${TC_BUILD-}"
@@ -848,6 +849,14 @@ tc_build() {
 			get_config_var CT_HOST_SUFFIX .config
 			sed -i -e "/^CT_HOST_SUFFIX=/d" .config
 			echo "CT_HOST_SUFFIX=\"$REPLY\"" >> .config
+
+			# update the CT_HOST's cflags if specified
+			if [ -n "$TC_HOST_CFLAGS" ]; then
+				get_config_var CT_EXTRA_CFLAGS_FOR_HOST .config
+				[ -n "$REPLY" ] || REPLY="${TC_HOST_CFLAGS}"
+				sed -i -e "/^CT_EXTRA_CFLAGS_FOR_HOST=/d" .config
+				echo "CT_EXTRA_CFLAGS_FOR_HOST=\"$REPLY\"" >> .config
+			fi
 		fi
 
 		#sed -i -e "s#\(CT_CC_VERSION=\).*#\1\"${CC_VERSION}\"#" .config
