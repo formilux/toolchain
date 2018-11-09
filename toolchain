@@ -271,6 +271,9 @@ tc_set_names() {
 
 	ABI=""
 	get_config_var "CT_CC_VERSION"       "$1" ; CC_VERSION="$REPLY"
+	if [ -z "$CC_VERSION" ]; then
+	    get_config_var "CT_GCC_VERSION"       "$1" ; CC_VERSION="$REPLY"
+	fi
 	get_config_var "CT_LIBC_VERSION"     "$1" ; LIBC_VERSION="$REPLY"
 	get_config_var "CT_ARCH"             "$1" ; FAMILY="$REPLY"
 	get_config_var "CT_ARCH_OVERRIDE"    "$1" ; ALIAS="$REPLY"
