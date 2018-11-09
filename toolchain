@@ -159,10 +159,17 @@ get_config_var() {
 set_ctng_version() {
 	[ "$#" = 1 ] || die 1 "get_ctng_config_version: need exactly one config file name"
 	[ -f "$1" ] || die 1 "get_ctng_config_version: cannot retrieve config version from $1 (no such file)"
-	CT_VERSION=$(sed -ne 's/^# crosstool-NG version: \([^ ]*\)$/\1/p' \
+	CT_VERSION_TMP=$(sed -ne 's/^# crosstool-NG version: \([^ ]*\)$/\1/p' \
 	                 -ne 's/^# crosstool-NG \([^ ]*\) Configuration/\1/p' "$1" 2>/dev/null)
-    	CT_VERSION=${CT_VERSION:-$CT_DEFAULT_VERSION}
-	[ -n "$CT_VERSION" ] || die 1 "No version found in config file $1, please force it using CT_DEFAULT_VERSION"
+	if [ "$CT_VERSION_TMP" == "UNKNOWN" ]; then
+		# this happens for git ctng
+		CT_VERSION_TMP="$CT_DEFAULT_VERSION"
+		if [ -z "$CT_VERSION_TMP" ]; then CT_VERSION_TMP="$CT_VERSION"; fi
+	else
+		CT_VERSION_TMP=${CT_VERSION_TMP:-$CT_DEFAULT_VERSION}
+	fi
+	if [ -z "$CT_VERSION_TMP" ]; then die 1 "No version found in config file $1, please force it using CT_DEFAULT_VERSION"
+	else CT_VERSION="$CT_VERSION_TMP"; fi
 }
 
 ########## functions used to build and install ct-ng ###########
