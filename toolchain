@@ -229,7 +229,12 @@ ct_ng_build() {
 		ct_ng_patch
 	fi
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
-	./configure --prefix="$BUILD/ct-ng-$CT_VERSION" ${BASH:+--with-bash="$BASH"} || die $?
+	if grep -q 'with-bash.*deprecated' ./configure; then
+		if [ -z "$BASH" ]; then BASH=`which bash`; fi
+		BASH_SHELL="$BASH" ./configure --prefix="$BUILD/ct-ng-$CT_VERSION" || die $?
+	else
+		./configure --prefix="$BUILD/ct-ng-$CT_VERSION" ${BASH:+--with-bash="$BASH"} || die $?
+	fi
 	${MAKE} ${V+V="$V"} || die $?
 	touch .ct_ng_build
 	cd "$p" || die $?
