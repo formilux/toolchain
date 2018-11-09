@@ -876,7 +876,10 @@ tc_build() {
 		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" oldconfig
 
 		# fix an obscure bug which happened in crosstool-NG
-		sed -i -e "s#^\. .*/\.config#. $PWD/.config#" ${BUILD}/ct-ng-${CT_VERSION}/lib/ct-ng[-.]${CT_VERSION}/scripts/crosstool-NG.sh
+		if [ -f ${BUILD}/ct-ng-${CT_VERSION}/lib/ct-ng[-.]${CT_VERSION}/scripts/crosstool-NG.sh ]; then
+			# this file no longer exist with new ct-ng versions (1.23)
+			sed -i -e "s#^\. .*/\.config#. $PWD/.config#" ${BUILD}/ct-ng-${CT_VERSION}/lib/ct-ng[-.]${CT_VERSION}/scripts/crosstool-NG.sh
+		fi
 		# Build but only pass "V=2" if any verbosity is required, otherwise
 		# libgmp will break in the libtool crap with V=0/V=1 due to the ECHO
 		# variable being redefined as ":".
