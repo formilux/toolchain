@@ -207,11 +207,15 @@ ct_ng_patch() {
 		done
 	fi
 
+	touch .removed
 	if [ -s "$TC_DIR/patches/ct-ng/to-remove" ]; then
 		for i in $(cat "$TC_DIR/patches/ct-ng/to-remove"); do
-			rm -vf patches/$i || die $?
+			find patches/ packages/ -wholename "*$i" -type f >> .removed 2>/dev/null
 		done
 	fi
+	echo "Removing $( wc -l < .removed ) patches"
+	cat .removed | xargs --no-run-if-empty rm -vf || die $?
+	rm -f .removed
 
 	cp -rL "$TC_DIR/patches/ct-ng/patches/." patches/ || die $?
 	touch .ct_ng_patch
