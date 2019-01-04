@@ -195,7 +195,7 @@ ct_ng_patch() {
 	local p="$PWD"
 
 	[ -n "$CT_VERSION" ] || die 1 "CT_VERSION not set, must match desired crosstool-ng version"
-	if [ ! -e "$BUILD/crosstool-ng-$CT_VERSION/.ct_ng_patch" ]; then
+	if [ ! -e "$BUILD/crosstool-ng-$CT_VERSION/.ct_ng_extract" ]; then
 		echo "crosstool-ng-$CT_VERSION not extracted yet, doing it now..."
 		ct_ng_extract
 	fi
