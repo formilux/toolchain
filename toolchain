@@ -1050,8 +1050,8 @@ tc_finish() {
 		fi
 
 		echo "Listing glibc patches applied to toolchain $PREF (version $LIBC_VERSION)..."
-		for i in "$BUILD/ct-ng-$CT_VERSION/lib/ct-ng.$CT_VERSION/patches/glibc/$LIBC_VERSION"/*; do
-			if [ -s "$i" ]; then
+		for i in "$BUILD/ct-ng-$CT_VERSION/lib/ct-ng.$CT_VERSION/patches/glibc/$LIBC_VERSION"/* "$BUILD/ct-ng-$CT_VERSION/share/crosstool-ng/packages/glibc/$LIBC_VERSION"/*; do
+			if [ -s "$i" -a "${i##*/}" != "chksum" ]; then
 				echo "${i##*/}"
 			fi
 		done > "$TC_DST/$PREF/.glibc-patches"
