@@ -1,4 +1,4 @@
-Formilux toolchain build script - 2014/08/03
+Formilux toolchain build script - 2019/01/04
 
 This is Formilux's toolchain build script. It relies on crosstool-ng (called
 ct-ng below) to build each toolchain, and can iterate over multiple configs and
@@ -83,6 +83,21 @@ conditions :
   mpfr-2.4.2.tar.bz2
   ncurses-5.9.tar.gz
   uClibc-0.9.33.2.tar.bz2
+
+or, for a more recent gcc 6.5 and glibc-2.28 on crosstool-ng-1.23.0:
+
+  gcc-6.5.0.tar.xz
+  glibc-2.28.tar.xz
+  linux-4.9.135.tar.xz
+  expat-2.2.6.tar.bz2
+  mpfr-4.0.1.tar.xz
+  gmp-6.1.2.tar.xz
+  binutils-2.31.1.tar.xz
+  gdb-8.2.tar.xz
+  mpc-1.1.0.tar.gz
+  ncurses-6.1.tar.gz
+  libiconv-1.15.tar.gz
+  gettext-0.19.8.1.tar.xz
 
 Locally, a number of tools are needed during the build process, which may be
 available as separate packages for your local system :
