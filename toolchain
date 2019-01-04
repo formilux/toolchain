@@ -217,7 +217,18 @@ ct_ng_patch() {
 	cat .removed | xargs --no-run-if-empty rm -vf || die $?
 	rm -f .removed
 
-	cp -rL "$TC_DIR/patches/ct-ng/patches/." patches/ || die $?
+	if [ -d "patches" ]; then
+		# for ct-ng <= 1.19
+		echo "Copy component patches to `pwd`/patches"
+		cp -rL "$TC_DIR/patches/ct-ng/patches/." patches/ || die $?
+	elif [ -d "packages" ]; then
+		# ct-ng 1.23
+		echo "Copy component patches to `pwd`/packages"
+		cp -rL "$TC_DIR/patches/ct-ng/patches/." packages/ || die $?
+	else
+		die 1 "cannot find ct-ng component patches directory"
+	fi
+
 	touch .ct_ng_patch
 
 	cd "$p" || die $?
