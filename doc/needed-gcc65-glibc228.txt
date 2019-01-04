@@ -1,0 +1,14 @@
+In order to build gcc65*glibc228, the following source files are needed :
+
+gcc-6.5.0.tar.xz
+glibc-2.28.tar.xz
+linux-4.9.135.tar.xz
+expat-2.2.6.tar.bz2
+mpfr-4.0.1.tar.xz
+gmp-6.1.2.tar.xz
+binutils-2.31.1.tar.xz
+gdb-8.2.tar.xz
+mpc-1.1.0.tar.gz
+ncurses-6.1.tar.gz
+libiconv-1.15.tar.gz
+gettext-0.19.8.1.tar.xz
