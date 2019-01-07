@@ -1,0 +1,26 @@
+# glibc try to check if make version is correct. These check fail for versions>=4.0
+# see https://sourceware.org/bugzilla/show_bug.cgi?id=16037
+diff -durN glibc-2.18.orig/configure glibc-2.18/configure
+--- glibc-2.18.orig/configure	2017-09-25 09:46:10.272449502 +0000
++++ glibc-2.18/configure	2017-09-25 11:29:11.768917433 +0000
+@@ -4772,7 +4772,7 @@
+   ac_prog_version=`$MAKE --version 2>&1 | sed -n 's/^.*GNU Make[^0-9]*\([0-9][0-9.]*\).*$/\1/p'`
+   case $ac_prog_version in
+     '') ac_prog_version="v. ?.??, bad"; ac_verc_fail=yes;;
+-    3.79* | 3.[89]*)
++    3.79* | 3.[89]* | [1-9][.0-9]*)
+        ac_prog_version="$ac_prog_version, ok"; ac_verc_fail=no;;
+     *) ac_prog_version="$ac_prog_version, bad"; ac_verc_fail=yes;;
+ 
+diff -durN glibc-2.18.orig/configure.in glibc-2.18/configure.in
+--- glibc-2.18.orig/configure.in	2013-08-10 22:52:55.000000000 +0000
++++ glibc-2.18/configure.in	2017-09-25 11:29:54.840625924 +0000
+@@ -989,7 +989,7 @@
+   critic_missing="$critic_missing gcc")
+ AC_CHECK_PROG_VER(MAKE, gnumake gmake make, --version,
+   [GNU Make[^0-9]*\([0-9][0-9.]*\)],
+-  [3.79* | 3.[89]*], critic_missing="$critic_missing make")
++  [3.79* | 3.[89]* | [0-9][.0-9]*], critic_missing="$critic_missing make")
+ 
+ AC_CHECK_PROG_VER(MSGFMT, gnumsgfmt gmsgfmt msgfmt, --version,
+   [GNU gettext.* \([0-9]*\.[0-9.]*\)],
