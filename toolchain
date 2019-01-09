@@ -169,7 +169,7 @@ set_ctng_version() {
 		CT_VERSION_TMP=${CT_VERSION_TMP:-$CT_DEFAULT_VERSION}
 	fi
 	if [ -z "$CT_VERSION_TMP" ]; then die 1 "No version found in config file $1, please force it using CT_DEFAULT_VERSION"
-	else CT_VERSION="$CT_VERSION_TMP"; fi
+	else CT_VERSION="${CT_VERSION_TMP%-dirty}"; fi
 }
 
 ########## functions used to build and install ct-ng ###########
