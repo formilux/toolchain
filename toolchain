@@ -653,7 +653,7 @@ tc_refresh() {
 		config="$TC_CFG/config-$PREF"
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
 
-		set_ctng_version "$config"
+		[ -n "$CT_VERSION" ] || set_ctng_version "$config"
 		if [ ! -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ]; then
 			echo "ct-ng-$CT_VERSION not installed yet, doing it now..."
 			ct_ng_install
@@ -735,7 +735,7 @@ tc_config() {
 		config="$TC_CFG/config-$PREF"
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
 
-		set_ctng_version "$config"
+		[ -n "$CT_VERSION" ] || set_ctng_version "$config"
 		if [ ! -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ]; then
 			echo "ct-ng-$CT_VERSION not installed yet, doing it now..."
 			ct_ng_install
@@ -813,7 +813,7 @@ tc_build() {
 		[ "$config" = "$in_conf" ] || echo "Note: using config file $config for toolchain configuration $in_conf."
 		cfg_list[${#cfg_list[@]}]="$config"
 
-		set_ctng_version "$config"
+		[ -n "$CT_VERSION" ] || set_ctng_version "$config"
 		if [ ! -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ]; then
 			echo "ct-ng-$CT_VERSION not installed yet, doing it now..."
 			ct_ng_install
@@ -827,7 +827,7 @@ tc_build() {
 	for config in "${cfg_list[@]}"; do
 		echo "Building toolchain for configuration file $config ..."
 		# show config and retrieve mandatory information
-		set_ctng_version "$config"
+		[ -n "$CT_VERSION" ] || set_ctng_version "$config"
 		cfg_info "$config"
 
 		tc_set_names "$config"
@@ -940,7 +940,7 @@ tc_restart() {
 	echo "## Using toolchain directory $BUILD/tc-$PREF ..."
 	[ -s "$BUILD/tc-$PREF/.config" ] || die 1 "cannot restart, no build currently in progress"
 
-	set_ctng_version "$BUILD/tc-$PREF/.config"
+	[ -n "$BUILD/tc-$PREF/.config" ] || set_ctng_version "$BUILD/tc-$PREF/.config"
 	if [ ! -x "$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" ]; then
 		echo "ct-ng-$CT_VERSION not installed yet, doing it now..."
 		ct_ng_install
