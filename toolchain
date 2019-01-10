@@ -177,6 +177,9 @@ ct_ng_extract() {
 	get_src_path_safe "crosstool-ng-$CT_VERSION"
 	echo "Extracting $REPLY ..."
 	tar xf "$REPLY" || die $?
+
+	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
+	cd ..
 	touch "crosstool-ng-$CT_VERSION/.ct_ng_extract"
 	cd "$p" || die $?
 }
@@ -229,6 +232,13 @@ ct_ng_build() {
 		ct_ng_patch
 	fi
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
+
+	if ! [ -f ./configure ] && [ -f ./bootstrap ]; then
+		# the boostrap has to be done after applying the patches, before building
+		echo "This is a git version, boostrapping it"
+		./bootstrap
+	fi
+
 	if grep -q 'with-bash.*deprecated' ./configure; then
 		if [ -z "$BASH" ]; then BASH=`which bash`; fi
 		BASH_SHELL="$BASH" ./configure --prefix="$BUILD/ct-ng-$CT_VERSION" || die $?
