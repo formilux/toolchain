@@ -1,0 +1,23 @@
+From b0151f5eb53c5bf70d39512a3d73e529be90bc0a Mon Sep 17 00:00:00 2001
+From: Stephan Conrad <stephan@conrad.pics>
+Date: Tue, 15 Jan 2019 16:28:16 +0100
+Subject: [PATCH] added the version 5 to the check of bash versions
+
+Signed-off-by: Stephan Conrad <stephan@conrad.pics>
+---
+ configure.ac | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index 5fd69a76a..f5955b38c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -147,7 +147,7 @@ CTNG_PROG_VERSION_REQ_STRICT([BASH_SHELL],
+     [GNU bash >= 3.1],
+     [bash],
+     [bash],
+-    [^GNU bash, version (3\.[1-9]|4)])
++    [^GNU bash, version (3\.[1-9]|4|5)])
+ 
+ # We need a awk that *is* GNU awk
+ CTNG_PROG_VERSION_REQ_STRICT([AWK],
