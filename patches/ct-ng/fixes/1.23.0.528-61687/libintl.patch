@@ -1,0 +1,33 @@
+From f2ac970b9b0ed2ad15e10d07a20e82e161bd11b3 Mon Sep 17 00:00:00 2001
+From: carlo-bramini <30959007+carlo-bramini@users.noreply.github.com>
+Date: Tue, 5 Feb 2019 16:39:17 +0100
+Subject: [PATCH] Correctly reference to libintl when linking.
+
+see https://github.com/crosstool-ng/crosstool-ng/pull/1133/commits/f2ac970b9b0ed2ad15e10d07a20e82e161bd11b3
+---
+ kconfig/Makefile.am | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/kconfig/Makefile.am b/kconfig/Makefile.am
+index 1cdde6ceb..0523ea95e 100644
+--- a/kconfig/Makefile.am
++++ b/kconfig/Makefile.am
+@@ -18,15 +18,16 @@ AM_CPPFLAGS		= -include config.h -DCONFIG_=\"CT_\"
+ AM_LIBTOOLFLAGS	= --tag CC
+ 
+ conf_SOURCES    = conf.c zconf.c
++conf_LDADD      = $(LIBINTL)
+ 
+ nconf_SOURCES	= nconf.c nconf.gui.c zconf.c
+ nconf_CFLAGS	= $(CURSES_CFLAGS)
+-nconf_LDADD		= $(MENU_LIBS) $(PANEL_LIBS) $(CURSES_LIBS)
++nconf_LDADD     = $(MENU_LIBS) $(PANEL_LIBS) $(CURSES_LIBS) $(LIBINTL)
+ 
+ mconf_SOURCES	= mconf.c zconf.c lxdialog/checklist.c lxdialog/inputbox.c \
+ 				  lxdialog/menubox.c lxdialog/textbox.c lxdialog/util.c \
+ 				  lxdialog/yesno.c
+-mconf_LDADD		= $(CURSES_LIBS)
++mconf_LDADD     = $(CURSES_LIBS) $(LIBINTL)
+ 
+ # automake's support for yacc/lex/gperf is too idiosyncratic. It doesn't
+ # support a common pattern of including lex-generated file into yacc, nor does
