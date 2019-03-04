@@ -1,0 +1,32 @@
+From d295d45b0cbcef7bd6eb91927c3ad4bf3e08b5e7 Mon Sep 17 00:00:00 2001
+From: Bernhard Walle <bernhard@bwalle.de>
+Date: Wed, 20 Feb 2019 18:34:26 +0100
+Subject: [PATCH] expat: Build without docbook
+
+This fixes following build error on Debian 9:
+
+   configure: error: Your local docbook2man was found to work with SGML rather
+      than XML. Please install docbook2X and use variable DOCBOOK_TO_MAN to point
+      configure to command docbook2x-man of docbook2X.
+      Or use DOCBOOK_TO_MAN="xmlto man --skip-validation" if you have xmlto around.
+      You can also configure using --without-docbook if you can do without a man
+      page for xmlwf.
+
+Signed-off-by: Bernhard Walle <bernhard@bwalle.de>
+see https://github.com/crosstool-ng/crosstool-ng/commit/d295d45b0cbcef7bd6eb91927c3ad4bf3e08b5e7
+---
+ scripts/build/companion_libs/210-expat.sh | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/scripts/build/companion_libs/210-expat.sh b/scripts/build/companion_libs/210-expat.sh
+index 75a78bf72..d2ca6a020 100644
+--- a/scripts/build/companion_libs/210-expat.sh
++++ b/scripts/build/companion_libs/210-expat.sh
+@@ -99,6 +99,7 @@ do_expat_backend() {
+         --host=${host}                                              \
+         --prefix="${prefix}"                                        \
+         --enable-static                                             \
++        --without-docbook                                           \
+         "${extra_config[@]}"
+ 
+     CT_DoLog EXTRA "Building expat"
