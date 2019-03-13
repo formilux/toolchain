@@ -1,0 +1,115 @@
+commit 35bec76b6371057746ac11ac25cffab75b8641db
+Author: Alexey Neyman <stilor@att.net>
+Date:   Mon Nov 12 01:15:58 2018 -0800
+
+    Fix installation of the license file
+    
+    ... for ct-ng configured without --enable-local. Also, install
+    licenses in subdirectories of the components.
+    
+    Also, ct-ng configured with --enable-local removed the scripts directory
+    upon `ct-ng distclean`.
+    
+    Also, misspelled CT_WGET/CT_CURL variables prevented use of
+    `ct-ng updatetools`.
+    
+    Fixes #1091.
+    
+    Signed-off-by: Alexey Neyman <stilor@att.net>
+
+diff --git a/Makefile.am b/Makefile.am
+index 92b8af50..92ee9103 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -67,6 +67,8 @@ install-data-hook:
+ 	gzip -9 $(DESTDIR)$(man1dir)/$(ctng_progname).1
+ 	chmod a+x $(DESTDIR)$(pkgdatadir)/scripts/config.guess
+ 	chmod a+x $(DESTDIR)$(pkgdatadir)/scripts/config.sub
++	rm -f $(DESTDIR)$(pkgdatadir)/LICENSE
++	ln -s COPYING $(DESTDIR)$(pkgdatadir)/LICENSE
+ if INSTALL_BASH_COMPLETION
+ 	chmod a-x $(DESTDIR)$(compdir)/$(ctng_progname)
+ endif
+diff --git a/bootstrap b/bootstrap
+index e4a207bb..2d398e13 100755
+--- a/bootstrap
++++ b/bootstrap
+@@ -742,7 +742,7 @@ msg "*** Gathering the list of data files to install"
+ {
+     declare -A seen_files
+     echo -n "verbatim_data ="
+-    find config contrib packages samples scripts -type f | LANG=C sort | while read f; do
++    find COPYING config contrib licenses.d packages samples scripts -type f | LANG=C sort | while read f; do
+         # Implement some kind of .installignore for these files?
+         case "${f}" in
+             # Skip certain files not needed at runtime (used above for generating kconfig
+diff --git a/ct-ng.in b/ct-ng.in
+index b99848fa..e93393bb 100644
+--- a/ct-ng.in
++++ b/ct-ng.in
+@@ -20,6 +20,7 @@ ifeq (@enable_local@,yes)
+ export CT_LIB_DIR:=$(patsubst %/,%,$(dir $(CT_NG)))
+ export CT_LIBEXEC_DIR:=$(CT_LIB_DIR)/kconfig
+ export CT_DOC_DIR:=$(CT_LIB_DIR)/docs
++export CT_LICENSE_DIR
+ else
+ # Paths and values set by ./configure
+ # Don't bother to change it other than with a new ./configure!
+diff --git a/scripts/functions b/scripts/functions
+index 491c7595..7150b5ba 100644
+--- a/scripts/functions
++++ b/scripts/functions
+@@ -2402,27 +2402,21 @@ fi
+ 
+ CT_InstallCopyingInformation()
+ {
+-    local pkgname
+-    local pkgdir
+     local licfile
+     local dstdir
+ 
+     CT_DoLog EXTRA "Collect license information from: ${CT_SRC_DIR}"
+     CT_DoLog EXTRA "Put the license information to: ${CT_PREFIX_DIR}/share/licenses"
+ 
+-    shopt -s nullglob
+-
+-    for pkgdir in ${CT_SRC_DIR}/*; do
+-        pkgname=$(basename "${pkgdir}")
+-        for licfile in ${pkgdir}/{COPYING*,LICENSE*}; do
+-            dstdir="${CT_PREFIX_DIR}/share/licenses/${pkgname}"
+-            mkdir -p "${dstdir}"
+-            CT_DoExecLog ALL cp -av "${licfile}" "${dstdir}/"
+-        done
++    for licfile in $( find "${CT_SRC_DIR}" -follow -type f -a \( -name "COPYING*" -o -name "LICENSE*" \) ); do
++        dstdir="${licfile%/*}"
++        dstdir="${CT_PREFIX_DIR}/share/licenses${dstdir#${CT_SRC_DIR}}"
++        mkdir -p "${dstdir}"
++        CT_DoExecLog ALL cp -av "${licfile}" "${dstdir}/"
+     done
+ 
+     # Also add crosstool's information
+-    for licfile in ${CT_TOP_DIR}/{COPYING*,LICENSE*,licenses.d}; do
++    for licfile in ${CT_LIB_DIR}/{COPYING*,LICENSE*,licenses.d}; do
+         dstdir="${CT_PREFIX_DIR}/share/licenses/crosstool-ng"
+         mkdir -p "${dstdir}"
+         CT_DoExecLog ALL cp -av "${licfile}" "${dstdir}/"
+diff --git a/scripts/scripts.mk b/scripts/scripts.mk
+index d77f1a70..eeb8a50c 100644
+--- a/scripts/scripts.mk
++++ b/scripts/scripts.mk
+@@ -31,11 +31,11 @@ ifneq ($(strip $(V)),2)
+   curl_silent_opt = --silent
+ endif
+ 
+-ifneq ($(CT_wget),)
+-download_cmd = $(CT_wget) --passive-ftp $(wget_silent_opt) -O $@
++ifneq ($(CT_WGET),)
++download_cmd = $(CT_WGET) --passive-ftp $(wget_silent_opt) -O $@
+ else
+-ifneq ($(CT_curl),)
+-download_cmd = $(CT_curl) --ftp-pasv $(curl_silent_opt) -o $@
++ifneq ($(CT_CURL),)
++download_cmd = $(CT_CURL) --ftp-pasv $(curl_silent_opt) -o $@
+ else
+ download_cmd = $(error wget or curl needed for downloads)
+ endif
