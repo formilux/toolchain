@@ -49,6 +49,9 @@ RANLIB="${RANLIB-ranlib}"
 ## patches to apply on top of uclibc
 #UCLIBC_PATCHES="uclibc-arm-no-asm-page.diff uclibc-armv5te.diff"
 
+## Unset a number of variables that ct-ng doesn't like
+unset CPLUS_INCLUDE_PATH
+
 ##### a few functions
 
 die() {
