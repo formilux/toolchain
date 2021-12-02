@@ -1,0 +1,14 @@
+This is needed to prevent the HOST CFLAGS from leaking into BUILD CFLAGS
+when building libiberty in the final gcc stage.
+
+--- a/scripts/build/cc/gcc.sh	2021-12-02 23:09:43.276918472 +0100
++++ b/scripts/build/cc/gcc.sh	2021-12-02 23:09:44.880917161 +0100
+@@ -1101,7 +1101,7 @@
+     CT_DoLog DEBUG "Extra config passed: '${extra_config[*]}'"
+ 
+     # We may need to modify host/build CFLAGS separately below
+-    cflags_for_build="${cflags}"
++    cflags_for_build="${CT_CFLAGS_FOR_BUILD}"
+ 
+     # Clang's default bracket-depth is 256, and building GCC
+     # requires somewhere between 257 and 512.
