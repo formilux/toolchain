@@ -1,0 +1,20 @@
+--- a/scripts/build/cc/gcc.sh	2021-12-03 08:54:58.199285408 +0100
++++ b/scripts/build/cc/gcc.sh	2021-12-03 08:55:45.491246751 +0100
+@@ -571,6 +571,8 @@
+     # miscompile or outright fail.
+     CT_DoExecLog CFG                                   \
+     CC_FOR_BUILD="${CT_BUILD}-gcc"                     \
++    CXX=                                               \
++    CXX_FOR_BUILD="${CT_BUILD}-g++"                    \
+     CFLAGS="${cflags}"                                 \
+     CFLAGS_FOR_BUILD="${cflags_for_build}"             \
+     CXXFLAGS="${cflags}"                               \
+@@ -1123,6 +1125,8 @@
+     CC_FOR_BUILD="${CT_BUILD}-gcc"                     \
+     CFLAGS="${cflags}"                                 \
+     CFLAGS_FOR_BUILD="${cflags_for_build}"             \
++    CXX=                                               \
++    CXX_FOR_BUILD="${CT_BUILD}-g++"                    \
+     CXXFLAGS="${cflags}"                               \
+     CXXFLAGS_FOR_BUILD="${cflags_for_build}"           \
+     LDFLAGS="${final_LDFLAGS[*]}"                      \
