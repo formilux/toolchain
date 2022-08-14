@@ -186,7 +186,8 @@ ct_ng_extract() {
 	rm -rf "crosstool-ng-$CT_VERSION" || die $?
 	get_src_path_safe "crosstool-ng-$CT_VERSION"
 	echo "Extracting $REPLY ..."
-	tar xf "$REPLY" || die $?
+	mkdir "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "failed to create crosstool-ng-$CT_VERSION directory"
+	tar -C "$BUILD/crosstool-ng-$CT_VERSION" --strip-components=1 -xf "$REPLY" || die $?
 
 	cd "$BUILD/crosstool-ng-$CT_VERSION" || die 1 "crosstool-ng-$CT_VERSION was not properly extracted"
 	cd ..
