@@ -264,7 +264,10 @@ ct_ng_build() {
 		./bootstrap
 	fi
 
-	if grep -q 'with-bash.*deprecated' ./configure; then
+	if [ -x ./bootstrap ]; then
+		./bootstrap || die $?
+		./configure --prefix="$BUILD/ct-ng-$CT_VERSION" || die $?
+	elif grep -q 'with-bash.*deprecated' ./configure; then
 		if [ -z "$BASH" ]; then BASH=`which bash`; fi
 		BASH_SHELL="$BASH" ./configure --prefix="$BUILD/ct-ng-$CT_VERSION" || die $?
 	else
