@@ -836,7 +836,7 @@ tc_config() {
 tc_build() {
 	local p="$PWD"
 	local in_conf config cfg_list
-
+	local build_dir gcc_dir xgcc_dir
 
 	[ "$#" -gt 0 ] || die 1 "need at least one config file"
 	# OK, now we know that all $TC_CFG/config-$PREF files are valid and that
@@ -942,6 +942,53 @@ tc_build() {
 		# libgmp will break in the libtool crap with V=0/V=1 due to the ECHO
 		# variable being redefined as ":".
 		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build${PARALLEL:+.$PARALLEL} ${V+V="2"} || die $?
+
+		# gcc before 4.8 does not provide libatomic, making some atomic
+		# ops cause link failures on certain architectures (e.g. mips).
+		# One simple implementation of libatomic is provided on the gcc
+		# site for this, we'll build it. In order to know if we need it,
+		# we check for any *_LOCK_FREE set to 1 in the gcc's defines,
+		# indicating libatomic is needed, and if so and if there's no
+		# libatomic, we'll build and install it. It's a bit trickier on
+		# canadian builds because we have to use the final compiler for
+		# the build host, but we can assume there's a single one!
+
+		build_dir="$BUILD/${TC_HOST:+HOST-$TC_HOST/}$PREF/build"
+
+		xgcc_dir=$(echo "$build_dir"/build-cc*-final-build-*/gcc)
+		if [ ! -d "$xgcc_dir/." ]; then
+			xgcc_dir=$(echo "$build_dir"/build-cc*-final/gcc)
+		fi
+
+		# target path (next to libgcc.a)
+		gcc_dir=$(echo "${TC_DST}/${PREF}/lib/gcc/${PREF}"/[1-9]*)
+
+		if [ -d "$xgcc_dir/." -a -d "$gcc_dir/." ]; then
+			# OK we got a final compiler, let's check for libatomic needs
+			echo "# Testing the need for libatomic."
+			set -- $(PATH="$xgcc_dir:$PATH" \
+				     "$xgcc_dir/xgcc" -dM -xc -E - </dev/null 2>/dev/null | \
+				      grep -c 'LOCK_FREE.*1')
+
+			if [ "$1" != "0" -a \
+			     ! -e "${gcc_dir}/libatomic.a" -a \
+			     ! -e "${TC_DST}/${PREF}/${PREF}/lib/libatomic.a" -a \
+			     ! -e "${TC_DST}/${PREF}/${PREF}/lib64/libatomic.a" -a \
+			     ! -e "${TC_DST}/${PREF}/${PREF}/sys-root/lib/libatomic.a" ]; then
+				# libatomic is needed and absent. Let's build it. Note:
+                                # warnings are expected.
+				echo "# Libatomic is needed, building it."
+				PATH="$xgcc_dir:$PATH" \
+				    "$xgcc_dir/xgcc" -O2 -o "${build_dir}/libatomic.o" \
+				                     -I"$xgcc_dir/include" \
+				                     -D__LIBATOMIC_SUPPORTS_I16=0 \
+				                     -c "$TC_DIR/add-ons/libatomic.c"
+				# the output dir is often r/o at this stage
+				chmod u+rw "${gcc_dir}"
+				"$AR" r "${gcc_dir}/libatomic.a" "${build_dir}/libatomic.o"
+			fi
+		fi
+
 		echo; echo "# ct-ng build complete for toolchain $PREF.";echo
 
 		if [ -z "${TC_DO_NOT_CLEAN}" ]; then
