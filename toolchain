@@ -22,6 +22,9 @@ TC_HOST_CFLAGS="${TC_HOST_CFLAGS-}"
 # If set, forces the build tuple to use for the local system
 TC_BUILD="${TC_BUILD-}"
 
+# If set to non-empty, do not clean build directories after a successful build
+TC_DO_NOT_CLEAN="${TC_DO_NOT_CLEAN-}"
+
 # NOTE: If a variable V is set, it is passed to most makefiles (use V=1 for more verbosity)
 
 # Build directory for various steps, may be totally removed at any time
@@ -930,10 +933,15 @@ tc_build() {
 		"$BUILD/ct-ng-$CT_VERSION/bin/ct-ng" build${PARALLEL:+.$PARALLEL} ${V+V="2"} || die $?
 		echo; echo "# ct-ng build complete for toolchain $PREF.";echo
 
-		echo "Removing build directory $BUILD/tc-$PREF ..."
-		rm -rf "$BUILD/tc-$PREF" || die $?
-		echo "Removing work directory $BUILD/$PREF ..."
-		rm -rf "$BUILD/$PREF" || die $?
+		if [ -z "${TC_DO_NOT_CLEAN}" ]; then
+			echo "Removing build directory $BUILD/tc-$PREF ..."
+			rm -rf "$BUILD/tc-$PREF" || die $?
+			echo "Removing work directory $BUILD/$PREF ..."
+			rm -rf "$BUILD/$PREF" || die $?
+		else
+			echo "TC_DO_NOT_CLEAN is set: keeping build directory $BUILD/tc-$PREF intact."
+			echo "TC_DO_NOT_CLEAN is set: keeping work directory $BUILD/$PREF intact."
+		fi
 	done
 	cd "$p" || die $?
 }
