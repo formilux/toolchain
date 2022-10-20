@@ -1,0 +1,20 @@
+--- a/Makefile.in	2021-12-03 14:19:13.539378933 +0100
++++ b/Makefile.in	2021-12-03 14:23:33.311166400 +0100
+@@ -426,7 +426,7 @@
+ 
+ # Defaults for stage 1; some are overridden below.
+ STAGE1_CFLAGS = $(STAGE_CFLAGS)
+-STAGE1_CXXFLAGS = $(CXXFLAGS)
++STAGE1_CXXFLAGS = $(STAGE_CFLAGS)
+ @if target-libstdc++-v3-bootstrap
+ # Override the above if we're bootstrapping C++.
+ STAGE1_CXXFLAGS = $(STAGE1_CFLAGS)
+@@ -436,7 +436,7 @@
+ 
+ # Defaults for stage 2; some are overridden below.
+ STAGE2_CFLAGS = $(STAGE_CFLAGS)
+-STAGE2_CXXFLAGS = $(CXXFLAGS)
++STAGE2_CXXFLAGS = $(STAGE_CFLAGS)
+ @if target-libstdc++-v3-bootstrap
+ # Override the above if we're bootstrapping C++.
+ STAGE2_CXXFLAGS = $(STAGE2_CFLAGS)
