@@ -1,0 +1,558 @@
+From: Eric Botcazou <ebotcazou@adacore.com>
+Date: Wed, 11 Apr 2012 11:13:39 +0000 (+0000)
+Subject: re PR target/52624 (missing __builtin_bswap16)
+X-Git-Tag: releases/gcc-4.8.0~6171
+X-Git-Url: https://gcc.gnu.org/git/?p=gcc.git;a=commitdiff_plain;h=ac868f29d7e81636b988cc4b67f681dce3498175;hp=cca4dd5983e33e31bfb559b7544428db628fd554
+
+re PR target/52624 (missing __builtin_bswap16)
+
+	PR target/52624
+	* doc/extend.texi (Other Builtins): Document __builtin_bswap16.
+	(PowerPC AltiVec/VSX Built-in Functions): Remove it.
+	* doc/md.texi (Standard Names): Add bswap.
+	* builtin-types.def (BT_UINT16): New primitive type.
+	(BT_FN_UINT16_UINT16): New function type.
+	* builtins.def (BUILT_IN_BSWAP16): New.
+	* builtins.c (expand_builtin_bswap): Add TARGET_MODE argument.
+	(expand_builtin) <BUILT_IN_BSWAP16>: New case.  Pass TARGET_MODE to
+	expand_builtin_bswap.
+	(fold_builtin_bswap): Add BUILT_IN_BSWAP16 case.
+	(fold_builtin_1): Likewise.
+	(is_inexpensive_builtin): Likewise.
+	* optabs.c (expand_unop): Deal with bswap in HImode specially.  Add
+	missing bits for bswap to libcall code.
+	* tree.c (build_common_tree_nodes): Build uint16_type_node.
+	* tree.h (enum tree_index): Add TI_UINT16_TYPE.
+	(uint16_type_node): New define.
+	* config/rs6000/rs6000-builtin.def (RS6000_BUILTIN_BSWAP_HI): Delete.
+	* config/rs6000/rs6000.c (rs6000_expand_builtin): Remove handling of
+	above builtin.
+	(rs6000_init_builtins): Likewise.
+	* config/rs6000/rs6000.md (bswaphi2): Add TARGET_POWERPC predicate.
+c-family/
+	* c-common.h (uint16_type_node): Rename into...
+	(c_uint16_type_node): ...this.
+	* c-common.c (c_common_nodes_and_builtins): Adjust for above renaming.
+	* c-cppbuiltin.c (builtin_define_stdint_macros): Likewise.
+
+From-SVN: r186308
+wt: drop conflicting changelog entries.
+
+---
+
+diff --git a/gcc/builtin-types.def b/gcc/builtin-types.def
+index fd37c2ca83a..d8e9e566694 100644
+--- a/gcc/builtin-types.def
++++ b/gcc/builtin-types.def
+@@ -76,6 +76,7 @@ DEF_PRIMITIVE_TYPE (BT_INT128, int128_integer_type_node)
+ DEF_PRIMITIVE_TYPE (BT_UINT128, int128_unsigned_type_node)
+ DEF_PRIMITIVE_TYPE (BT_INTMAX, intmax_type_node)
+ DEF_PRIMITIVE_TYPE (BT_UINTMAX, uintmax_type_node)
++DEF_PRIMITIVE_TYPE (BT_UINT16, uint16_type_node)
+ DEF_PRIMITIVE_TYPE (BT_UINT32, uint32_type_node)
+ DEF_PRIMITIVE_TYPE (BT_UINT64, uint64_type_node)
+ DEF_PRIMITIVE_TYPE (BT_WORD, (*lang_hooks.types.type_for_mode) (word_mode, 1))
+@@ -226,6 +227,7 @@ DEF_FUNCTION_TYPE_1 (BT_FN_VOID_PTRPTR, BT_VOID, BT_PTR_PTR)
+ DEF_FUNCTION_TYPE_1 (BT_FN_UINT_UINT, BT_UINT, BT_UINT)
+ DEF_FUNCTION_TYPE_1 (BT_FN_ULONG_ULONG, BT_ULONG, BT_ULONG)
+ DEF_FUNCTION_TYPE_1 (BT_FN_ULONGLONG_ULONGLONG, BT_ULONGLONG, BT_ULONGLONG)
++DEF_FUNCTION_TYPE_1 (BT_FN_UINT16_UINT16, BT_UINT16, BT_UINT16)
+ DEF_FUNCTION_TYPE_1 (BT_FN_UINT32_UINT32, BT_UINT32, BT_UINT32)
+ DEF_FUNCTION_TYPE_1 (BT_FN_UINT64_UINT64, BT_UINT64, BT_UINT64)
+ 
+diff --git a/gcc/builtins.c b/gcc/builtins.c
+index 7afe61df505..b47f2180527 100644
+--- a/gcc/builtins.c
++++ b/gcc/builtins.c
+@@ -4626,13 +4626,15 @@ expand_builtin_alloca (tree exp, bool cannot_accumulate)
+   return result;
+ }
+ 
+-/* Expand a call to a bswap builtin with argument ARG0.  MODE
+-   is the mode to expand with.  */
++/* Expand a call to bswap builtin in EXP.
++   Return NULL_RTX if a normal call should be emitted rather than expanding the
++   function in-line.  If convenient, the result should be placed in TARGET.
++   SUBTARGET may be used as the target for computing one of EXP's operands.  */
+ 
+ static rtx
+-expand_builtin_bswap (tree exp, rtx target, rtx subtarget)
++expand_builtin_bswap (enum machine_mode target_mode, tree exp, rtx target,
++		      rtx subtarget)
+ {
+-  enum machine_mode mode;
+   tree arg;
+   rtx op0;
+ 
+@@ -4640,14 +4642,18 @@ expand_builtin_bswap (tree exp, rtx target, rtx subtarget)
+     return NULL_RTX;
+ 
+   arg = CALL_EXPR_ARG (exp, 0);
+-  mode = TYPE_MODE (TREE_TYPE (arg));
+-  op0 = expand_expr (arg, subtarget, VOIDmode, EXPAND_NORMAL);
++  op0 = expand_expr (arg,
++		     subtarget && GET_MODE (subtarget) == target_mode
++		     ? subtarget : NULL_RTX,
++		     target_mode, EXPAND_NORMAL);
++  if (GET_MODE (op0) != target_mode)
++    op0 = convert_to_mode (target_mode, op0, 1);
+ 
+-  target = expand_unop (mode, bswap_optab, op0, target, 1);
++  target = expand_unop (target_mode, bswap_optab, op0, target, 1);
+ 
+   gcc_assert (target);
+ 
+-  return convert_to_mode (mode, target, 0);
++  return convert_to_mode (target_mode, target, 1);
+ }
+ 
+ /* Expand a call to a unary builtin in EXP.
+@@ -6077,10 +6083,10 @@ expand_builtin (tree exp, rtx target, rtx subtarget, enum machine_mode mode,
+       expand_stack_restore (CALL_EXPR_ARG (exp, 0));
+       return const0_rtx;
+ 
++    case BUILT_IN_BSWAP16:
+     case BUILT_IN_BSWAP32:
+     case BUILT_IN_BSWAP64:
+-      target = expand_builtin_bswap (exp, target, subtarget);
+-
++      target = expand_builtin_bswap (target_mode, exp, target, subtarget);
+       if (target)
+ 	return target;
+       break;
+@@ -8169,7 +8175,7 @@ fold_builtin_bitop (tree fndecl, tree arg)
+   return NULL_TREE;
+ }
+ 
+-/* Fold function call to builtin_bswap and the long and long long
++/* Fold function call to builtin_bswap and the short, long and long long
+    variants.  Return NULL_TREE if no simplification can be made.  */
+ static tree
+ fold_builtin_bswap (tree fndecl, tree arg)
+@@ -8182,15 +8188,15 @@ fold_builtin_bswap (tree fndecl, tree arg)
+     {
+       HOST_WIDE_INT hi, width, r_hi = 0;
+       unsigned HOST_WIDE_INT lo, r_lo = 0;
+-      tree type;
++      tree type = TREE_TYPE (TREE_TYPE (fndecl));
+ 
+-      type = TREE_TYPE (arg);
+       width = TYPE_PRECISION (type);
+       lo = TREE_INT_CST_LOW (arg);
+       hi = TREE_INT_CST_HIGH (arg);
+ 
+       switch (DECL_FUNCTION_CODE (fndecl))
+ 	{
++	  case BUILT_IN_BSWAP16:
+ 	  case BUILT_IN_BSWAP32:
+ 	  case BUILT_IN_BSWAP64:
+ 	    {
+@@ -8220,9 +8226,9 @@ fold_builtin_bswap (tree fndecl, tree arg)
+ 	}
+ 
+       if (width < HOST_BITS_PER_WIDE_INT)
+-	return build_int_cst (TREE_TYPE (TREE_TYPE (fndecl)), r_lo);
++	return build_int_cst (type, r_lo);
+       else
+-	return build_int_cst_wide (TREE_TYPE (TREE_TYPE (fndecl)), r_lo, r_hi);
++	return build_int_cst_wide (type, r_lo, r_hi);
+     }
+ 
+   return NULL_TREE;
+@@ -10575,6 +10581,7 @@ fold_builtin_1 (location_t loc, tree fndecl, tree arg0, bool ignore)
+     CASE_FLT_FN (BUILT_IN_LLRINT):
+       return fold_fixed_mathfn (loc, fndecl, arg0);
+ 
++    case BUILT_IN_BSWAP16:
+     case BUILT_IN_BSWAP32:
+     case BUILT_IN_BSWAP64:
+       return fold_builtin_bswap (fndecl, arg0);
+@@ -14339,6 +14346,7 @@ is_inexpensive_builtin (tree decl)
+       case BUILT_IN_ABS:
+       case BUILT_IN_ALLOCA:
+       case BUILT_IN_ALLOCA_WITH_ALIGN:
++      case BUILT_IN_BSWAP16:
+       case BUILT_IN_BSWAP32:
+       case BUILT_IN_BSWAP64:
+       case BUILT_IN_CLZ:
+diff --git a/gcc/builtins.def b/gcc/builtins.def
+index 0cba2feea63..d03e41092b8 100644
+--- a/gcc/builtins.def
++++ b/gcc/builtins.def
+@@ -628,6 +628,7 @@ DEF_GCC_BUILTIN        (BUILT_IN_AGGREGATE_INCOMING_ADDRESS, "aggregate_incoming
+ DEF_EXT_LIB_BUILTIN    (BUILT_IN_ALLOCA, "alloca", BT_FN_PTR_SIZE, ATTR_MALLOC_NOTHROW_LEAF_LIST)
+ DEF_GCC_BUILTIN        (BUILT_IN_APPLY, "apply", BT_FN_PTR_PTR_FN_VOID_VAR_PTR_SIZE, ATTR_NULL)
+ DEF_GCC_BUILTIN        (BUILT_IN_APPLY_ARGS, "apply_args", BT_FN_PTR_VAR, ATTR_LEAF_LIST)
++DEF_GCC_BUILTIN        (BUILT_IN_BSWAP16, "bswap16", BT_FN_UINT16_UINT16, ATTR_CONST_NOTHROW_LEAF_LIST)
+ DEF_GCC_BUILTIN        (BUILT_IN_BSWAP32, "bswap32", BT_FN_UINT32_UINT32, ATTR_CONST_NOTHROW_LEAF_LIST)
+ DEF_GCC_BUILTIN        (BUILT_IN_BSWAP64, "bswap64", BT_FN_UINT64_UINT64, ATTR_CONST_NOTHROW_LEAF_LIST)
+ DEF_EXT_LIB_BUILTIN    (BUILT_IN_CLEAR_CACHE, "__clear_cache", BT_FN_VOID_PTR_PTR, ATTR_NOTHROW_LEAF_LIST)
+diff --git a/gcc/c-family/c-common.c b/gcc/c-family/c-common.c
+index a9e7ec1d14d..a08db464dfd 100644
+--- a/gcc/c-family/c-common.c
++++ b/gcc/c-family/c-common.c
+@@ -5087,7 +5087,7 @@ c_common_nodes_and_builtins (void)
+     uint8_type_node =
+       TREE_TYPE (identifier_global_value (c_get_ident (UINT8_TYPE)));
+   if (UINT16_TYPE)
+-    uint16_type_node =
++    c_uint16_type_node =
+       TREE_TYPE (identifier_global_value (c_get_ident (UINT16_TYPE)));
+   if (UINT32_TYPE)
+     c_uint32_type_node =
+diff --git a/gcc/c-family/c-common.h b/gcc/c-family/c-common.h
+index cab7b439661..dd411032272 100644
+--- a/gcc/c-family/c-common.h
++++ b/gcc/c-family/c-common.h
+@@ -390,7 +390,7 @@ extern const unsigned int num_c_common_reswords;
+ #define int32_type_node			c_global_trees[CTI_INT32_TYPE]
+ #define int64_type_node			c_global_trees[CTI_INT64_TYPE]
+ #define uint8_type_node			c_global_trees[CTI_UINT8_TYPE]
+-#define uint16_type_node		c_global_trees[CTI_UINT16_TYPE]
++#define c_uint16_type_node		c_global_trees[CTI_UINT16_TYPE]
+ #define c_uint32_type_node		c_global_trees[CTI_UINT32_TYPE]
+ #define c_uint64_type_node		c_global_trees[CTI_UINT64_TYPE]
+ #define int_least8_type_node		c_global_trees[CTI_INT_LEAST8_TYPE]
+diff --git a/gcc/c-family/c-cppbuiltin.c b/gcc/c-family/c-cppbuiltin.c
+index 49804f98146..920154a73c8 100644
+--- a/gcc/c-family/c-cppbuiltin.c
++++ b/gcc/c-family/c-cppbuiltin.c
+@@ -448,8 +448,8 @@ builtin_define_stdint_macros (void)
+     builtin_define_type_max ("__INT64_MAX__", int64_type_node);
+   if (uint8_type_node)
+     builtin_define_type_max ("__UINT8_MAX__", uint8_type_node);
+-  if (uint16_type_node)
+-    builtin_define_type_max ("__UINT16_MAX__", uint16_type_node);
++  if (c_uint16_type_node)
++    builtin_define_type_max ("__UINT16_MAX__", c_uint16_type_node);
+   if (c_uint32_type_node)
+     builtin_define_type_max ("__UINT32_MAX__", c_uint32_type_node);
+   if (c_uint64_type_node)
+diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
+index 776350bb5c0..2fd51af458f 100644
+--- a/gcc/config/rs6000/rs6000-builtin.def
++++ b/gcc/config/rs6000/rs6000-builtin.def
+@@ -1430,9 +1430,6 @@ BU_SPECIAL_X (RS6000_BUILTIN_RSQRT, "__builtin_rsqrt", RS6000_BTM_FRSQRTE,
+ BU_SPECIAL_X (RS6000_BUILTIN_RSQRTF, "__builtin_rsqrtf", RS6000_BTM_FRSQRTES,
+ 	      RS6000_BTC_FP)
+ 
+-BU_SPECIAL_X (RS6000_BUILTIN_BSWAP_HI, "__builtin_bswap16", RS6000_BTM_POWERPC,
+-	      RS6000_BTC_MEM)
+-
+ /* Darwin CfString builtin.  */
+ BU_SPECIAL_X (RS6000_BUILTIN_CFSTRING, "__builtin_cfstring", RS6000_BTM_POWERPC,
+ 	      RS6000_BTC_MISC)
+diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
+index b6054b302c8..fa882de429b 100644
+--- a/gcc/config/rs6000/rs6000.c
++++ b/gcc/config/rs6000/rs6000.c
+@@ -11381,9 +11381,6 @@ rs6000_expand_builtin (tree exp, rtx target, rtx subtarget ATTRIBUTE_UNUSED,
+     case RS6000_BUILTIN_RSQRT:
+       return rs6000_expand_unop_builtin (CODE_FOR_rsqrtdf2, exp, target);
+ 
+-    case RS6000_BUILTIN_BSWAP_HI:
+-      return rs6000_expand_unop_builtin (CODE_FOR_bswaphi2, exp, target);
+-
+     case POWER7_BUILTIN_BPERMD:
+       return rs6000_expand_binop_builtin (((TARGET_64BIT)
+ 					   ? CODE_FOR_bpermd_di
+@@ -11673,12 +11670,6 @@ rs6000_init_builtins (void)
+ 				 POWER7_BUILTIN_BPERMD, "__builtin_bpermd");
+   def_builtin ("__builtin_bpermd", ftype, POWER7_BUILTIN_BPERMD);
+ 
+-      /* Don't use builtin_function_type here, as it maps HI/QI to SI.  */
+-  ftype = build_function_type_list (unsigned_intHI_type_node,
+-				    unsigned_intHI_type_node,
+-				    NULL_TREE);
+-  def_builtin ("__builtin_bswap16", ftype, RS6000_BUILTIN_BSWAP_HI);
+-
+ #if TARGET_XCOFF
+   /* AIX libm provides clog as __clog.  */
+   if ((tdecl = builtin_decl_explicit (BUILT_IN_CLOG)) != NULL_TREE)
+diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
+index 22207bbf2b2..1f5085da1ca 100644
+--- a/gcc/config/rs6000/rs6000.md
++++ b/gcc/config/rs6000/rs6000.md
+@@ -2386,7 +2386,7 @@
+ 		   (bswap:HI
+ 		    (match_operand:HI 1 "reg_or_mem_operand" "")))
+ 	      (clobber (match_scratch:SI 2 ""))])]
+-  ""
++  "TARGET_POWERPC"
+ {
+   if (!REG_P (operands[0]) && !REG_P (operands[1]))
+     operands[1] = force_reg (HImode, operands[1]);
+diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
+index c33ec66f65e..dd08845fb9b 100644
+--- a/gcc/doc/extend.texi
++++ b/gcc/doc/extend.texi
+@@ -8535,12 +8535,17 @@ Similar to @code{__builtin_powi}, except the argument and return types
+ are @code{long double}.
+ @end deftypefn
+ 
+-@deftypefn {Built-in Function} int32_t __builtin_bswap32 (int32_t x)
++@deftypefn {Built-in Function} int16_t __builtin_bswap16 (int16_t x)
+ Returns @var{x} with the order of the bytes reversed; for example,
+-@code{0xaabbccdd} becomes @code{0xddccbbaa}.  Byte here always means
++@code{0xaabb} becomes @code{0xbbaa}.  Byte here always means
+ exactly 8 bits.
+ @end deftypefn
+ 
++@deftypefn {Built-in Function} int32_t __builtin_bswap32 (int32_t x)
++Similar to @code{__builtin_bswap16}, except the argument and return types
++are 32-bit.
++@end deftypefn
++
+ @deftypefn {Built-in Function} int64_t __builtin_bswap64 (int64_t x)
+ Similar to @code{__builtin_bswap32}, except the argument and return types
+ are 64-bit.
+@@ -13426,7 +13431,6 @@ float __builtin_rsqrtf (float);
+ double __builtin_recipdiv (double, double);
+ double __builtin_rsqrt (double);
+ long __builtin_bpermd (long, long);
+-int __builtin_bswap16 (int);
+ @end smallexample
+ 
+ The @code{vec_rsqrt}, @code{__builtin_rsqrt}, and
+diff --git a/gcc/doc/md.texi b/gcc/doc/md.texi
+index c4eb355e253..bca84a72ce5 100644
+--- a/gcc/doc/md.texi
++++ b/gcc/doc/md.texi
+@@ -4736,6 +4736,10 @@ Other shift and rotate instructions, analogous to the
+ Vector shift and rotate instructions that take vectors as operand 2
+ instead of a scalar type.
+ 
++@cindex @code{bswap@var{m}2} instruction pattern
++@item @samp{bswap@var{m}2}
++Reverse the order of bytes of operand 1 and store the result in operand 0.
++
+ @cindex @code{neg@var{m}2} instruction pattern
+ @cindex @code{ssneg@var{m}2} instruction pattern
+ @cindex @code{usneg@var{m}2} instruction pattern
+diff --git a/gcc/optabs.c b/gcc/optabs.c
+index 565db428045..080061a1f57 100644
+--- a/gcc/optabs.c
++++ b/gcc/optabs.c
+@@ -3030,6 +3030,47 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
+   /* Widening (or narrowing) bswap needs special treatment.  */
+   if (unoptab == bswap_optab)
+     {
++      /* HImode is special because in this mode BSWAP is equivalent to ROTATE
++	 or ROTATERT.  First try these directly; if this fails, then try the
++	 obvious pair of shifts with allowed widening, as this will probably
++	 be always more efficient than the other fallback methods.  */
++      if (mode == HImode)
++	{
++	  rtx last, temp1, temp2;
++
++	  if (optab_handler (rotl_optab, mode) != CODE_FOR_nothing)
++	    {
++	      temp = expand_binop (mode, rotl_optab, op0, GEN_INT (8), target,
++				   unsignedp, OPTAB_DIRECT);
++	      if (temp)
++		return temp;
++	     }
++
++	  if (optab_handler (rotr_optab, mode) != CODE_FOR_nothing)
++	    {
++	      temp = expand_binop (mode, rotr_optab, op0, GEN_INT (8), target,
++				   unsignedp, OPTAB_DIRECT);
++	      if (temp)
++		return temp;
++	    }
++
++	  last = get_last_insn ();
++
++	  temp1 = expand_binop (mode, ashl_optab, op0, GEN_INT (8), NULL_RTX,
++			        unsignedp, OPTAB_WIDEN);
++	  temp2 = expand_binop (mode, lshr_optab, op0, GEN_INT (8), NULL_RTX,
++			        unsignedp, OPTAB_WIDEN);
++	  if (temp1 && temp2)
++	    {
++	      temp = expand_binop (mode, ior_optab, temp1, temp2, target,
++				   unsignedp, OPTAB_WIDEN);
++	      if (temp)
++		return temp;
++	    }
++
++	  delete_insns_since (last);
++	}
++
+       temp = widen_bswap (mode, op0, target);
+       if (temp)
+ 	return temp;
+@@ -3222,10 +3263,10 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
+ 	      /* For certain operations, we need not actually extend
+ 		 the narrow operand, as long as we will truncate the
+ 		 results to the same narrowness.  */
+-
+ 	      xop0 = widen_operand (xop0, wider_mode, mode, unsignedp,
+ 				    (unoptab == neg_optab
+-				     || unoptab == one_cmpl_optab)
++				     || unoptab == one_cmpl_optab
++				     || unoptab == bswap_optab)
+ 				    && mclass == MODE_INT);
+ 
+ 	      temp = expand_unop (wider_mode, unoptab, xop0, NULL_RTX,
+@@ -3240,6 +3281,20 @@ expand_unop (enum machine_mode mode, optab unoptab, rtx op0, rtx target,
+ 					      - GET_MODE_PRECISION (mode)),
+ 				     target, true, OPTAB_DIRECT);
+ 
++	      /* Likewise for bswap.  */
++	      if (unoptab == bswap_optab && temp != 0)
++		{
++		  gcc_assert (GET_MODE_PRECISION (wider_mode)
++			      == GET_MODE_BITSIZE (wider_mode)
++			      && GET_MODE_PRECISION (mode)
++				 == GET_MODE_BITSIZE (mode));
++
++		  temp = expand_shift (RSHIFT_EXPR, wider_mode, temp,
++				       GET_MODE_BITSIZE (wider_mode)
++				       - GET_MODE_BITSIZE (mode),
++				       NULL_RTX, true);
++		}
++
+ 	      if (temp)
+ 		{
+ 		  if (mclass != MODE_INT)
+diff --git a/gcc/testsuite/gcc.dg/builtin-bswap-1.c b/gcc/testsuite/gcc.dg/builtin-bswap-1.c
+index 6b4a805536c..724ba1e9847 100644
+--- a/gcc/testsuite/gcc.dg/builtin-bswap-1.c
++++ b/gcc/testsuite/gcc.dg/builtin-bswap-1.c
+@@ -5,11 +5,29 @@
+ 
+ #include <stdint.h>
+ 
+-uint32_t foo (uint32_t a)
++uint16_t foo16 (uint16_t a)
+ {
+-  int b;
++  uint16_t b;
++
++  b = __builtin_bswap16 (a);
++
++  return b;
++}
++
++uint32_t foo32 (uint32_t a)
++{
++  uint32_t b;
+ 
+   b = __builtin_bswap32 (a);
+ 
+   return b;
+ }
++
++uint64_t foo64 (uint64_t a)
++{
++  uint64_t b;
++
++  b = __builtin_bswap64 (a);
++
++  return b;
++}
+diff --git a/gcc/testsuite/gcc.dg/builtin-bswap-4.c b/gcc/testsuite/gcc.dg/builtin-bswap-4.c
+index 03e190ad782..da8ee68cd51 100644
+--- a/gcc/testsuite/gcc.dg/builtin-bswap-4.c
++++ b/gcc/testsuite/gcc.dg/builtin-bswap-4.c
+@@ -16,11 +16,19 @@
+     return result;							\
+   }									\
+ 
++MAKE_FUN(16, uint16_t);
+ MAKE_FUN(32, uint32_t);
+ MAKE_FUN(64, uint64_t);
+ 
+ extern void abort (void);
+ 
++#define NUMS16					\
++  {						\
++    0x0000,					\
++    0x1122,					\
++    0xffff,					\
++  }
++
+ #define NUMS32					\
+   {						\
+     0x00000000UL,				\
+@@ -35,6 +43,9 @@ extern void abort (void);
+     0xffffffffffffffffULL,			\
+   }
+ 
++uint16_t uint16_ts[] =
++  NUMS16;
++
+ uint32_t uint32_ts[] =
+   NUMS32;
+ 
+@@ -48,6 +59,10 @@ main (void)
+ {
+   int i;
+ 
++  for (i = 0; i < N(uint16_ts); i++)
++    if (__builtin_bswap16 (uint16_ts[i]) != my_bswap16 (uint16_ts[i]))
++      abort ();
++
+   for (i = 0; i < N(uint32_ts); i++)
+     if (__builtin_bswap32 (uint32_ts[i]) != my_bswap32 (uint32_ts[i]))
+       abort ();
+diff --git a/gcc/testsuite/gcc.dg/builtin-bswap-5.c b/gcc/testsuite/gcc.dg/builtin-bswap-5.c
+index ccac9663334..b29931e4e10 100644
+--- a/gcc/testsuite/gcc.dg/builtin-bswap-5.c
++++ b/gcc/testsuite/gcc.dg/builtin-bswap-5.c
+@@ -6,6 +6,9 @@ main (void)
+   /* Test constant folding.  */
+   extern void link_error (void);
+ 
++  if (__builtin_bswap16(0xaabb) != 0xbbaa)
++    link_error ();
++
+   if (__builtin_bswap32(0xaabbccdd) != 0xddccbbaa)
+     link_error ();
+ 
+diff --git a/gcc/testsuite/gcc.target/i386/builtin-bswap-4.c b/gcc/testsuite/gcc.target/i386/builtin-bswap-4.c
+new file mode 100644
+index 00000000000..65198aee89e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/builtin-bswap-4.c
+@@ -0,0 +1,8 @@
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++/* { dg-final { scan-assembler-not "bswap\[ \t\]" } } */
++
++short foo (short x)
++{
++  return __builtin_bswap16 (x);
++}
+diff --git a/gcc/tree.c b/gcc/tree.c
+index 7c7e43a5a88..e5a33de51ff 100644
+--- a/gcc/tree.c
++++ b/gcc/tree.c
+@@ -9388,6 +9388,7 @@ build_common_tree_nodes (bool signed_char, bool short_double)
+   integer_ptr_type_node = build_pointer_type (integer_type_node);
+ 
+   /* Fixed size integer types.  */
++  uint16_type_node = build_nonstandard_integer_type (16, true);
+   uint32_type_node = build_nonstandard_integer_type (32, true);
+   uint64_type_node = build_nonstandard_integer_type (64, true);
+ 
+diff --git a/gcc/tree.h b/gcc/tree.h
+index c3fbde99b56..809017667d6 100644
+--- a/gcc/tree.h
++++ b/gcc/tree.h
+@@ -3747,6 +3747,7 @@ enum tree_index
+   TI_UINTDI_TYPE,
+   TI_UINTTI_TYPE,
+ 
++  TI_UINT16_TYPE,
+   TI_UINT32_TYPE,
+   TI_UINT64_TYPE,
+ 
+@@ -3902,6 +3903,7 @@ extern GTY(()) tree global_trees[TI_MAX];
+ #define unsigned_intDI_type_node	global_trees[TI_UINTDI_TYPE]
+ #define unsigned_intTI_type_node	global_trees[TI_UINTTI_TYPE]
+ 
++#define uint16_type_node		global_trees[TI_UINT16_TYPE]
+ #define uint32_type_node		global_trees[TI_UINT32_TYPE]
+ #define uint64_type_node		global_trees[TI_UINT64_TYPE]
+ 
