@@ -947,11 +947,11 @@ tc_build() {
 		if [ -z "${TC_DO_NOT_CLEAN}" ]; then
 			echo "Removing build directory $BUILD/tc-$PREF ..."
 			rm -rf "$BUILD/tc-$PREF" || die $?
-			echo "Removing work directory $BUILD/$PREF ..."
-			rm -rf "$BUILD/$PREF" || die $?
+			echo "Removing work directory $BUILD/${TC_HOST:+HOST-$TC_HOST/}$PREF ..."
+			rm -rf "$BUILD/${TC_HOST:+HOST-$TC_HOST/}/$PREF" || die $?
 		else
 			echo "TC_DO_NOT_CLEAN is set: keeping build directory $BUILD/tc-$PREF intact."
-			echo "TC_DO_NOT_CLEAN is set: keeping work directory $BUILD/$PREF intact."
+			echo "TC_DO_NOT_CLEAN is set: keeping work directory $BUILD/${TC_HOST:+HOST-$TC_HOST/}$PREF intact."
 		fi
 	done
 	cd "$p" || die $?
