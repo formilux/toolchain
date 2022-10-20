@@ -337,7 +337,18 @@ tc_set_names() {
 	get_config_var "CT_TARGET_VENDOR"    "$1" ; VENDOR="$REPLY"
 	get_config_var "CT_ARCH_.*_EABI"     "$1" && ABI="eabi"
 
-	CC_BRANCH="${CC_VERSION#*.*.}" ; CC_BRANCH="${CC_VERSION%.$CC_BRANCH}"
+	# branch: keep the two numbers around the dot, eliminate leading
+	# and trailing words before and after "-".
+	CC_BRANCH="${CC_VERSION}"
+	while [ -n "$CC_BRANCH" -a -z "${CC_BRANCH##*.*.*}" ]; do
+		CC_BRANCH="${CC_BRANCH%.*}"
+	done
+	while [ -n "$CC_BRANCH" -a -z "${CC_BRANCH##*.*-*}" ]; do
+		CC_BRANCH="${CC_BRANCH%-*}"
+	done
+	while [ -n "$CC_BRANCH" -a -z "${CC_BRANCH##*-*.*}" ]; do
+		CC_BRANCH="${CC_BRANCH#*-}"
+	done
 	LIBC_BRANCH="${LIBC_VERSION#*.*.}" ; LIBC_BRANCH="${LIBC_VERSION%.$LIBC_BRANCH}"
 
 	# compute ARCH from FAMILY, ARCHIS64, and CT_ARCH_ARCH
