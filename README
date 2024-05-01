@@ -84,7 +84,7 @@ conditions :
   ncurses-5.9.tar.gz
   uClibc-0.9.33.2.tar.bz2
 
-or, for a more recent gcc 6.5 and glibc-2.28 on crosstool-ng-1.23.0:
+For gcc 6.5 and glibc-2.28 on crosstool-ng-1.23.0:
 
   gcc-6.5.0.tar.xz
   glibc-2.28.tar.xz
@@ -98,6 +98,61 @@ or, for a more recent gcc 6.5 and glibc-2.28 on crosstool-ng-1.23.0:
   ncurses-6.1.tar.gz
   libiconv-1.15.tar.gz
   gettext-0.19.8.1.tar.xz
+
+For gcc 9.5, binutils 2.34 and glibc-2.31 on crosstool-ng-1.25.0:
+
+  crosstool-ng-1.25.0-8a1ef667.tar.xz
+  linux-5.15.37.tar.xz
+  gmp-6.1.2.tar.xz
+  mpfr-4.0.2.tar.xz
+  isl-0.24.tar.bz2
+  mpc-1.1.0.tar.gz
+  ncurses-6.1.tar.gz
+  libiconv-1.15.tar.gz
+  gettext-0.19.8.1.tar.xz
+  binutils-2.34.tar.xz
+  gcc-9.5.0.tar.xz
+  glibc-2.31.tar.xz
+
+For gcc 11.4, binutils 2.38 and glibc-2.31 on crosstool-ng-1.26.0:
+
+  crosstool-ng-1.26.0.tar.xz
+  linux-5.15.118.tar.xz
+  gmp-6.1.2.tar.xz
+  mpfr-4.0.2.tar.xz
+  isl-0.24.tar.bz2
+  mpc-1.1.0.tar.gz
+  ncurses-6.1.tar.gz
+  libiconv-1.15.tar.gz
+  gettext-0.19.8.1.tar.xz
+  binutils-2.38.tar.xz
+  gcc-11.4.0.tar.xz
+  glibc-2.31.tar.xz
+
+Note that a quick way to check what version of each component is used by a
+given config file, simply issue the following "grep" command:
+
+  $ grep '_VERSION="[0-9]' config/config-riscv64-gcc114bu238_glibc231-linux-gnu
+  CT_VERSION="1.26.0"
+  CT_CONFIG_VERSION="4"
+  CT_LINUX_VERSION="5.15.118"
+  CT_BINUTILS_VERSION="2.38"
+  CT_GLIBC_VERSION="2.31"
+  CT_GLIBC_MIN_KERNEL_VERSION="3.0.0"
+  CT_GCC_VERSION="11.4.0"
+  CT_EXPAT_VERSION="2.4.1"
+  CT_GETTEXT_VERSION="0.19.8.1"
+  CT_GMP_VERSION="6.1.2"
+  CT_ISL_VERSION="0.24"
+  CT_LIBICONV_VERSION="1.15"
+  CT_MPC_VERSION="1.1.0"
+  CT_MPFR_VERSION="4.0.2"
+  CT_NCURSES_VERSION="6.1"
+
+When building multiple configs, a preliminary check may also be performed
+this way, to produce the union of all needed components at once:
+
+  $ grep -h '_VERSION="[0-9]' config/config-*-gcc95*glibc231*|sort -u
 
 Locally, a number of tools are needed during the build process, which may be
 available as separate packages for your local system :
