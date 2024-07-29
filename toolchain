@@ -1128,6 +1128,18 @@ tc_finish() {
 				echo "${i##*/}"
 			fi
 		done > "$TC_DST/$PREF/.glibc-patches"
+
+		# Remove libncurses, its configure script and ncurses headers from sys-root, enabled
+		# by NCURSES_TARGET=y, installed as a dependency of GDB_NATIVE=y.
+		# In case of crashes it is convenient to have a native gdb in sysroot.
+		# So, to garantee that sys-root is "clean" in any cases
+		# (compiled with GDB_NATIVE or without), let's always remove libncurses and
+		# its headers from sys-root.
+		echo "Removing libncurses and its headers from $TC_DST/$PREF/$PREF/sys-root..."
+		rm -rf "$TC_DST/$PREF/$PREF"/sys-root/usr/include/*ncurses*
+		rm -rf "$TC_DST/$PREF/$PREF"/sys-root/usr/bin/*ncurses*
+		rm -rf "$TC_DST/$PREF/$PREF"/sys-root/usr/lib*/*ncurses*
+		rm -rf "$TC_DST/$PREF/$PREF"/sys-root/lib*/*ncurses*
 	done
 	cd "$p" || $?
 }
