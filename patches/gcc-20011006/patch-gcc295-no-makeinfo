@@ -1,0 +1,14 @@
+# do not try to install info files since they were not produced
+
+--- ./gcc/Makefile.in.bad	2024-08-13 11:22:57.955980793 +0200
++++ ./gcc/Makefile.in	2024-08-13 11:33:50.327470808 +0200
+@@ -2440,8 +2440,7 @@
+ # Install the driver last so that the window when things are
+ # broken is small.
+ install-normal: install-common $(INSTALL_HEADERS) $(INSTALL_LIBGCC) \
+-    $(INSTALL_CPP) install-man install-info intl.install lang.install-normal \
+-    install-driver
++    $(INSTALL_CPP) install-driver
+ 
+ # Do nothing while making gcc with a cross-compiler. The person who
+ # makes gcc for the target machine has to know how to put a complete
