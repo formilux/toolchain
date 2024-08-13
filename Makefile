@@ -275,7 +275,9 @@ $(BINUTILS_BDIR)/.compiled: $(BINUTILS_BDIR)/.configured
 
 $(BINUTILS_BDIR)/.configured: $(BINUTILS_SDIR)/.completed
 	mkdir -p $(BINUTILS_BDIR)
-	(cd $(BINUTILS_BDIR) && CC=$(HOSTCC) $(BINUTILS_SDIR)/configure \
+	(cd $(BINUTILS_BDIR) && \
+	 ac_cv_prog_MAKEINFO=missing ac_cv_prog_CONFIGURED_MAKEINFO=missing \
+	 CC=$(HOSTCC) $(BINUTILS_SDIR)/configure \
            --host=$(HOST) --target=$(TARGET) --prefix=$(TOOL_PREFIX) \
 	   --with-sysroot=$(SYS_ROOT) \
 	   --with-lib-path="$(TOOL_PREFIX)/$(TARGET)-linux/lib:$(ROOTDIR)/lib:$(ROOT_PREFIX)/lib" \
@@ -298,7 +300,7 @@ $(BUILDDIR)/gcc-libc-$(GCC29)/.installed: $(BUILDDIR)/gcc-libc-$(GCC29)/.compile
 	    $(TOOL_PREFIX)/bin/.gcclc29/ >/dev/null 2>&1
 
 	(cd $(BUILDDIR)/gcc-libc-$(GCC29) && \
-	 PATH=$(TARGET_PATH) $(cmd_make) install-gcc $(MFLAGS) INSTALL_PROGRAM_ARGS="-s" )
+	 PATH=$(TARGET_PATH) $(cmd_make) MAKEINFO=/bin/true install-gcc $(MFLAGS) INSTALL_PROGRAM_ARGS="-s" )
 
 	@# this one is mis-named
 	mv -v $(TOOL_PREFIX)/bin/cpp $(TOOL_PREFIX)/bin/$(TARGET)-cpp || true; \
@@ -318,7 +320,7 @@ $(BUILDDIR)/gcc-libc-$(GCC29)/.installed: $(BUILDDIR)/gcc-libc-$(GCC29)/.compile
 $(BUILDDIR)/gcc-libc-$(GCC29)/.compiled: $(BUILDDIR)/gcc-libc-$(GCC29)/.configured $(BINUTILS_BDIR)/.installed
 	[ -e $(TOOL_PREFIX)/$(TARGET)/include ] || ln -s $(ROOT_PREFIX)/include $(TOOL_PREFIX)/$(TARGET)/
 	[ -e $(TOOL_PREFIX)/$(TARGET)/sys-include ] || ln -s $(ROOT_PREFIX)/sys-include $(TOOL_PREFIX)/$(TARGET)/
-	cd $(BUILDDIR)/gcc-libc-$(GCC29) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS)
+	cd $(BUILDDIR)/gcc-libc-$(GCC29) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS) MAKEINFO=/bin/true
 	touch $@
 
 # Note: we will install this first-stage compiler in $PREFIX, but since it
@@ -348,6 +350,7 @@ $(BUILDDIR)/gcc-libc-$(GCC29)/.configured: $(SOURCE)/gcc-$(GCC29)/.completed $(G
 	 AR_FOR_TARGET=$(TARGET)-ar AS_FOR_TARGET=$(TARGET)-as \
 	 NM_FOR_TARGET=$(TARGET)-nm LD_FOR_TARGET=$(TARGET)-ld \
          RANLIB_FOR_TARGET=$(TARGET)-ranlib \
+	 MAKEINFO=/bin/true \
 	 $(SOURCE)/gcc-$(GCC29)/configure \
            --build=$(HOST) --host=$(HOST) --target=$(TARGET) \
 	   --prefix=$(TOOL_PREFIX) --disable-shared --disable-nls \
@@ -535,6 +538,7 @@ $(BUILDDIR)/gcc-$(GCC29)/.installed: $(BUILDDIR)/gcc-$(GCC29)/.compiled $(BINUTI
 	echo "###############  installing 'gcc-cross'  ##################"
 	(cd $(BUILDDIR)/gcc-$(GCC29) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-gcc-cross INSTALL_PROGRAM_ARGS="-s" \
+	    MAKEINFO=/bin/true \
 	    gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
@@ -549,6 +553,7 @@ $(BUILDDIR)/gcc-$(GCC29)/.installed: $(BUILDDIR)/gcc-$(GCC29)/.compiled $(BINUTI
 
 	(cd $(BUILDDIR)/gcc-$(GCC29) && \
 	 PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) install-target INSTALL_PROGRAM_ARGS="-s" \
+	    MAKEINFO=/bin/true \
 	    gcclibdir='$(TOOL_PREFIX)/lib/gcc-lib' \
 	    libsubdir='$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' \
 	    libdir='$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)' \
@@ -589,6 +594,7 @@ $(BUILDDIR)/gcc-$(GCC29)/.compiled: $(BUILDDIR)/gcc-$(GCC29)/.configured $(GLIBC
 
 	@# first, we will only build gcc
 	cd $(BUILDDIR)/gcc-$(GCC29) && PATH=$(TARGET_PATH) $(cmd_make) all-gcc $(MFLAGS) \
+	   MAKEINFO=/bin/true \
 	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
@@ -601,7 +607,8 @@ $(BUILDDIR)/gcc-$(GCC29)/.compiled: $(BUILDDIR)/gcc-$(GCC29)/.configured $(GLIBC
 
 	@# now we can make everything else (libio, libstdc++, ...)
 	cd $(BUILDDIR)/gcc-$(GCC29) && PATH=$(TARGET_PATH) $(cmd_make) $(MFLAGS) \
-	   gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
+	    MAKEINFO=/bin/true \
+	    gcclibdir="$(TOOL_PREFIX)/lib/gcc-lib" \
 	    GCC_FLAGS_TO_PASS='$$(BASE_FLAGS_TO_PASS) $$(EXTRA_GCC_FLAGS) \
 	        gcclibdir=$(TOOL_PREFIX)/lib/gcc-lib \
 	        libsubdir=$(TOOL_PREFIX)/lib/gcc-lib/\$$(target_alias)/\$$(gcc_version)'
