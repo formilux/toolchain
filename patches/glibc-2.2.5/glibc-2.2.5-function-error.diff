@@ -1,0 +1,24 @@
+# syntax error before __FUNCTION__ with gcc 3.4
+
+--- glibc-2.2.5/grp/initgroups.c.bad	2001-07-06 06:54:46.000000000 +0200
++++ glibc-2.2.5/grp/initgroups.c	2024-08-12 20:41:34.348090808 +0200
+@@ -176,7 +176,7 @@
+ 
+       /* This is really only for debugging.  */
+       if (NSS_STATUS_TRYAGAIN > status || status > NSS_STATUS_RETURN)
+-	__libc_fatal ("illegal status in " __FUNCTION__);
++	__libc_fatal ("illegal status in " "internal_getgrouplist");
+ 
+       if (status != NSS_STATUS_SUCCESS
+ 	  && nss_next_action (nip, status) == NSS_ACTION_RETURN)
+--- glibc-2.2.5/nss/nsswitch.c.bad	2001-07-17 10:21:36.000000000 +0200
++++ glibc-2.2.5/nss/nsswitch.c	2024-08-12 20:46:13.781872325 +0200
+@@ -178,7 +178,7 @@
+     {
+       /* This is really only for debugging.  */
+        if (NSS_STATUS_TRYAGAIN > status || status > NSS_STATUS_RETURN)
+-	 __libc_fatal ("illegal status in " __FUNCTION__);
++	 __libc_fatal ("illegal status in " "__nss_next");
+ 
+        if (nss_next_action (*ni, status) == NSS_ACTION_RETURN)
+ 	 return 1;

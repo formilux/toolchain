@@ -1,0 +1,28 @@
+Otherwise breaks the build with gcc 3.4
+
+--- glibc-2.2.5/stdio-common/sscanf.c.bad	2001-07-06 06:55:41.000000000 +0200
++++ glibc-2.2.5/stdio-common/sscanf.c	2024-08-12 20:34:51.323405854 +0200
+@@ -27,9 +27,7 @@
+ /* Read formatted input from S, according to the format string FORMAT.  */
+ /* VARARGS2 */
+ int
+-sscanf (s, format)
+-     const char *s;
+-     const char *format;
++sscanf (const char *s, const char *format, ...)
+ {
+   va_list arg;
+   int done;
+--- glibc-2.2.5/stdio-common/sprintf.c.bad	2001-07-06 06:55:41.000000000 +0200
++++ glibc-2.2.5/stdio-common/sprintf.c	2024-08-12 20:34:23.914427277 +0200
+@@ -27,9 +27,7 @@
+ /* Write formatted output into S, according to the format string FORMAT.  */
+ /* VARARGS2 */
+ int
+-sprintf (s, format)
+-     char *s;
+-     const char *format;
++sprintf (char *s, const char *format, ...)
+ {
+   va_list arg;
+   int done;

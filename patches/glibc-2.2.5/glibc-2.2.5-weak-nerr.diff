@@ -1,0 +1,14 @@
+"weak definition of old_sys_nerr must precede definition".
+
+--- glibc-2.2.5/sysdeps/unix/sysv/linux/errlist.c.bad	2024-08-12 20:37:35.619277437 +0200
++++ glibc-2.2.5/sysdeps/unix/sysv/linux/errlist.c	2024-08-12 20:38:43.171224629 +0200
+@@ -37,8 +37,8 @@
+ 
+ const int __old_sys_nerr = OLD_ERRLIST_SIZE;
+ 
+-strong_alias (__old_sys_nerr, _old_sys_nerr);
+ weak_alias (__old_sys_nerr, _old_sys_nerr)
++strong_alias (__old_sys_nerr, _old_sys_nerr);
+ compat_symbol (libc, __old_sys_nerr, _sys_nerr, GLIBC_2_0);
+ compat_symbol (libc, _old_sys_nerr, sys_nerr, GLIBC_2_0);
+ weak_alias (__old_sys_errlist, _old_sys_errlist);
